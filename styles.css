@@ -163,13 +163,17 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — solid plum, in the site-wide
-   handwritten Caveat (inherited from --display-font via .display). */
+/* The big WENDYPIX brand wordmark — solid plum, in clean uppercase
+   Helvetica (overrides the site-wide Caveat handwritten display). The
+   intent: a strong, modern logotype anchoring the page above the more
+   playful handwritten section headers below. */
 .hero h1.display.brand {
+  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-weight: 900;        /* Helvetica Black — punchy logotype weight */
+  text-transform: uppercase;
+  letter-spacing: -0.02em; /* Helvetica looks crisp with a touch of tightening */
   color: #8e3a8c;
-  /* Caveat has wide letter advance; we can run it bigger than Anton was
-     at the same viewport. */
-  font-size: clamp(72px, 14vw, 240px);
+  font-size: clamp(64px, 13vw, 220px);
 }
 .hero h1.display {
   color: #8e3a8c;
