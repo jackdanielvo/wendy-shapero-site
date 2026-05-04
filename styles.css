@@ -470,7 +470,16 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
      containing section has horizontal padding, but the carousel itself
      should let tiles ride to the edges of the viewport. */
   outline: none;
+  /* Touch / drag affordance. `cursor: grab` signals you can drag it on
+     desktop. `touch-action: pan-y` tells the browser: vertical scroll
+     stays with the page, horizontal motion is mine to handle (so swipes
+     drive the carousel instead of scrolling the page sideways). */
+  cursor: grab;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
+.featured-carousel:active { cursor: grabbing; }
 .featured-carousel:focus-visible {
   /* Subtle keyboard-focus ring on the carousel container itself, since
      individual tiles can't easily host a ring while they're transformed. */

@@ -501,6 +501,48 @@ function buildFeatured(subjects, featuredSlugs) {
     }
   });
 
+  // Drag / swipe nav. Works for mouse drag on desktop AND touch swipe on
+  // mobile via the unified PointerEvent API. A horizontal drag past the
+  // threshold (or a fast flick) advances the carousel by one tile in
+  // the matching direction. A short stationary press still registers as
+  // a tile tap (we suppress the synthesized click only when an actual
+  // drag happened).
+  let dragStartX = null;
+  let dragStartT = 0;
+  let didDrag = false;
+  carousel.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragStartX = e.clientX;
+    dragStartT = performance.now();
+    didDrag = false;
+    try { carousel.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  carousel.addEventListener("pointermove", (e) => {
+    if (dragStartX === null) return;
+    if (Math.abs(e.clientX - dragStartX) > 8) didDrag = true;
+  });
+  carousel.addEventListener("pointerup", (e) => {
+    if (dragStartX === null) return;
+    const dx = e.clientX - dragStartX;
+    const dt = performance.now() - dragStartT;
+    dragStartX = null;
+    if (!didDrag) return;        // pure tap — let the tile click fire
+    // Swallow the click that a pointerup synthesizes, so a drag that
+    // ends on a tile doesn't accidentally trigger that tile's click.
+    carousel.addEventListener("click", (ce) => {
+      ce.stopPropagation(); ce.preventDefault();
+    }, { capture: true, once: true });
+    // Threshold: 50px static, or 20px + 0.4 px/ms flick for snappy users
+    const fast = Math.abs(dx) > 20 && Math.abs(dx) / Math.max(dt, 1) > 0.4;
+    const isSwipe = Math.abs(dx) > 50 || fast;
+    if (!isSwipe) return;
+    if (dx > 0 && active > 0) { active--; layout(); }
+    else if (dx < 0 && active < tiles.length - 1) { active++; layout(); }
+  });
+  carousel.addEventListener("pointercancel", () => {
+    dragStartX = null; didDrag = false;
+  });
+
   // Mouse-wheel nav. Wheeling up while hovering the carousel = previous,
   // wheeling down = next. Throttled so a single gesture advances at most
   // one step. Once the carousel is at either end, wheel events pass
