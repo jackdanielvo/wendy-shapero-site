@@ -1,0 +1,62 @@
+name: Sync from Pixieset & Deploy
+
+# Triggers
+# 1. Cron: every 4 hours, automatically pulls Wendy's latest Pixieset uploads.
+# 2. workflow_dispatch: a manual "Refresh now" button (in the GitHub UI,
+#    or via a one-click bookmark using the GitHub API — see README).
+# 3. push to main: re-deploys whenever the source changes.
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # so the workflow can commit refreshed photos.json
+  pages: write      # GitHub Pages deploy
+  id-token: write   # GitHub Pages deploy
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sync from Pixieset
+        run: node scripts/sync-pixieset.js
+
+      - name: Commit refreshed photos.json (if changed)
+        run: |
+          if [[ -n "$(git status --porcelain data/photos.json)" ]]; then
+            git config user.name  "wendy-pix-bot"
+            git config user.email "actions@github.com"
+            git add data/photos.json
+            git commit -m "chore(sync): refresh from Pixieset [skip ci]"
+            git push
+          else
+            echo "No changes from Pixieset."
+          fi
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The whole repo IS the static site.
+          path: .
+
+  deploy:
+    needs: sync
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

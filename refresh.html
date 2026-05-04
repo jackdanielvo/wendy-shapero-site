@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Refresh Wendy's Site</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Page-specific overrides — keeps the brand feel */
+  body { display: grid; place-items: center; min-height: 100vh; padding: 40px 20px; }
+  .panel {
+    width: min(560px, 100%);
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: clamp(24px, 4vw, 44px);
+    box-shadow: var(--shadow);
+  }
+  h1 {
+    font-family: var(--display-font);
+    font-weight: 400;
+    font-size: clamp(36px, 6vw, 60px);
+    line-height: 0.95;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+  }
+  .lead {
+    font-family: var(--serif-font);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--muted);
+    margin: 0 0 28px 0;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .field input {
+    font: inherit;
+    padding: 12px 14px;
+    border: 1px solid var(--rule);
+    background: var(--bg);
+    color: var(--ink);
+    border-radius: 10px;
+  }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -2px; border-color: var(--accent); }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row .field { flex: 1; }
+  button.go {
+    margin-top: 14px;
+    width: 100%;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    border-radius: 999px;
+    padding: 18px 22px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform .2s var(--ease), background .2s var(--ease);
+  }
+  button.go:hover:not(:disabled) { background: var(--accent); }
+  button.go:active:not(:disabled) { transform: scale(0.985); }
+  button.go:disabled { opacity: 0.5; cursor: progress; }
+  .status {
+    margin-top: 18px;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--bg-alt);
+    color: var(--ink);
+    display: none;
+  }
+  .status.ok    { background: color-mix(in srgb, #2dbf80 18%, var(--bg-alt)); }
+  .status.err   { background: color-mix(in srgb, #ff6b6b 22%, var(--bg-alt)); }
+  .help {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 22px;
+    line-height: 1.6;
+  }
+  .help code { font-family: ui-monospace, SF Mono, monospace; background: var(--bg-alt); padding: 2px 6px; border-radius: 4px; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h1>Refresh Now</h1>
+  <p class="lead">Pulls your latest Pixieset uploads into the site. Takes ~2 minutes.</p>
+
+  <div class="row">
+    <div class="field" style="flex: 2">
+      <label for="repo">GitHub repo</label>
+      <input id="repo" placeholder="username/wendy-shapero-site" autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="branch">Branch</label>
+      <input id="branch" value="main" autocomplete="off" />
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="pat">Personal Access Token <span style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted)">(saved on this device only)</span></label>
+    <input id="pat" type="password" placeholder="ghp_..." autocomplete="off" />
+  </div>
+
+  <button class="go" id="go">Refresh the site</button>
+
+  <div class="status" id="status"></div>
+
+  <details>
+    <summary>First-time setup</summary>
+    <div class="help">
+      <p>1. Go to <code>github.com/settings/tokens?type=beta</code> and create a fine-grained Personal Access Token. Give it permission to <em>Actions: write</em> on this repo only. Set an expiration that works for you (a year is fine).</p>
+      <p>2. Copy the token (starts with <code>github_pat_</code> or <code>ghp_</code>) and paste it above. It's stored only in your browser, never sent anywhere except GitHub.</p>
+      <p>3. Bookmark this page. From now on, just open it and click the big button.</p>
+      <p>The site is also rebuilt automatically every 4 hours, so this is just for when you want it sooner.</p>
+    </div>
+  </details>
+</div>
+
+<script>
+  // Restore last values
+  const $ = (id) => document.getElementById(id);
+  const KEY = "ws-refresh-config";
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+    if (saved.repo)   $("repo").value   = saved.repo;
+    if (saved.branch) $("branch").value = saved.branch;
+    if (saved.pat)    $("pat").value    = saved.pat;
+  } catch {}
+
+  function setStatus(kind, text) {
+    const el = $("status");
+    el.className = "status " + kind;
+    el.textContent = text;
+    el.style.display = "block";
+  }
+
+  $("go").addEventListener("click", async () => {
+    const repo   = $("repo").value.trim();
+    const branch = $("branch").value.trim() || "main";
+    const pat    = $("pat").value.trim();
+
+    if (!repo.includes("/")) return setStatus("err", "Repo should be in the form  user/repo");
+    if (!pat)               return setStatus("err", "Paste a GitHub Personal Access Token first.");
+
+    localStorage.setItem(KEY, JSON.stringify({ repo, branch, pat }));
+
+    $("go").disabled = true;
+    setStatus("", "Asking GitHub to start the rebuild…");
+    try {
+      const url = `https://api.github.com/repos/${repo}/actions/workflows/sync.yml/dispatches`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": "Bearer " + pat,
+          "X-GitHub-Api-Version": "2022-11-28"
+        },
+        body: JSON.stringify({ ref: branch })
+      });
+      if (res.status === 204) {
+        setStatus("ok", "Rebuild kicked off! The site will be live with new shoots in about 2 minutes.\n\nYou can close this tab.");
+      } else {
+        const text = await res.text();
+        setStatus("err", `GitHub said: ${res.status} ${res.statusText}\n${text.slice(0, 400)}`);
+      }
+    } catch (e) {
+      setStatus("err", "Network error: " + e.message);
+    } finally {
+      $("go").disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>

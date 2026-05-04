@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wendy's Site — Admin</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* ============================================================
+     Admin page — pick featured shoots, hide shoots from the grid.
+     Loads the same data/photos.js the main site uses so we know
+     every shoot. Reads & writes pixieset.config.json on GitHub via
+     the Contents API, then triggers the sync workflow to redeploy.
+     ============================================================ */
+  body { padding: 40px 20px 120px; background: var(--bg-alt); }
+  .wrap { width: min(1100px, 100%); margin: 0 auto; }
+
+  /* -------- Header -------- */
+  header.admin-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px; margin-bottom: 28px;
+  }
+  header.admin-head h1 {
+    font-family: var(--display-font); font-weight: 400;
+    font-size: clamp(36px, 5vw, 56px); line-height: 0.95;
+    margin: 0; text-transform: uppercase; color: #8e3a8c;
+  }
+  header.admin-head .lead {
+    font-family: var(--serif-font); font-style: italic;
+    color: var(--muted); margin: 6px 0 0; font-size: 18px;
+  }
+  header.admin-head .right {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .lnk {
+    background: transparent; border: 1px solid var(--rule);
+    border-radius: 999px; padding: 8px 14px; font: inherit;
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--muted); cursor: pointer;
+    transition: all 0.2s var(--ease); text-decoration: none;
+  }
+  .lnk:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* -------- Setup screen (first run) -------- */
+  .panel {
+    background: var(--bg); border: 1px solid var(--rule);
+    border-radius: 16px; padding: clamp(24px, 4vw, 36px);
+    box-shadow: var(--shadow);
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field label {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 700; color: var(--muted);
+  }
+  .field input {
+    font: inherit; padding: 12px 14px; border: 1px solid var(--rule);
+    background: var(--bg); color: var(--ink); border-radius: 10px;
+  }
+  .field input:focus {
+    outline: 2px solid var(--accent); outline-offset: -2px; border-color: var(--accent);
+  }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row .field { flex: 1; }
+  button.go {
+    margin-top: 8px; width: 100%;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 999px; padding: 16px 22px;
+    font: inherit; font-weight: 700; font-size: 14px;
+    letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+    transition: transform .2s var(--ease), background .2s var(--ease);
+  }
+  button.go:hover:not(:disabled) { background: var(--accent); }
+  button.go:active:not(:disabled) { transform: scale(0.985); }
+  button.go:disabled { opacity: 0.5; cursor: progress; }
+  details summary {
+    cursor: pointer; font-size: 12px; letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 700; color: var(--muted);
+  }
+  details .help {
+    font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.6;
+  }
+  .help code {
+    font-family: ui-monospace, SF Mono, monospace;
+    background: var(--bg-alt); padding: 2px 6px; border-radius: 4px;
+  }
+
+  /* -------- Status banner -------- */
+  .status {
+    margin: 14px 0; font-size: 13px; line-height: 1.5;
+    padding: 14px 16px; border-radius: 10px;
+    background: var(--bg-alt); color: var(--ink);
+    white-space: pre-wrap;
+  }
+  .status.ok    { background: color-mix(in srgb, #2dbf80 18%, var(--bg-alt)); }
+  .status.err   { background: color-mix(in srgb, #ff6b6b 22%, var(--bg-alt)); }
+  .status.warn  { background: color-mix(in srgb, #ffb84d 28%, var(--bg-alt)); }
+  .status:empty { display: none; }
+
+  /* -------- Section card -------- */
+  section.card {
+    background: var(--bg); border: 1px solid var(--rule);
+    border-radius: 16px; padding: clamp(20px, 3vw, 32px);
+    margin-bottom: 22px;
+  }
+  section.card h2 {
+    font-family: var(--display-font); font-weight: 400;
+    font-size: clamp(24px, 3.4vw, 36px); line-height: 1; margin: 0 0 6px;
+    text-transform: uppercase; letter-spacing: 0.005em;
+  }
+  section.card p.sub {
+    margin: 0 0 18px; color: var(--muted);
+    font-family: var(--serif-font); font-style: italic; font-size: 16px;
+  }
+  section.card h3 {
+    margin: 22px 0 10px; font-size: 11px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); font-weight: 700;
+  }
+
+  /* -------- Featured ordered list -------- */
+  .featured-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .featured-list li {
+    display: grid;
+    grid-template-columns: 28px 56px 1fr auto;
+    gap: 12px; align-items: center;
+    padding: 8px 12px; border: 1px solid var(--rule);
+    border-radius: 12px; background: var(--bg-alt);
+    transition: background 0.2s var(--ease);
+  }
+  .featured-list li:hover { background: color-mix(in srgb, var(--accent) 6%, var(--bg-alt)); }
+  .featured-list .pos {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .featured-list .thumb {
+    width: 56px; height: 56px; border-radius: 8px; overflow: hidden;
+    background: var(--ghost);
+  }
+  .featured-list .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .featured-list .info {
+    min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  }
+  .featured-list .info .title {
+    font-weight: 600; font-size: 14px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .featured-list .info .meta {
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+  }
+  .featured-list .ctrl { display: flex; gap: 4px; }
+  .icon-btn {
+    background: transparent; border: 1px solid var(--rule);
+    border-radius: 8px; padding: 6px 9px; font: inherit;
+    font-size: 14px; line-height: 1;
+    color: var(--muted); cursor: pointer;
+    transition: all 0.2s var(--ease);
+  }
+  .icon-btn:hover { color: var(--ink); border-color: var(--ink); background: var(--bg); }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .icon-btn.danger:hover { color: var(--accent); border-color: var(--accent); }
+
+  .empty {
+    padding: 24px; text-align: center; color: var(--muted);
+    font-style: italic; border: 1px dashed var(--rule); border-radius: 12px;
+    font-family: var(--serif-font); font-size: 15px;
+  }
+
+  /* -------- Add-from-pool grid -------- */
+  .pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .chip {
+    position: relative;
+    border: 1px solid var(--rule); border-radius: 12px;
+    background: var(--bg); padding: 0; overflow: hidden; cursor: pointer;
+    text-align: left;
+    transition: all 0.2s var(--ease);
+    display: flex; flex-direction: column;
+  }
+  .chip:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .chip .ph {
+    aspect-ratio: 1 / 1; width: 100%;
+    background: var(--ghost) center/cover no-repeat;
+  }
+  .chip .lbl {
+    padding: 8px 10px;
+    font-size: 12px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chip .cat {
+    padding: 0 10px 8px;
+    font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--muted);
+  }
+  .chip .add-pill {
+    position: absolute; top: 8px; right: 8px;
+    background: var(--accent); color: #fff;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 16px; font-weight: 700; line-height: 1;
+    opacity: 0; transform: scale(0.8);
+    transition: all 0.2s var(--ease);
+  }
+  .chip:hover .add-pill { opacity: 1; transform: scale(1); }
+  .chip.in-list { opacity: 0.45; pointer-events: none; }
+  .chip.in-list::after {
+    content: "Featured"; position: absolute; inset: auto 0 0 0;
+    background: var(--ink); color: var(--bg);
+    font-size: 9px; letter-spacing: 0.14em; font-weight: 700;
+    text-transform: uppercase; padding: 4px;
+    text-align: center;
+  }
+
+  /* -------- Hide-from-grid toggles -------- */
+  .hide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .hide-grid .chip.hidden-shoot {
+    opacity: 0.32;
+    border-color: var(--accent);
+  }
+  .hide-grid .chip.hidden-shoot::before {
+    content: "Hidden";
+    position: absolute; top: 8px; left: 8px;
+    background: var(--accent); color: #fff;
+    padding: 3px 8px; border-radius: 999px;
+    font-size: 9px; letter-spacing: 0.14em; font-weight: 700;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  /* -------- Search -------- */
+  .search {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 12px;
+  }
+  .search input {
+    flex: 1; font: inherit; padding: 9px 12px;
+    border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--bg); color: var(--ink); font-size: 13px;
+  }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: -2px; border-color: var(--accent); }
+  .count {
+    font-size: 11px; color: var(--muted); letter-spacing: 0.12em;
+    text-transform: uppercase; font-weight: 700;
+  }
+
+  /* -------- Save bar (sticky bottom) -------- */
+  .savebar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--rule);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
+    z-index: 200;
+    box-shadow: 0 -8px 24px -16px rgba(0,0,0,0.18);
+  }
+  .savebar .info { flex: 1; font-size: 13px; color: var(--muted); }
+  .savebar .info b { color: var(--ink); font-weight: 700; }
+  .savebar button {
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 999px;
+    padding: 12px 22px; font: inherit; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+  .savebar button:hover:not(:disabled) { background: var(--accent); }
+  .savebar button:active:not(:disabled) { transform: scale(0.985); }
+  .savebar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @media (max-width: 600px) {
+    .featured-list li { grid-template-columns: 22px 44px 1fr auto; gap: 8px; padding: 6px 8px; }
+    .featured-list .thumb { width: 44px; height: 44px; }
+    .savebar { flex-wrap: wrap; }
+    .savebar .info { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="admin-head">
+    <div>
+      <h1>Wendy's Site</h1>
+      <p class="lead">Pick the shoots that show on the home page.</p>
+    </div>
+    <div class="right">
+      <a href="index.html" class="lnk">View site</a>
+      <a href="refresh.html" class="lnk">Refresh now</a>
+      <button id="logout" class="lnk" hidden>Sign out</button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       SETUP — first-run screen, asks for repo + PAT (matches
+       refresh.html so the same token works for both).
+       ============================================================ -->
+  <div id="setup" class="panel" hidden>
+    <h2 style="font-family:var(--display-font);font-weight:400;font-size:28px;text-transform:uppercase;margin:0 0 6px">Sign in once</h2>
+    <p class="lead" style="margin-bottom:22px">This page edits the shoot list directly in your GitHub repo. Tell it where to look.</p>
+
+    <div class="row">
+      <div class="field" style="flex:2">
+        <label for="repo">GitHub repo</label>
+        <input id="repo" placeholder="username/wendy-shapero-site" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="branch">Branch</label>
+        <input id="branch" value="main" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="pat">Personal Access Token <span style="text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted)">(saved on this device only)</span></label>
+      <input id="pat" type="password" placeholder="github_pat_..." autocomplete="off" />
+    </div>
+
+    <button class="go" id="signin">Sign in</button>
+
+    <div class="status" id="setupStatus"></div>
+
+    <details style="margin-top:18px">
+      <summary>First-time setup</summary>
+      <div class="help">
+        <p>1. Go to <code>github.com/settings/tokens?type=beta</code> and create a fine-grained Personal Access Token. Give it permission to <em>Contents: write</em> AND <em>Actions: write</em> on this repo only. Set an expiration (a year is fine).</p>
+        <p>2. Copy the token (starts with <code>github_pat_</code>) and paste it above. It's stored only in your browser, never sent anywhere except GitHub.</p>
+        <p>3. Bookmark this page. From now on, just open it, tick the shoots you want, and click Save.</p>
+        <p>The same token also works for <code>refresh.html</code>.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- ============================================================
+       APP — the actual editor.
+       ============================================================ -->
+  <div id="app" hidden>
+    <div class="status" id="appStatus"></div>
+
+    <!-- ---------- FEATURED ---------- -->
+    <section class="card">
+      <h2>Featured Work carousel</h2>
+      <p class="sub">These are the shoots that appear in the rotating carousel near the top of the home page. Order matters — the first item starts in the center.</p>
+
+      <h3>Currently featured <span class="count" id="featuredCount">(0)</span></h3>
+      <ol class="featured-list" id="featuredList"></ol>
+
+      <h3>Add a shoot to the carousel</h3>
+      <div class="search">
+        <input id="featSearch" placeholder="Search shoots…" />
+        <span class="count" id="featPoolCount">(0)</span>
+      </div>
+      <div class="pool" id="featuredPool"></div>
+    </section>
+
+    <!-- ---------- HIDE FROM GRID ---------- -->
+    <section class="card">
+      <h2>Hide from the main grid</h2>
+      <p class="sub">Click any shoot to hide it from the "All Shoots" grid. The shoot stays synced from Pixieset, just doesn't show on the home page. Click again to bring it back.</p>
+
+      <div class="search">
+        <input id="hideSearch" placeholder="Search shoots…" />
+        <span class="count" id="hideCount">(0 hidden)</span>
+      </div>
+      <div class="hide-grid" id="hideGrid"></div>
+    </section>
+  </div>
+
+  <!-- Sticky save bar -->
+  <div class="savebar" id="savebar" hidden>
+    <div class="info" id="saveInfo">No changes yet.</div>
+    <button id="save" disabled>Save &amp; rebuild</button>
+  </div>
+
+</div>
+
+<!-- Use the same auto-generated data the main site loads -->
+<script src="data/photos.js" onerror="window.WENDY_PHOTOS_MISSING = true"></script>
+<script>
+/* ============================================================
+   Admin script
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const KEY = "ws-refresh-config";   // same key as refresh.html — share the token
+
+// ---------- State ----------
+const state = {
+  repo: "",
+  branch: "main",
+  pat: "",
+  // Loaded from GitHub:
+  configSha: null,        // SHA of the current pixieset.config.json (for safe PUT)
+  config: null,           // Parsed config object (preserves unknown fields on save)
+  // Locally edited:
+  featured: [],           // array of slugs in display order
+  excluded: new Set(),    // slugs hidden from the grid
+  // Snapshots so we can detect "dirty"
+  initialFeatured: [],
+  initialExcluded: new Set(),
+};
+
+// ---------- Storage ----------
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; }
+}
+function saveStore(s) {
+  localStorage.setItem(KEY, JSON.stringify(s));
+}
+
+// ---------- Status banner ----------
+function setStatus(target, kind, text) {
+  const el = $(target);
+  el.className = "status " + (kind || "");
+  el.textContent = text || "";
+}
+
+// ============================================================
+// Setup screen
+// ============================================================
+function showSetup() {
+  $("setup").hidden = false;
+  $("app").hidden = true;
+  $("savebar").hidden = true;
+  $("logout").hidden = true;
+  const s = loadStore();
+  $("repo").value   = s.repo   || "";
+  $("branch").value = s.branch || "main";
+  $("pat").value    = s.pat    || "";
+}
+
+$("signin").addEventListener("click", async () => {
+  const repo   = $("repo").value.trim();
+  const branch = $("branch").value.trim() || "main";
+  const pat    = $("pat").value.trim();
+
+  if (!repo.includes("/")) return setStatus("setupStatus", "err", "Repo should be in the form  user/repo");
+  if (!pat)               return setStatus("setupStatus", "err", "Paste a GitHub Personal Access Token first.");
+
+  state.repo = repo; state.branch = branch; state.pat = pat;
+  saveStore({ repo, branch, pat });
+
+  $("signin").disabled = true;
+  setStatus("setupStatus", "", "Connecting to GitHub…");
+  try {
+    await loadConfigFromGitHub();
+    enterApp();
+  } catch (e) {
+    setStatus("setupStatus", "err", e.message);
+  } finally {
+    $("signin").disabled = false;
+  }
+});
+
+$("logout").addEventListener("click", () => {
+  if (!confirm("Sign out and clear your token from this device?")) return;
+  localStorage.removeItem(KEY);
+  state.repo = state.branch = state.pat = "";
+  showSetup();
+});
+
+// ============================================================
+// GitHub Contents API — load + save scripts/pixieset.config.json
+// ============================================================
+const CONFIG_PATH = "scripts/pixieset.config.json";
+
+async function ghHeaders() {
+  return {
+    "Accept": "application/vnd.github+json",
+    "Authorization": "Bearer " + state.pat,
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+async function loadConfigFromGitHub() {
+  const url = `https://api.github.com/repos/${state.repo}/contents/${CONFIG_PATH}?ref=${encodeURIComponent(state.branch)}`;
+  const res = await fetch(url, { headers: await ghHeaders() });
+  if (res.status === 401) throw new Error("Token rejected — double-check it has Contents: write on this repo.");
+  if (res.status === 404) throw new Error(`Couldn't find ${CONFIG_PATH} in ${state.repo}@${state.branch}. Is the repo name right?`);
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`GitHub: ${res.status} ${res.statusText}\n${t.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  // Decode base64 → UTF-8 string → JSON
+  const json = decodeURIComponent(escape(atob(data.content.replace(/\s/g, ""))));
+  const cfg = JSON.parse(json);
+  state.configSha = data.sha;
+  state.config    = cfg;
+  state.featured  = Array.isArray(cfg.featured) ? cfg.featured.slice() : [];
+  state.excluded  = new Set(Array.isArray(cfg.excludeShoots) ? cfg.excludeShoots : []);
+  state.initialFeatured = state.featured.slice();
+  state.initialExcluded = new Set(state.excluded);
+}
+
+async function saveConfigToGitHub() {
+  // Merge edits into the full config (preserves all other fields)
+  const next = { ...state.config, featured: state.featured, excludeShoots: Array.from(state.excluded) };
+  const body = JSON.stringify(next, null, 2) + "\n";
+  // UTF-8 → base64
+  const b64 = btoa(unescape(encodeURIComponent(body)));
+
+  const url = `https://api.github.com/repos/${state.repo}/contents/${CONFIG_PATH}`;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: await ghHeaders(),
+    body: JSON.stringify({
+      message: "admin: update featured + hidden shoots",
+      content: b64,
+      sha: state.configSha,
+      branch: state.branch,
+    }),
+  });
+  if (res.status === 409) throw new Error("The config changed on GitHub since we loaded it. Reload this page and try again.");
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`GitHub: ${res.status} ${res.statusText}\n${t.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  state.configSha = data.content.sha;
+  state.config    = next;
+  state.initialFeatured = state.featured.slice();
+  state.initialExcluded = new Set(state.excluded);
+}
+
+async function triggerRebuild() {
+  const url = `https://api.github.com/repos/${state.repo}/actions/workflows/sync.yml/dispatches`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: await ghHeaders(),
+    body: JSON.stringify({ ref: state.branch }),
+  });
+  // 204 = success. Anything else, surface but don't fail the save (the config was committed).
+  if (res.status !== 204) {
+    const t = await res.text();
+    throw new Error(`Rebuild trigger failed: ${res.status} ${res.statusText}\n${t.slice(0, 300)}`);
+  }
+}
+
+// ============================================================
+// App
+// ============================================================
+function enterApp() {
+  $("setup").hidden = true;
+  $("app").hidden = false;
+  $("savebar").hidden = false;
+  $("logout").hidden = false;
+
+  if (window.WENDY_PHOTOS_MISSING || !window.WENDY_PHOTOS) {
+    setStatus("appStatus", "err",
+      "Couldn't load data/photos.js. Run the sync once (refresh.html) and reload this page.");
+    return;
+  }
+  setStatus("appStatus", "",
+    `Loaded ${window.WENDY_PHOTOS.subjects.length} shoots from your repo. Last sync: ${
+      (window.WENDY_PHOTOS.generatedAt || "").split("T")[0]
+    }`);
+  renderAll();
+}
+
+function subjectsBySlug() {
+  const map = {};
+  for (const s of (window.WENDY_PHOTOS.subjects || [])) map[s.slug || s.id] = s;
+  return map;
+}
+
+function renderAll() {
+  renderFeatured();
+  renderFeaturedPool();
+  renderHideGrid();
+  updateSaveBar();
+}
+
+// ---------- Featured list ----------
+function renderFeatured() {
+  const list = $("featuredList");
+  const map = subjectsBySlug();
+  list.innerHTML = "";
+  if (!state.featured.length) {
+    list.innerHTML = `<li class="empty" style="grid-template-columns:1fr">No featured shoots yet — add some from below. The Featured Work section will be hidden until you do.</li>`;
+  } else {
+    state.featured.forEach((slug, i) => {
+      const subj = map[slug];
+      const li = document.createElement("li");
+      li.dataset.slug = slug;
+      const cover = subj && (subj.cover || (subj.photos && subj.photos[0])) || "";
+      const title = (subj && (subj.title || subj.label)) || slug;
+      const cat = (subj && subj.cat) || "";
+      li.innerHTML = `
+        <div class="pos">${String(i + 1).padStart(2, "0")}</div>
+        <div class="thumb">${cover ? `<img src="${cover}" alt="" loading="lazy"/>` : ""}</div>
+        <div class="info">
+          <div class="title">${escapeHtml(title)}</div>
+          <div class="meta">${escapeHtml(cat)} · ${escapeHtml(slug)}</div>
+        </div>
+        <div class="ctrl">
+          <button class="icon-btn" data-act="up"   title="Move up"    aria-label="Move up"    ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="icon-btn" data-act="down" title="Move down"  aria-label="Move down"  ${i === state.featured.length - 1 ? "disabled" : ""}>↓</button>
+          <button class="icon-btn danger" data-act="rm" title="Remove" aria-label="Remove">✕</button>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+  }
+  $("featuredCount").textContent = `(${state.featured.length})`;
+}
+
+$("featuredList").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const li = e.target.closest("li[data-slug]");
+  if (!li) return;
+  const slug = li.dataset.slug;
+  const i = state.featured.indexOf(slug);
+  if (i < 0) return;
+  if (btn.dataset.act === "up" && i > 0) {
+    [state.featured[i - 1], state.featured[i]] = [state.featured[i], state.featured[i - 1]];
+  } else if (btn.dataset.act === "down" && i < state.featured.length - 1) {
+    [state.featured[i + 1], state.featured[i]] = [state.featured[i], state.featured[i + 1]];
+  } else if (btn.dataset.act === "rm") {
+    state.featured.splice(i, 1);
+  }
+  renderAll();
+});
+
+// ---------- Featured pool (clickable thumbnails to add) ----------
+function renderFeaturedPool() {
+  const pool = $("featuredPool");
+  const q = ($("featSearch").value || "").toLowerCase().trim();
+  pool.innerHTML = "";
+  const subs = (window.WENDY_PHOTOS.subjects || []).slice()
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  let n = 0;
+  subs.forEach((subj) => {
+    const slug = subj.slug || subj.id;
+    const title = subj.title || slug;
+    if (q && !(`${slug} ${title} ${subj.cat || ""}`).toLowerCase().includes(q)) return;
+    n++;
+    const inList = state.featured.includes(slug);
+    const cover = subj.cover || (subj.photos && subj.photos[0]) || "";
+    const chip = document.createElement("button");
+    chip.className = "chip" + (inList ? " in-list" : "");
+    chip.dataset.slug = slug;
+    chip.innerHTML = `
+      <div class="ph" style="background-image:url('${cover}')"></div>
+      <div class="lbl">${escapeHtml(title)}</div>
+      <div class="cat">${escapeHtml(subj.cat || "")}</div>
+      <span class="add-pill">+</span>
+    `;
+    pool.appendChild(chip);
+  });
+  $("featPoolCount").textContent = `(${n} shoot${n === 1 ? "" : "s"})`;
+}
+$("featSearch").addEventListener("input", renderFeaturedPool);
+$("featuredPool").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip[data-slug]");
+  if (!chip) return;
+  const slug = chip.dataset.slug;
+  if (state.featured.includes(slug)) return;
+  state.featured.push(slug);
+  renderAll();
+});
+
+// ---------- Hide-from-grid toggles ----------
+function renderHideGrid() {
+  const grid = $("hideGrid");
+  const q = ($("hideSearch").value || "").toLowerCase().trim();
+  grid.innerHTML = "";
+  const subs = (window.WENDY_PHOTOS.subjects || []).slice()
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  subs.forEach((subj) => {
+    const slug = subj.slug || subj.id;
+    const title = subj.title || slug;
+    if (q && !(`${slug} ${title} ${subj.cat || ""}`).toLowerCase().includes(q)) return;
+    const hidden = state.excluded.has(slug);
+    const cover = subj.cover || (subj.photos && subj.photos[0]) || "";
+    const chip = document.createElement("button");
+    chip.className = "chip" + (hidden ? " hidden-shoot" : "");
+    chip.dataset.slug = slug;
+    chip.innerHTML = `
+      <div class="ph" style="background-image:url('${cover}')"></div>
+      <div class="lbl">${escapeHtml(title)}</div>
+      <div class="cat">${escapeHtml(subj.cat || "")}</div>
+    `;
+    grid.appendChild(chip);
+  });
+  $("hideCount").textContent = `(${state.excluded.size} hidden)`;
+}
+$("hideSearch").addEventListener("input", renderHideGrid);
+$("hideGrid").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip[data-slug]");
+  if (!chip) return;
+  const slug = chip.dataset.slug;
+  if (state.excluded.has(slug)) state.excluded.delete(slug);
+  else state.excluded.add(slug);
+  renderHideGrid();
+  updateSaveBar();
+});
+
+// ---------- Save bar ----------
+function isDirty() {
+  if (state.featured.length !== state.initialFeatured.length) return true;
+  for (let i = 0; i < state.featured.length; i++) {
+    if (state.featured[i] !== state.initialFeatured[i]) return true;
+  }
+  if (state.excluded.size !== state.initialExcluded.size) return true;
+  for (const s of state.excluded) if (!state.initialExcluded.has(s)) return true;
+  return false;
+}
+function updateSaveBar() {
+  const dirty = isDirty();
+  $("save").disabled = !dirty;
+  if (!dirty) {
+    $("saveInfo").innerHTML = `No unsaved changes. <b>${state.featured.length}</b> featured · <b>${state.excluded.size}</b> hidden.`;
+  } else {
+    const fChange = state.featured.length - state.initialFeatured.length;
+    const eChange = state.excluded.size - state.initialExcluded.size;
+    const bits = [];
+    if (state.featured.length !== state.initialFeatured.length || !sameList(state.featured, state.initialFeatured)) {
+      bits.push(`Featured changed (${state.featured.length} now${fChange ? `, ${fChange > 0 ? "+" : ""}${fChange}` : ""})`);
+    }
+    if (state.excluded.size !== state.initialExcluded.size) {
+      bits.push(`${state.excluded.size} hidden${eChange ? ` (${eChange > 0 ? "+" : ""}${eChange})` : ""}`);
+    }
+    $("saveInfo").innerHTML = "Unsaved changes: <b>" + bits.join(" · ") + "</b>";
+  }
+}
+function sameList(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+$("save").addEventListener("click", async () => {
+  $("save").disabled = true;
+  setStatus("appStatus", "", "Saving config to GitHub…");
+  try {
+    await saveConfigToGitHub();
+    setStatus("appStatus", "", "Triggering rebuild…");
+    try { await triggerRebuild(); }
+    catch (e) {
+      // Save succeeded, rebuild failed — surface but don't block
+      setStatus("appStatus", "warn",
+        "Saved! But couldn't trigger an instant rebuild. The next 4-hour cron will pick it up.\n\n" + e.message);
+      updateSaveBar();
+      return;
+    }
+    setStatus("appStatus", "ok",
+      "Saved! Site is rebuilding now and will be live in about 2 minutes. You can close this tab.");
+    updateSaveBar();
+  } catch (e) {
+    setStatus("appStatus", "err", e.message);
+    $("save").disabled = false;
+  }
+});
+
+// ---------- Util ----------
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ============================================================
+// Boot
+// ============================================================
+(function init() {
+  const s = loadStore();
+  if (s.repo && s.pat) {
+    state.repo = s.repo;
+    state.branch = s.branch || "main";
+    state.pat = s.pat;
+    setStatus("appStatus", "", "Connecting to GitHub…");
+    enterApp();      // shows the app shell so the user sees something
+    loadConfigFromGitHub()
+      .then(() => {
+        setStatus("appStatus", "",
+          `Loaded config. ${state.featured.length} featured · ${state.excluded.size} hidden.`);
+        renderAll();
+      })
+      .catch((e) => {
+        // If the token's bad, drop back to the setup screen
+        if (/Token rejected/.test(e.message) || /401/.test(e.message)) {
+          setStatus("setupStatus", "err", e.message);
+          showSetup();
+        } else {
+          setStatus("appStatus", "err", e.message);
+        }
+      });
+  } else {
+    showSetup();
+  }
+})();
+</script>
+
+</body>
+</html>

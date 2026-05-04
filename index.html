@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wendy Shapero — Photographer, Los Angeles</title>
+  <meta name="description" content="Wendy Shapero is a Los Angeles photographer specializing in headshots, corporate portraits, product branding, and event photography. Playful, lively, journalistic." />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Wendy Shapero — Photographer" />
+  <meta property="og:description" content="Headshots, portraits, products and moments. Based in Los Angeles." />
+  <meta property="og:type" content="website" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-meta">
+        <p class="caps">Los Angeles, California</p>
+        <p class="caps muted"><a href="mailto:wendy@wendypix.com">wendy@wendypix.com</a></p>
+      </div>
+
+      <h1 class="display">WENDY SHAPERO</h1>
+
+      <div class="hero__mid">
+        <div class="hero__images" id="heroImages" aria-hidden="true">
+          <!-- Photo cards injected by JS -->
+        </div>
+      </div>
+
+      <p class="display sub">PHOTOGRAPHER,<br/>PORTRAITS &amp; MOMENTS</p>
+
+      <div class="services">
+        <p class="caps">Available for</p>
+        <p class="caps muted">Headshots · Corporate Portraits · Product Branding · Events</p>
+      </div>
+    </section>
+
+    <!-- ABOUT / BIO -->
+    <section class="about" id="about">
+      <div class="about__photo">
+        <figure>
+          <div class="about__photo-frame" id="aboutPhotoFrame">
+            <img id="aboutPhoto" src="wendy-portrait.jpg" alt="Wendy Shapero, photographer"
+                 onerror="document.getElementById('aboutPhotoFrame').classList.add('missing'); this.style.display='none';" />
+          </div>
+          <figcaption class="about__caption caps">Wendy Shapero, Los Angeles</figcaption>
+        </figure>
+      </div>
+      <div class="about__copy">
+        <p class="kicker">About</p>
+        <p class="bio">
+          Los Angeles&ndash;based photographer Wendy Shapero is known for her fun, easy&#8209;going,
+          relaxed manner. Her focus has been lifestyle, private celebrity &amp; corporate events,
+          headshots for actors (VO and On-Camera), portraits for executives, product placement,
+          and special occasions.
+        </p>
+        <p class="bio">
+          Stylistically she works moment to moment and celebrates spontaneity and levity.
+          <a class="link" href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">Schedule a free 15-minute discovery call</a> to plan your next shoot.
+        </p>
+      </div>
+    </section>
+
+    <!-- FEATURED WORK — Spencer-style carousel. Only renders if Wendy
+         has curated a list in scripts/pixieset.config.json (otherwise the
+         All Work section below already shows every shoot).
+         Mechanics: a focal tile sits centered with the shoot title in a
+         pill below it; flanking tiles peek in from each side, slightly
+         rotated. Click a flank to rotate it into focus; click the focal
+         tile to open the shoot. Arrow keys navigate. -->
+    <section class="featured" id="work" style="display:none">
+      <h2 class="display">FEATURED WORK</h2>
+      <p class="featured-sub">Hand-picked sessions worth a closer look</p>
+
+      <div class="featured-carousel" id="featuredCarousel" tabindex="0"
+           role="region" aria-roledescription="carousel" aria-label="Featured shoots">
+        <!-- Carousel tiles injected by JS -->
+      </div>
+      <div class="featured-dots" id="featuredDots" aria-hidden="true">
+        <!-- Position dots injected by JS -->
+      </div>
+    </section>
+
+    <!-- ALL WORK with category filter -->
+    <section class="all-work">
+      <h2 class="display secondary">ALL SHOOTS,<br/>TAKE A LOOK</h2>
+
+      <nav class="filters" id="filters" aria-label="Filter by category">
+        <!-- Filter buttons rendered dynamically from the loaded subjects -->
+      </nav>
+
+      <div class="grid" id="grid">
+        <!-- All photos injected by JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scroll runway — extends the document a full viewport beyond <main>
+       so the user can scroll past it. While that scroll happens, the
+       fixed CONTACT panel below is progressively revealed. -->
+  <div class="contact-spacer" aria-hidden="true"></div>
+
+  <!-- CONTACT — pinned to the viewport behind main, revealed as main
+       scrolls up off the top. The "accordion" feel is just the natural
+       reveal of a tall fixed element by its scrolling cover. -->
+  <section class="contact" id="contact">
+    <div class="contact-inner">
+      <h2 class="contact-mega">CONTACT</h2>
+      <div class="contact-info">
+        <p><a href="mailto:wendy@wendypix.com">WENDY@WENDYPIX.COM</a></p>
+        <p><a href="tel:+18183830102">(818) 383-0102</a></p>
+        <p><a href="https://instagram.com/wendypix" target="_blank" rel="noopener">INSTAGRAM</a></p>
+        <p><a href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">15-MIN FREE CONSULT</a></p>
+      </div>
+      <p class="copyright">All photographs &copy; <span id="year"></span> Wendy Shapero. Based in Los Angeles.</p>
+    </div>
+  </section>
+
+  <!-- Shoot view: a full-screen subject takeover, not a lightbox -->
+  <div class="shoot" id="shoot" aria-hidden="true" role="dialog">
+    <header class="shoot__bar">
+      <button class="shoot__close" aria-label="Close shoot">&times;</button>
+      <p class="shoot__crumb caps"><span data-role="cat">&nbsp;</span> &nbsp;&middot;&nbsp; <span data-role="num">&nbsp;</span></p>
+      <div class="shoot__nav">
+        <button class="shoot__prev" aria-label="Previous shoot">&#8592; <span class="caps">Prev shoot</span></button>
+        <button class="shoot__next" aria-label="Next shoot"><span class="caps">Next shoot</span> &#8594;</button>
+      </div>
+    </header>
+    <div class="shoot__body" id="shootBody">
+      <!-- One or more photos rendered by JS for the active subject -->
+    </div>
+    <footer class="shoot__foot">
+      <p class="caps muted">Like this shoot? <a href="mailto:wendy@wendypix.com?subject=Booking%20a%20shoot">Book a session with Wendy</a></p>
+    </footer>
+  </div>
+
+  <!-- Auto-synced data from Pixieset (optional). If missing, the site
+       falls back to its built-in dataset, so it never breaks. -->
+  <script src="data/photos.js" onerror="window.WENDY_PHOTOS_MISSING=true"></script>
+  <script src="script.js"></script>
+</body>
+</html>

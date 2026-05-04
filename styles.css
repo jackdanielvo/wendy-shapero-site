@@ -1,0 +1,892 @@
+/* ============================================================
+   Wendy Shapero — Photography Portfolio
+   Inspired by spencergabor.work, tuned for photography.
+   ============================================================ */
+
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f3f3f1;
+  --ink: #0c0c0c;
+  --muted: #6b6b6b;
+  --ghost: #d4d4d2;
+  --accent: #ff6b6b;          /* coral pink — Wendy's existing brand color */
+  --rule: #ececec;
+  --shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.18), 0 6px 18px -12px rgba(0, 0, 0, 0.12);
+  --radius: 14px;
+  --max: 1400px;
+  --pad-x: clamp(20px, 5vw, 80px);
+  --display-font: "Anton", "Helvetica Neue", Arial, sans-serif;
+  --serif-font: "Instrument Serif", Georgia, serif;
+  --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="dark"] {
+  --bg: #0c0c0c;
+  --bg-alt: #161616;
+  --ink: #f5f5f3;
+  --muted: #9a9a9a;
+  --ghost: #2a2a2a;
+  --rule: #1f1f1f;
+  --shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.6), 0 6px 18px -12px rgba(0, 0, 0, 0.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  /* The body's background is the CONTACT panel color so that as <main>
+     scrolls up off the top, the fixed footer underneath blends seamlessly. */
+  background: var(--bg-alt);
+  color: var(--ink);
+  font-family: var(--body-font);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  transition: background 0.5s var(--ease), color 0.5s var(--ease);
+}
+
+/* Main sits ABOVE the fixed CONTACT footer, with its own opaque background.
+   As you scroll, main slides up off the top of the viewport, progressively
+   revealing the footer that's been pinned underneath the whole time. */
+main {
+  position: relative;
+  z-index: 2;
+  background: var(--bg);
+}
+.contact-spacer {
+  /* Two viewports of runway. Combined with RANGE_VH = 2 in script.js,
+     this aligns the reveal so the word is at scaleY(0) right when the
+     contact panel first peeks out, and grows to scaleY(4.2) at full
+     scroll. (Spacer height in vh must match RANGE_VH for the alignment.) */
+  height: 200vh;
+  height: 200dvh;
+  pointer-events: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+a:hover { color: var(--accent); border-color: var(--accent); }
+
+img { max-width: 100%; display: block; }
+
+button { cursor: pointer; font-family: inherit; }
+
+/* -------- Theme toggle -------- */
+.theme-toggle {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  z-index: 200;
+  transition: transform 0.4s var(--ease), background 0.3s var(--ease);
+}
+.theme-toggle:hover { transform: rotate(20deg); color: var(--accent); border-color: var(--accent); }
+
+/* -------- Typography -------- */
+.caps {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin: 0;
+}
+.muted { color: var(--muted); font-weight: 500; }
+
+.display {
+  font-family: var(--display-font);
+  font-weight: 400;
+  letter-spacing: 0.005em;
+  margin: 0;
+  text-transform: uppercase;
+  line-height: 0.92;
+}
+
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 24px 0;
+  font-weight: 700;
+}
+
+/* -------- Layout -------- */
+main { display: block; }
+section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: clamp(28px, 5vh, 60px);
+  padding-bottom: clamp(40px, 8vh, 100px);
+  position: relative;
+  text-align: center;
+}
+
+.hero-meta { margin-bottom: clamp(28px, 6vh, 60px); }
+.hero-meta p { line-height: 1.4; }
+.hero-meta a { border-bottom: none; }
+.hero-meta a:hover { color: var(--accent); }
+
+.hero .display {
+  font-size: clamp(64px, 13vw, 220px);
+  margin-bottom: clamp(20px, 4vh, 60px);
+}
+
+/* The big WENDY SHAPERO title — solid plum. */
+.hero h1.display {
+  color: #8e3a8c;
+}
+
+/* Each letter is wrapped in a .char span (by JS) so we can stagger a
+   gentle fade-in-from-below entrance. Subtle: ~70ms per letter, 1s ease-out
+   per letter, runs once on load. */
+.hero h1.display .char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  animation: title-char-in 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms + 200ms);
+  /* Preserve word breaks: the JS marks spaces with .char--space */
+}
+.hero h1.display .char--space {
+  width: 0.25em; /* default word break width */
+}
+@keyframes title-char-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero h1.display .char {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+.hero .sub {
+  color: var(--ghost);
+  font-size: clamp(34px, 7vw, 110px);
+  margin-top: clamp(20px, 4vh, 60px);
+}
+
+.services {
+  margin-top: clamp(36px, 6vh, 80px);
+}
+.services p { line-height: 1.7; }
+
+/* ============================================================
+   Hero card stack — Spencer-style continuous floating motion.
+   Each card sits in flow as a row item; CSS variables --ox/--oy/--rot
+   are updated every frame by JS to drive translate/rotate.
+   ============================================================ */
+.hero__mid {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: clamp(-40px, -4vh, -10px) 0 clamp(-30px, -3vh, 0px) 0;
+  position: relative;
+  z-index: 1;
+}
+.hero__images {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1vw, 18px);
+  height: clamp(260px, 36vh, 440px);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  pointer-events: none; /* visual only; clicks fall through to nothing */
+}
+.hero__image {
+  position: relative;
+  width: clamp(140px, 14.5vw, 220px);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero__image img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: var(--bg-alt);
+  /* Custom props the rAF loop writes to */
+  --ox: 0px;
+  --oy: 0px;
+  --rot: 0deg;
+  /* Modern translate/rotate properties layer cleanly with transforms */
+  translate: var(--ox) var(--oy);
+  rotate: calc(var(--base-rot, 0deg) + var(--rot));
+  will-change: translate, rotate;
+  /* Entrance fade */
+  opacity: 0;
+  animation: hero-card-in 1.1s var(--ease) forwards;
+  animation-delay: calc(var(--idx, 0) * 120ms + 200ms);
+}
+.hero__image:nth-child(1) img { --base-rot: -14deg; --idx: 0; }
+.hero__image:nth-child(2) img { --base-rot:  -6deg; --idx: 1; }
+.hero__image:nth-child(3) img { --base-rot:   2deg; --idx: 2; transform: scale(1.04); }
+.hero__image:nth-child(4) img { --base-rot:   8deg; --idx: 3; }
+.hero__image:nth-child(5) img { --base-rot:  16deg; --idx: 4; }
+
+@keyframes hero-card-in {
+  from { opacity: 0; scale: 0.85; }
+  to   { opacity: 1; scale: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero__image img { animation: none; opacity: 1; }
+}
+
+/* ============================================================
+   ABOUT — two-column layout: portrait + bio
+   ============================================================ */
+.about {
+  max-width: 1180px;
+  margin: clamp(80px, 14vh, 180px) auto;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.4fr);
+  gap: clamp(30px, 5vw, 80px);
+  align-items: center;
+  text-align: left;
+}
+.about__photo figure {
+  margin: 0;
+}
+.about__photo-frame {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-alt);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.about__photo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Friendly placeholder if wendy-portrait.jpg isn't present */
+.about__photo-frame.missing {
+  background:
+    repeating-linear-gradient(45deg, var(--bg-alt) 0 12px, color-mix(in srgb, var(--bg-alt) 70%, var(--ghost)) 12px 24px);
+}
+.about__photo-frame.missing::after {
+  content: "Drop  wendy-portrait.jpg  in this folder";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--body-font);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  padding: 0 20px;
+}
+.about__caption {
+  margin: 14px 0 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.about__copy { min-width: 0; }
+.about .bio {
+  font-family: var(--serif-font);
+  font-size: clamp(22px, 2.2vw, 32px);
+  font-style: italic;
+  line-height: 1.35;
+  margin: 0 0 24px 0;
+  color: var(--ink);
+}
+.about .link {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+@media (max-width: 720px) {
+  .about {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+  .about__photo { max-width: 360px; }
+}
+
+/* ============================================================
+   FEATURED WORK
+   ============================================================ */
+.featured {
+  margin-top: clamp(80px, 12vh, 160px);
+  padding-top: clamp(40px, 8vh, 100px);
+  border-top: 1px solid var(--rule);
+  text-align: center;
+}
+.featured .display {
+  font-size: clamp(46px, 8vw, 110px);
+}
+.featured-sub {
+  font-family: var(--serif-font);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 18px;
+  margin: 16px 0 clamp(50px, 8vh, 110px) 0;
+}
+
+/* ------------------------------------------------------------
+   Featured Work carousel — Spencer-style.
+   Three tiles visible at a time:
+     - flank-left (rotated, partially overlapped behind center)
+     - active    (centered, larger, label pill below)
+     - flank-right
+   Tiles further out slide off-screen and fade. Click a flank to
+   rotate it into focus; click the active tile to open the shoot.
+   ------------------------------------------------------------ */
+.featured-carousel {
+  --tile-w: clamp(240px, 28vw, 420px);
+  --tile-h: clamp(320px, 50vh, 540px);
+  position: relative;
+  width: 100%;
+  height: var(--tile-h);
+  margin: 0 auto;
+  /* Allow flanking tiles to extend past the section's content box. The
+     containing section has horizontal padding, but the carousel itself
+     should let tiles ride to the edges of the viewport. */
+  outline: none;
+}
+.featured-carousel:focus-visible {
+  /* Subtle keyboard-focus ring on the carousel container itself, since
+     individual tiles can't easily host a ring while they're transformed. */
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: var(--radius);
+}
+
+.ftile {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  margin-left: calc(var(--tile-w) / -2);
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  /* Default: hidden / off-screen. State classes (.active, .flank-left,
+     etc.) override these with the per-position transform + opacity. */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(0) scale(0.55) rotate(0deg);
+  transform-origin: 50% 60%;
+  transition:
+    transform 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity   0.5s  var(--ease),
+    box-shadow 0.5s var(--ease);
+  will-change: transform, opacity;
+}
+.ftile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: var(--bg-alt);
+}
+.ftile__label {
+  position: absolute;
+  left: 50%;
+  bottom: -28px;
+  transform: translateX(-50%) translateY(8px);
+  background: var(--ink);
+  color: var(--bg);
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+  pointer-events: none;
+}
+[data-theme="dark"] .ftile__label {
+  background: var(--bg-alt);
+  color: var(--ink);
+}
+
+/* --- Position states --- */
+.ftile.active {
+  transform: translateX(0) scale(1) rotate(-2deg);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 3;
+}
+.ftile.active .ftile__label {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.ftile.flank-left {
+  transform: translateX(-90%) scale(0.78) rotate(-9deg);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+.ftile.flank-right {
+  transform: translateX(90%) scale(0.78) rotate(8deg);
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+/* Far positions: slid further out, fading away. Kept in the DOM so the
+   transition reads naturally as they move past the flank slots. */
+.ftile.far-left {
+  transform: translateX(-180%) scale(0.6) rotate(-13deg);
+  opacity: 0;
+  z-index: 0;
+}
+.ftile.far-right {
+  transform: translateX(180%) scale(0.6) rotate(13deg);
+  opacity: 0;
+  z-index: 0;
+}
+
+/* Focal-tile hover lift — like the gallery tiles, just a touch bigger. */
+.ftile.active:hover {
+  transform: translateX(0) scale(1.025) rotate(-2deg);
+}
+.ftile.flank-left:hover {
+  transform: translateX(-86%) scale(0.81) rotate(-7deg);
+}
+.ftile.flank-right:hover {
+  transform: translateX(86%) scale(0.81) rotate(6deg);
+}
+
+/* --- Dot indicators --- */
+.featured-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: clamp(56px, 8vh, 96px) auto 0;
+}
+.featured-dots button {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ghost);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.3s var(--ease), transform 0.3s var(--ease);
+}
+.featured-dots button:hover { background: var(--muted); }
+.featured-dots button.on {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ftile { transition: opacity 0.3s linear; }
+}
+
+/* ============================================================
+   ALL WORK
+   ============================================================ */
+.all-work {
+  margin-top: clamp(100px, 16vh, 200px);
+  padding-top: clamp(40px, 8vh, 100px);
+  border-top: 1px solid var(--rule);
+}
+.all-work .display.secondary {
+  font-size: clamp(40px, 7vw, 100px);
+  text-align: center;
+  color: var(--ghost);
+  margin-bottom: clamp(40px, 6vh, 80px);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  justify-content: center;
+  margin-bottom: clamp(40px, 6vh, 80px);
+}
+.filter {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+  transition: all 0.25s var(--ease);
+}
+.filter:hover { color: var(--ink); border-color: var(--ink); }
+.filter.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+/* Uniform grid — every tile is the same 4:5 portrait, like the hero cards.
+   No more masonry; the photos themselves do the talking. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(14px, 2vw, 28px);
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.grid .tile {
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--bg-alt);
+  border: none;
+  padding: 0;
+  /* Reveal-on-scroll: just a fade — the continuous bob already gives
+     the tile life, so we don't need a translate-up entrance. */
+  opacity: 0;
+  /* Continuous gentle bob, staggered per-tile via --i (set in JS). The
+     negative animation-delay scatters each tile's start phase across
+     the cycle so the grid breathes instead of bobbing in lockstep —
+     same idea as the hero cards' multi-card wander, just calmer. */
+  animation: tile-float 7s ease-in-out calc(var(--i, 0) * -310ms) infinite;
+  /* The bob uses `transform`; the hover lift uses individual translate/
+     rotate/scale properties so the two layers compose without fighting. */
+  transition: opacity 0.7s var(--ease),
+              translate 0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              rotate    0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              scale     0.55s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.5s var(--ease);
+  will-change: transform, translate, rotate, scale;
+}
+.grid .tile.in { opacity: 1; }
+.grid .tile.hidden { display: none; }
+.grid .tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: scale 1.2s var(--ease);
+}
+.grid .tile:hover {
+  z-index: 2;
+  /* Springy lift + slight rotate, echoing the rubbery feel of the hero
+     cards. --hover-rot is set per-tile in JS so adjacent tiles tilt
+     in different directions, mimicking the hero stack's varied base-rot. */
+  translate: 0 -10px;
+  rotate: var(--hover-rot, -1.2deg);
+  scale: 1.025;
+  box-shadow: var(--shadow);
+}
+.grid .tile:hover img { scale: 1.05; }
+.grid .tile::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.35));
+  opacity: 0;
+  transition: opacity 0.4s var(--ease);
+  pointer-events: none;
+}
+.grid .tile:hover::after { opacity: 1; }
+.grid .tile .cat {
+  position: absolute;
+  bottom: 14px; left: 14px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+}
+.grid .tile .view {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s var(--ease) 60ms, transform 0.4s var(--ease) 60ms;
+}
+.grid .tile:hover .cat,
+.grid .tile:hover .view { opacity: 1; transform: translateY(0); }
+
+/* Subtle continuous floating motion. Echoes the hero cards' wander but
+   is much calmer (a few px translate, fractional-degree rotate) — the
+   gallery is supporting cast, not the lead. */
+@keyframes tile-float {
+  0%   { transform: translate(0px, 0px)   rotate(0deg);    }
+  25%  { transform: translate(3px, -5px)  rotate(0.55deg); }
+  50%  { transform: translate(-3px, 2px)  rotate(-0.5deg); }
+  75%  { transform: translate(-2px, -3px) rotate(0.35deg); }
+  100% { transform: translate(0px, 0px)   rotate(0deg);    }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grid .tile { animation: none; }
+}
+
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  /* Pull the carousel tile down a notch on tablet so flanks still read. */
+  .featured-carousel {
+    --tile-w: clamp(220px, 36vw, 360px);
+    --tile-h: clamp(300px, 56vw, 460px);
+  }
+}
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  /* On phones, the flanks tuck right against the active tile's edges. */
+  .featured-carousel {
+    --tile-w: clamp(200px, 60vw, 280px);
+    --tile-h: clamp(260px, 80vw, 360px);
+  }
+  .ftile.flank-left  { transform: translateX(-78%) scale(0.7) rotate(-8deg); }
+  .ftile.flank-right { transform: translateX(78%)  scale(0.7) rotate(7deg); }
+  .card-stack { height: 60vw; }
+  .card { width: 38vw; }
+}
+
+/* ============================================================
+   CONTACT — fixed under main, revealed as main scrolls past
+   ============================================================ */
+.contact {
+  position: fixed;
+  inset: auto 0 0 0;            /* pin to bottom of viewport */
+  /* Use 100dvh on browsers that support it; fall back to 100vh. */
+  height: 100vh;
+  height: 100dvh;
+  z-index: 1;
+  background: var(--bg-alt);
+  overflow: hidden;
+  padding: 0 clamp(20px, 4vw, 60px);
+}
+.contact-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.contact-mega {
+  /* Anchored to the bottom of the panel (just above the contact info)
+     so when scaleY grows the word stretches *upward* only — the bottom
+     edge stays put. Same anchor strategy as jackdanielvo and Spencer's. */
+  position: absolute;
+  left: 50%;
+  bottom: clamp(160px, 22vh, 260px);
+  margin: 0;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: clamp(100px, 24vw, 420px);
+  line-height: 0.85;
+  color: var(--bg);
+  letter-spacing: -0.02em;
+  user-select: none;
+  white-space: nowrap;
+  /* scaleY is driven by --reveal (set by the scroll listener in JS).
+     transform-origin: center bottom = the bottom edge stays anchored;
+     the top edge sweeps upward as the word stretches. */
+  transform: translateX(-50%) scaleY(var(--reveal, 0));
+  transform-origin: center bottom;
+  will-change: transform;
+}
+[data-theme="dark"] .contact-mega {
+  color: var(--bg-alt);
+  -webkit-text-stroke: 1px var(--ghost);
+}
+.contact-info {
+  /* Pinned near the bottom so it sits below the stretched word. */
+  position: absolute;
+  left: 0; right: 0;
+  bottom: clamp(70px, 12vh, 120px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  text-align: center;
+}
+.contact-info p {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.contact-info a { border-bottom: none; }
+.contact-info a:hover { color: var(--accent); }
+.copyright {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: clamp(24px, 4vh, 44px);
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* When the shoot view is open, the fixed contact shouldn't peek through. */
+body.shoot-open .contact { display: none; }
+
+/* ============================================================
+   SHOOT view — full-screen takeover, magazine-style layout
+   ============================================================ */
+.shoot {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 600;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+}
+.shoot.open {
+  display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+.shoot__bar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  padding: 18px clamp(20px, 4vw, 50px);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--rule);
+  z-index: 5;
+}
+.shoot__close {
+  background: transparent;
+  border: 1px solid var(--rule);
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  font-size: 22px;
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  transition: all 0.25s var(--ease);
+}
+.shoot__close:hover { color: var(--accent); border-color: var(--accent); transform: rotate(90deg); }
+.shoot__crumb { margin: 0; text-align: center; color: var(--muted); }
+.shoot__crumb span[data-role="num"] { color: var(--ink); }
+.shoot__nav { display: flex; gap: 6px; justify-self: end; }
+.shoot__nav button {
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s var(--ease);
+}
+.shoot__nav button:hover { color: var(--ink); border-color: var(--ink); }
+.shoot__nav .caps { display: inline; }
+
+.shoot__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(20px, 3vw, 40px);
+  padding: clamp(30px, 6vh, 80px) clamp(16px, 4vw, 60px);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+.shoot__photo {
+  width: 100%;
+  max-width: 900px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--bg-alt);
+  opacity: 0;
+  transform: translateY(28px);
+  animation: shoot-photo-in 0.9s var(--ease) forwards;
+}
+.shoot__photo:nth-child(1) { animation-delay: 80ms; }
+.shoot__photo:nth-child(2) { animation-delay: 220ms; max-width: 760px; align-self: flex-end; }
+.shoot__photo:nth-child(3) { animation-delay: 360ms; max-width: 700px; align-self: flex-start; }
+.shoot__photo:nth-child(4) { animation-delay: 500ms; max-width: 820px; }
+.shoot__photo:nth-child(5) { animation-delay: 640ms; max-width: 680px; align-self: center; }
+.shoot__photo img { width: 100%; height: auto; display: block; }
+@keyframes shoot-photo-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.shoot__foot {
+  padding: clamp(30px, 6vh, 60px) 20px;
+  text-align: center;
+  border-top: 1px solid var(--rule);
+}
+.shoot__foot a {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .shoot__bar { grid-template-columns: auto auto; gap: 12px; }
+  .shoot__crumb { display: none; }
+  .shoot__nav button .caps { display: none; }
+  .shoot__nav button { padding: 8px 12px; }
+}
+
+/* When the shoot is open, lock body scroll */
+body.shoot-open { overflow: hidden; }
+
+/* ============================================================
+   Reveal-on-scroll
+   ============================================================ */
+.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+.reveal.in { opacity: 1; transform: translateY(0); }

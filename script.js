@@ -1,0 +1,748 @@
+/* ============================================================
+   Wendy Shapero — Site script
+   - Hero photo row with continuous Spencer-style floating motion.
+   - Photos open as a full-screen "shoot" takeover (URL-routed via
+     hash so each shoot is shareable).
+   - Subjects load from data/photos.json (auto-synced from Pixieset)
+     and gracefully fall back to a hardcoded Krop dataset if that
+     file isn't present yet.
+   ============================================================ */
+
+// ============================================================
+// LEGACY KROP FALLBACK — used when data/photos.json isn't there.
+// You normally won't need to edit any of this; the Pixieset sync
+// produces the live data.
+// ============================================================
+const KROP = (h) => `https://album.krop.com/${h}/850w.jpg`;
+
+const LEGACY_PHOTOS = {
+  women: [
+    "ea9e93cc0b8046c0","2ec1758036ea4aac","024c0d8ee39a4482","9c5147a6725f42c1",
+    "f2215b05ee5444ec","f86b3e722e4e489f","3a6fcee1ba2b489a","015720e6750246eb",
+    "5994e85576704141","8f290eff6df64df7","931681e5eeac4e2c","bd3fa8eaeb0c49b8",
+    "fac8decd562144af","61a6600bda164c3b","021f102a537f4273","a3b89cc466b348b0",
+    "92f658c0c2d04e34","36794aa9191f4a71","153946089a7b4123","790a0722f93f4d3f",
+    "02332563844c49bc","c0e016f2f43848a5","1fea9041c0a14c75","d337f98890ce46f1",
+    "fe896d4cc2f54061","d232ac5ed84048f7","b12549d8b9f14e24","520ebc4689104e7f"
+  ],
+  men: [
+    "47dd7c07ee664567","b651c2a8af6b4a92","54c20933a2064b0e","1c999e3be1d345e6",
+    "965f7e1c6abb4a51","3488b2b1ec6c4a6b","d5ca4a994b8d4d81","1197f19514544be1",
+    "fbd743d33afb4432","f848a5ebdcf44d11","694dfa75af4d49f3","60112774dbda4ffa",
+    "f7c661dca4564827","36d37dd7abac42db","b82ae8da04614a52","d0df13477589426f",
+    "7f4032b5a0fb41da","f657586f87f846a0","a2a59d4b6b144d83"
+  ],
+  kids: [
+    "bbe3464b1c664d6f","8a121179eeda4ddf","7ac372850acb4ffc","cc4a2674df984438",
+    "e87d478866b64a52","ffd366f6c4824449","27fb9eb35b224f7a","b81fb4de9621470a",
+    "b37aac1c58724c73","ef1cd3ecb708486a"
+  ],
+  animals: [
+    "c36c324a069e4ebe","a0e68e208d524aae","4bdcb7f7304c4732","30bb66a92fef436b",
+    "51b508db15d340e6","df1b253f12a844be","81027d403e1f41c2","887da5fea29245b4",
+    "2edae965276446f0"
+  ],
+  products: [
+    "6316e849ec3c4ff7","032ed84d336f43ed","1dceb0b1bb5d4831","fc2841e2a5ba43d2",
+    "7c9b441c128c4624","00167304773b477b","77abd05f15164288"
+  ]
+};
+
+const CAT_LABEL = {
+  women:    "Women",
+  men:      "Men",
+  kids:     "Kids & Families",
+  animals:  "Animals",
+  products: "Products",
+  events:   "Events",
+  headshots:"Headshots"
+};
+
+// ============================================================
+// Subject loading — Pixieset JSON first, Krop fallback.
+// ============================================================
+function loadSubjects() {
+  // 1) Auto-synced Pixieset data is loaded as a sibling <script src="data/photos.js">
+  //    that sets window.WENDY_PHOTOS — works over file:// too (no fetch).
+  const synced = window.WENDY_PHOTOS;
+  if (synced && Array.isArray(synced.subjects) && synced.subjects.length) {
+    return {
+      source: "pixieset",
+      generatedAt: synced.generatedAt,
+      featured: Array.isArray(synced.featured) ? synced.featured.slice() : null,
+      heroPhotos: Array.isArray(synced.heroPhotos) ? synced.heroPhotos.slice() : null,
+      // Grid curation: allowlist of slugs (in order), blocklist of slugs,
+      // and per-shoot thumbnail overrides. All optional.
+      gridShoots: Array.isArray(synced.gridShoots) ? synced.gridShoots.slice() : null,
+      excludeShoots: Array.isArray(synced.excludeShoots) ? synced.excludeShoots.slice() : null,
+      leadPhotos: (synced.leadPhotos && typeof synced.leadPhotos === "object") ? { ...synced.leadPhotos } : null,
+      subjects: synced.subjects.map((s, i) => ({
+        id: s.id || s.slug,
+        cat: s.cat || "events",
+        label: s.title || s.label,
+        date: s.date || null,
+        num: i + 1,
+        photoUrls: (s.photos || []).map((p) =>
+          typeof p === "string" ? p : (p.url || p)
+        ),
+      })),
+    };
+  }
+  // 2) Fallback: build from the hardcoded Krop dataset
+  const subjects = [];
+  for (const cat of Object.keys(LEGACY_PHOTOS)) {
+    let idx = 1;
+    for (const hash of LEGACY_PHOTOS[cat]) {
+      subjects.push({
+        id: `${cat}-${String(idx).padStart(2, "0")}`,
+        cat,
+        date: null,
+        num: idx,
+        photoUrls: [KROP(hash)],
+      });
+      idx++;
+    }
+  }
+  return { source: "legacy", subjects };
+}
+
+// ============================================================
+// Util
+// ============================================================
+function seededShuffle(arr, seed = 7) {
+  const a = arr.slice();
+  let s = seed;
+  const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function catLabel(cat) {
+  return CAT_LABEL[cat] || (cat ? cat[0].toUpperCase() + cat.slice(1) : "Other");
+}
+
+// ============================================================
+// State
+// ============================================================
+let SUBJECTS = [];
+let SUBJECT_BY_ID = {};
+
+// ============================================================
+// HERO — Spencer-style floating photo row
+// ============================================================
+function buildHero(subjects, heroPhotosConfig) {
+  const row = document.getElementById("heroImages");
+  if (!row) return;
+  row.innerHTML = "";
+  // Pick 5 lead photos from across categories for variety, OR honor Wendy's
+  // explicit heroPhotos curation from the config.
+  const heroes = pickHeroes(subjects, heroPhotosConfig, 5);
+  heroes.forEach((url) => {
+    const wrap = document.createElement("div");
+    wrap.className = "hero__image";
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "";
+    img.loading = "eager";
+    img.decoding = "async";
+    wrap.appendChild(img);
+    row.appendChild(wrap);
+  });
+  startHeroDrift(row);
+}
+
+// Resolve a single heroPhotos config entry into a photo URL.
+// An entry can be:
+//   - a string slug          → that subject's lead (first) photo
+//   - "slug#3"                → that subject's photo at index 3 (zero-based)
+//   - { slug, index }         → same as above
+//   - { url: "https://..." }  → use this URL directly (lets Wendy pin a
+//                                specific image even if the slug isn't on the
+//                                Pixieset homepage yet)
+function resolveHeroEntry(entry, byId) {
+  if (!entry) return null;
+  if (typeof entry === "string") {
+    const m = entry.match(/^([\w-]+)(?:#(\d+))?$/);
+    if (!m) return null;
+    const subj = byId[m[1]];
+    if (!subj) return null;
+    const idx = m[2] ? parseInt(m[2], 10) : 0;
+    return subj.photoUrls[idx] || subj.photoUrls[0];
+  }
+  if (typeof entry === "object") {
+    if (entry.url) return entry.url;
+    if (entry.slug) {
+      const subj = byId[entry.slug];
+      if (!subj) return null;
+      return subj.photoUrls[entry.index || 0] || subj.photoUrls[0];
+    }
+  }
+  return null;
+}
+
+function pickHeroes(subjects, heroPhotosConfig, n) {
+  if (!subjects.length) return [];
+  // 1) Wendy's explicit curation wins.
+  if (Array.isArray(heroPhotosConfig) && heroPhotosConfig.length) {
+    const byId = Object.fromEntries(subjects.map((s) => [s.id, s]));
+    const picks = heroPhotosConfig
+      .map((e) => resolveHeroEntry(e, byId))
+      .filter(Boolean);
+    if (picks.length) return picks.slice(0, n);
+  }
+  // 2) Auto: lead photo from up to n distinct categories, then fill with the rest.
+  const byCat = new Map();
+  for (const s of subjects) {
+    if (!byCat.has(s.cat)) byCat.set(s.cat, s.photoUrls[0]);
+  }
+  const fromCats = Array.from(byCat.values()).slice(0, n);
+  const extras = subjects.map(s => s.photoUrls[0]).filter(u => !fromCats.includes(u));
+  return [...fromCats, ...extras].slice(0, n);
+}
+function startHeroDrift(row) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const imgs = Array.from(row.querySelectorAll("img"));
+  const start = performance.now();
+  let lastT = start;
+
+  // Per-card seeds. Two layers of motion are blended together:
+  //  1) A subtle continuous "wander" (layered sines)         — the alive idle.
+  //  2) A spring that chases a mouse-driven target           — the elastic kick.
+  // The spring is what makes the motion feel rubbery: it overshoots, wobbles,
+  // and settles, instead of linearly interpolating like the previous version.
+  const seeds = imgs.map((_, i) => {
+    const idx = i - (imgs.length - 1) / 2; // signed index, e.g. -2..-1..0..1..2
+    return {
+      // Idle wander
+      pX: i * 1.7 + 0.3, pY: i * 2.1 + 1.1, pR: i * 1.3 + 0.7,
+      aX: 12 + (i % 2) * 5,                 // softer than before — spring carries more of the energy
+      aY:  9 + ((i + 1) % 2) * 4,
+      aR: 0.7 + (i % 3) * 0.3,
+      sX: 0.34 + i * 0.04, sY: 0.27 + i * 0.05, sR: 0.21 + i * 0.03,
+      // Spring "depths" — outer cards target a bigger offset on cursor extremes.
+      // Smaller than before so the bouncing feels contained, not chaotic.
+      depthX: idx * 80,
+      depthY: 38 - Math.abs(idx) * 11,
+      depthR: idx * 5,
+      // Spring physics constants per axis. Slightly varied per card so they
+      // don't all wobble in lockstep — feels more like Jell-O than a rigid rig.
+      // damping ratio ≈ c / (2*sqrt(k))  → ~0.5 for noticeable bounce.
+      kX: 95 + (i % 3) * 18, cX: 10.5 + (i % 2) * 1.5,
+      kY: 105 + (i % 3) * 14, cY: 11.5 + (i % 2) * 1.2,
+      kR: 80 + (i % 3) * 12,  cR: 9.5 + (i % 2) * 0.8,
+    };
+  });
+
+  // Per-card spring state.
+  const springs = imgs.map(() => ({ x: 0, vx: 0, y: 0, vy: 0, r: 0, vr: 0 }));
+
+  // Mouse target — fed straight into the spring (no pre-lerp; the spring is
+  // the smoother, and that's where the rubbery feel lives).
+  let targetMX = 0, targetMY = 0;
+  function onMove(e) {
+    const r = row.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    // Slightly under-scaled so even at viewport edges the targets are reasonable
+    // — bounds clamping is the safety net, but we want the spring to feel
+    // like it's reaching, not slamming the wall.
+    targetMX = Math.max(-1.05, Math.min(1.05, (e.clientX - cx) / (r.width / 2)));
+    targetMY = Math.max(-1.05, Math.min(1.05, (e.clientY - cy) / (r.height / 2)));
+  }
+  function onLeave() { targetMX = 0; targetMY = 0; }
+  window.addEventListener("mousemove", onMove, { passive: true });
+  window.addEventListener("mouseleave", onLeave, { passive: true });
+
+  // Per-card horizontal travel limits so cards never escape the viewport.
+  // Recomputed on resize; tracks each card's natural (zero-offset) rect.
+  const PAD = 8;
+  let bounds = imgs.map(() => ({ minX: -Infinity, maxX: Infinity }));
+  function recomputeBounds() {
+    bounds = imgs.map((img) => {
+      const ox = img.style.getPropertyValue("--ox");
+      const oy = img.style.getPropertyValue("--oy");
+      img.style.setProperty("--ox", "0px");
+      img.style.setProperty("--oy", "0px");
+      const r = img.getBoundingClientRect();
+      img.style.setProperty("--ox", ox || "0px");
+      img.style.setProperty("--oy", oy || "0px");
+      const vw = window.innerWidth;
+      const minX = -r.left + PAD;
+      const maxX = vw - r.right - PAD;
+      return {
+        minX: Number.isFinite(minX) ? minX : 0,
+        maxX: Number.isFinite(maxX) ? maxX : 0,
+      };
+    });
+  }
+  setTimeout(recomputeBounds, 100);
+  window.addEventListener("resize", recomputeBounds);
+
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+  function frame(now) {
+    const t = (now - start) / 1000;
+    let dt = (now - lastT) / 1000;
+    // Cap dt to keep the spring stable after tab-switch / long pause.
+    if (dt > 0.04) dt = 0.04;
+    lastT = now;
+
+    for (let i = 0; i < imgs.length; i++) {
+      const s = seeds[i];
+      const sp = springs[i];
+
+      // 1) Idle wander (single-layer sines — calmer than before)
+      const wx = Math.sin(t * s.sX + s.pX) * s.aX;
+      const wy = Math.cos(t * s.sY + s.pY) * s.aY;
+      const wr = Math.sin(t * s.sR + s.pR) * s.aR;
+
+      // 2) Spring chases the mouse-driven target.  Hooke + viscous damping:
+      //      acc = (target - x) * k  -  v * c
+      //    With k ~ 100, c ~ 11 → underdamped → it overshoots, wobbles, settles.
+      const tX = targetMX * s.depthX;
+      const tY = targetMY * s.depthY;
+      const tR = targetMX * s.depthR;
+      const aX = (tX - sp.x) * s.kX - sp.vx * s.cX;
+      const aY = (tY - sp.y) * s.kY - sp.vy * s.cY;
+      const aR = (tR - sp.r) * s.kR - sp.vr * s.cR;
+      sp.vx += aX * dt; sp.x += sp.vx * dt;
+      sp.vy += aY * dt; sp.y += sp.vy * dt;
+      sp.vr += aR * dt; sp.r += sp.vr * dt;
+
+      // Composite + clamp so the card stays on-screen even mid-overshoot.
+      const b = bounds[i];
+      const x = clamp(wx + sp.x, b.minX, b.maxX);
+      imgs[i].style.setProperty("--ox", x.toFixed(2) + "px");
+      imgs[i].style.setProperty("--oy", (wy + sp.y).toFixed(2) + "px");
+      imgs[i].style.setProperty("--rot", (wr + sp.r).toFixed(2) + "deg");
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+  let rafId = requestAnimationFrame(frame);
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && !rafId) {
+        lastT = performance.now();   // reset dt on resume so spring doesn't lurch
+        rafId = requestAnimationFrame(frame);
+      } else if (!e.isIntersecting && rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    });
+  });
+  io.observe(row);
+}
+
+// ============================================================
+// FEATURED — Wendy's hand-picked shoots (or hidden if she hasn't picked any)
+//
+// Source of truth (in priority order):
+//   1. window.WENDY_PHOTOS.featured = ["slug1", "slug2", ...]
+//   2. (no fallback) — the section is hidden, since the main grid below
+//      already shows every shoot.
+//
+// To curate, edit `featured` in scripts/pixieset.config.json — or, for a
+// quick local override, scripts/featured.local.json — and re-run sync.
+// ============================================================
+function buildFeatured(subjects, featuredSlugs) {
+  const section = document.querySelector(".featured");
+  const carousel = document.getElementById("featuredCarousel");
+  const dotsEl   = document.getElementById("featuredDots");
+  if (!section || !carousel) return;
+  carousel.innerHTML = "";
+  if (dotsEl) dotsEl.innerHTML = "";
+
+  const subjectsById = Object.fromEntries(subjects.map((s) => [s.id, s]));
+  const picks = (featuredSlugs || [])
+    .map((slug) => subjectsById[slug])
+    .filter(Boolean);
+  // No picks → hide the whole section so we don't show an arbitrary curation.
+  if (!picks.length) {
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "";
+
+  // Start with the middle item focal — like Spencer's site, the carousel
+  // is balanced on first paint with one flank on each side.
+  let active = Math.min(picks.length - 1, Math.floor(picks.length / 2));
+
+  // Build a tile per pick and a dot per pick. Tiles use button (so it's
+  // keyboard-activatable); dots are buttons too.
+  const tiles = picks.map((subj, i) => {
+    const tile = document.createElement("button");
+    tile.className = "ftile";
+    tile.dataset.i = i;
+    tile.dataset.subjectId = subj.id;
+    tile.setAttribute("aria-label",
+      `${subj.label || catLabel(subj.cat)} — featured shoot ${i + 1} of ${picks.length}`);
+    tile.innerHTML =
+      `<img src="${subj.photoUrls[0]}" alt="" loading="lazy"/>` +
+      `<span class="ftile__label caps">${subj.label || catLabel(subj.cat)}</span>`;
+    tile.addEventListener("click", () => {
+      // Click the focal tile → open the shoot. Click a flank → rotate it
+      // to focus first; the user clicks again to open. Same UX as Spencer's.
+      if (i === active) {
+        openShoot(subj.id);
+      } else {
+        active = i;
+        layout();
+      }
+    });
+    carousel.appendChild(tile);
+    return tile;
+  });
+
+  const dots = picks.map((_, i) => {
+    if (!dotsEl) return null;
+    const dot = document.createElement("button");
+    dot.setAttribute("aria-label", `Show featured shoot ${i + 1}`);
+    dot.addEventListener("click", () => { active = i; layout(); });
+    dotsEl.appendChild(dot);
+    return dot;
+  });
+
+  function layout() {
+    tiles.forEach((tile, i) => {
+      const rel = i - active;
+      tile.classList.remove("active", "flank-left", "flank-right", "far-left", "far-right");
+      if (rel === 0)        tile.classList.add("active");
+      else if (rel === -1)  tile.classList.add("flank-left");
+      else if (rel === 1)   tile.classList.add("flank-right");
+      else if (rel < -1)    tile.classList.add("far-left");
+      else                  tile.classList.add("far-right");
+    });
+    dots.forEach((dot, i) => {
+      if (!dot) return;
+      dot.classList.toggle("on", i === active);
+    });
+  }
+  layout();
+
+  // Keyboard nav when the carousel container has focus. Arrow Left/Right
+  // shifts active by one (clamped — non-wrapping, like Spencer's). Enter
+  // / Space on the focused tile is already handled by the <button> default.
+  carousel.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" && active > 0) {
+      active--; layout(); e.preventDefault();
+    } else if (e.key === "ArrowRight" && active < tiles.length - 1) {
+      active++; layout(); e.preventDefault();
+    }
+  });
+}
+
+// Resolve the thumbnail URL for a grid tile. Falls back to the shoot's
+// first photo when no override is configured for this subject.
+function resolveLeadPhoto(subj, leadPhotos) {
+  const fallback = subj.photoUrls[0];
+  if (!leadPhotos) return fallback;
+  const pick = leadPhotos[subj.id];
+  if (pick == null) return fallback;
+  // Number → photo index into this subject's photo list.
+  if (typeof pick === "number" && Number.isFinite(pick)) {
+    return subj.photoUrls[pick] || fallback;
+  }
+  if (typeof pick === "string") {
+    // Full URL → pin it directly.
+    if (/^https?:\/\//i.test(pick)) return pick;
+    // "slug#3" or "#3" → pull a specific index from this subject.
+    const m = pick.match(/#(\d+)$/);
+    if (m) return subj.photoUrls[parseInt(m[1], 10)] || fallback;
+    // Bare numeric string fallback.
+    const n = parseInt(pick, 10);
+    if (!isNaN(n)) return subj.photoUrls[n] || fallback;
+  }
+  // Object form: { index } or { url }.
+  if (typeof pick === "object") {
+    if (pick.url) return pick.url;
+    if (typeof pick.index === "number") return subj.photoUrls[pick.index] || fallback;
+  }
+  return fallback;
+}
+
+// ============================================================
+// UNIFORM GRID — every subject's lead photo, with optional curation.
+//   - gridShoots:   allowlist + display order (empty → show all, shuffled)
+//   - excludeShoots: blocklist applied after gridShoots
+//   - leadPhotos:   per-shoot thumbnail override (index, "slug#3", or URL)
+// ============================================================
+function buildGrid(subjects, gridShoots, excludeShoots, leadPhotos) {
+  const grid = document.getElementById("grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  // 1) Pick + order the list of shoots to render.
+  let list;
+  if (Array.isArray(gridShoots) && gridShoots.length) {
+    // Allowlist mode: render exactly these slugs in this order. Unknown
+    // slugs are silently skipped so a typo or stale entry won't break the page.
+    const byId = Object.fromEntries(subjects.map((s) => [s.id, s]));
+    list = gridShoots.map((slug) => byId[slug]).filter(Boolean);
+  } else {
+    // Default: every shoot, in a stable shuffled order.
+    list = seededShuffle(subjects);
+  }
+  // 2) Apply the blocklist.
+  if (Array.isArray(excludeShoots) && excludeShoots.length) {
+    const blocked = new Set(excludeShoots);
+    list = list.filter((s) => !blocked.has(s.id));
+  }
+
+  list.forEach((subj, i) => {
+    const tile = document.createElement("button");
+    tile.className = "tile";
+    tile.dataset.cat = subj.cat;
+    tile.dataset.subjectId = subj.id;
+    // --i drives the staggered phase of the continuous bob (CSS animation
+    // delay). --hover-rot gives each tile a deterministic-but-varied tilt
+    // on hover, so adjacent tiles lean different directions — echoes the
+    // hero cards' alternating base rotations.
+    tile.style.setProperty("--i", i);
+    const rot = (((i * 73 + 11) % 41) - 20) / 10; // pseudo-random in ~[-2°, +2°]
+    tile.style.setProperty("--hover-rot", rot.toFixed(2) + "deg");
+    tile.setAttribute("aria-label", `Open ${catLabel(subj.cat)} shoot`);
+    // 3) Resolve the thumbnail: config override > shoot's first photo.
+    const leadUrl = resolveLeadPhoto(subj, leadPhotos);
+    tile.innerHTML = `
+      <img src="${leadUrl}"
+           alt="${catLabel(subj.cat)} portrait by Wendy Shapero" loading="lazy"/>
+      <span class="cat">${subj.label || catLabel(subj.cat)}</span>
+      <span class="view">View shoot &rarr;</span>
+    `;
+    tile.addEventListener("click", () => openShoot(subj.id));
+    grid.appendChild(tile);
+  });
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    });
+  }, { rootMargin: "0px 0px -10% 0px" });
+  grid.querySelectorAll(".tile").forEach((t) => io.observe(t));
+}
+
+// ============================================================
+// FILTERS — built dynamically from categories present
+// ============================================================
+function buildFilters(subjects) {
+  const filters = document.getElementById("filters");
+  if (!filters) return;
+  const cats = Array.from(new Set(subjects.map((s) => s.cat)));
+  filters.innerHTML = "";
+  const all = btn("all", "All", true);
+  filters.appendChild(all);
+  cats.forEach((cat) => filters.appendChild(btn(cat, catLabel(cat), false)));
+  function btn(cat, label, active) {
+    const b = document.createElement("button");
+    b.className = "filter" + (active ? " active" : "");
+    b.dataset.cat = cat;
+    b.textContent = label;
+    b.addEventListener("click", () => {
+      filters.querySelectorAll(".filter").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+      document.querySelectorAll(".grid .tile").forEach((tile) => {
+        const show = cat === "all" || tile.dataset.cat === cat;
+        tile.classList.toggle("hidden", !show);
+      });
+    });
+    return b;
+  }
+}
+
+// ============================================================
+// SHOOT VIEW — full-screen subject takeover with URL routing
+// ============================================================
+const shootEl = () => document.getElementById("shoot");
+
+function openShoot(subjectId, opts = {}) {
+  const subj = SUBJECT_BY_ID[subjectId];
+  if (!subj) return;
+  const sh = shootEl();
+  sh.querySelector('[data-role="cat"]').textContent = catLabel(subj.cat);
+  sh.querySelector('[data-role="num"]').textContent =
+    subj.label
+      ? subj.label
+      : `Shoot No. ${String(subj.num).padStart(2, "0")}`;
+  const body = document.getElementById("shootBody");
+  body.innerHTML = "";
+  subj.photoUrls.forEach((url) => {
+    const fig = document.createElement("figure");
+    fig.className = "shoot__photo";
+    fig.innerHTML = `<img src="${url}" alt="${catLabel(subj.cat)} portrait by Wendy Shapero" />`;
+    body.appendChild(fig);
+  });
+  // Optional: a date line under the breadcrumb
+  if (subj.date) {
+    const dateEl = sh.querySelector('[data-role="date"]');
+    if (dateEl) dateEl.textContent = subj.date;
+  }
+  sh.classList.add("open");
+  document.body.classList.add("shoot-open");
+  sh.setAttribute("aria-hidden", "false");
+  body.scrollTop = 0;
+  sh.scrollTop = 0;
+  if (!opts.fromHash) {
+    history.pushState({ subjectId }, "", `#/shoot/${subjectId}`);
+  }
+  shootEl().dataset.subjectId = subj.id;
+}
+function closeShoot() {
+  const sh = shootEl();
+  sh.classList.remove("open");
+  document.body.classList.remove("shoot-open");
+  sh.setAttribute("aria-hidden", "true");
+  if (location.hash.startsWith("#/shoot/")) {
+    history.pushState(null, "", location.pathname + location.search);
+  }
+  delete sh.dataset.subjectId;
+}
+function navShoot(dir) {
+  const sh = shootEl();
+  const id = sh.dataset.subjectId;
+  if (!id) return;
+  const idxInList = SUBJECTS.findIndex(s => s.id === id);
+  if (idxInList < 0) return;
+  const next = (idxInList + dir + SUBJECTS.length) % SUBJECTS.length;
+  openShoot(SUBJECTS[next].id);
+  shootEl().scrollTo({ top: 0, behavior: "smooth" });
+}
+function bindShoot() {
+  const sh = shootEl();
+  sh.querySelector(".shoot__close").addEventListener("click", closeShoot);
+  sh.querySelector(".shoot__prev").addEventListener("click", () => navShoot(-1));
+  sh.querySelector(".shoot__next").addEventListener("click", () => navShoot(1));
+  document.addEventListener("keydown", (e) => {
+    if (!sh.classList.contains("open")) return;
+    if (e.key === "Escape") closeShoot();
+    if (e.key === "ArrowLeft") navShoot(-1);
+    if (e.key === "ArrowRight") navShoot(1);
+  });
+  const handleHash = () => {
+    const m = location.hash.match(/^#\/shoot\/([\w-]+)$/);
+    if (m && SUBJECT_BY_ID[m[1]]) {
+      openShoot(m[1], { fromHash: true });
+    } else if (sh.classList.contains("open")) {
+      sh.classList.remove("open");
+      document.body.classList.remove("shoot-open");
+    }
+  };
+  window.addEventListener("popstate", handleHash);
+  window.addEventListener("hashchange", handleHash);
+  handleHash();
+}
+
+// ============================================================
+// THEME, REVEAL, INIT
+// ============================================================
+function bindTheme() {
+  const btn = document.getElementById("themeToggle");
+  const stored = localStorage.getItem("ws-theme");
+  if (stored) document.documentElement.dataset.theme = stored;
+  btn.addEventListener("click", () => {
+    const cur = document.documentElement.dataset.theme === "dark" ? "" : "dark";
+    if (cur) document.documentElement.dataset.theme = cur;
+    else document.documentElement.removeAttribute("data-theme");
+    localStorage.setItem("ws-theme", cur);
+  });
+}
+function setYear() {
+  const el = document.getElementById("year");
+  if (el) el.textContent = new Date().getFullYear();
+}
+
+// Wrap each character of WENDY SHAPERO in a span so CSS can stagger a
+// per-letter fade-up entrance. Run once at load.
+function splitTitle() {
+  const title = document.querySelector(".hero h1.display");
+  if (!title || title.dataset.split) return;
+  const text = title.textContent;
+  title.innerHTML = "";
+  text.split("").forEach((c, i) => {
+    const span = document.createElement("span");
+    if (c === " ") {
+      span.className = "char char--space";
+      span.innerHTML = "&nbsp;";
+    } else {
+      span.className = "char";
+      span.textContent = c;
+    }
+    span.style.setProperty("--i", i);
+    title.appendChild(span);
+  });
+  title.dataset.split = "1";
+}
+function bindReveal() {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+    });
+  }, { rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".about, .featured, .all-work").forEach((s) => {
+    s.classList.add("reveal");
+    io.observe(s);
+  });
+}
+
+// ============================================================
+// CONTACT scroll-driven reveal
+// As the user scrolls into the last ~2 viewports of the page, the giant
+// CONTACT word stretches from scaleY(0) (invisible) up to scaleY(4.2)
+// (fully elongated). Scrolling back up shrinks it again — symmetric.
+// Same trick used on jackdanielvo.com and Spencer Gabor's site.
+// ============================================================
+function bindContactReveal() {
+  const word = document.querySelector(".contact-mega");
+  if (!word) return;
+  const MAX = 4.2;             // peak scaleY at the bottom of the page
+  // Reveal range: the last N viewports of scroll. The .contact-spacer in
+  // CSS must be sized to N viewports too — that alignment is what makes
+  // the word be at scaleY(0) exactly when the contact panel first peeks
+  // out from behind <main>, and reach scaleY(MAX) at the end of scroll.
+  // (Same value jackdanielvo.com uses — 2 viewports of scroll for the
+  // full 0 → 4.2 ramp, half during the panel reveal, half after.)
+  const RANGE_VH = 2;
+  let raf = 0;
+
+  function update() {
+    raf = 0;
+    const doc = document.documentElement;
+    const vh = window.innerHeight || doc.clientHeight;
+    const maxScroll = (doc.scrollHeight - vh);
+    const range = Math.max(1, vh * RANGE_VH);
+    const start = maxScroll - range;
+    const progress = Math.min(1, Math.max(0, (window.scrollY - start) / range));
+    const reveal = (progress * MAX).toFixed(3);
+    word.style.setProperty("--reveal", reveal);
+  }
+  function onScroll() {
+    if (!raf) raf = requestAnimationFrame(update);
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  // Also recalculate after layout settles (images, fonts) since scrollHeight grows.
+  setTimeout(update, 100);
+  setTimeout(update, 800);
+  update();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindTheme();
+  bindReveal();
+  setYear();
+  splitTitle();
+
+  const data = loadSubjects();
+  SUBJECTS = data.subjects;
+  SUBJECT_BY_ID = Object.fromEntries(SUBJECTS.map((s) => [s.id, s]));
+  console.log(`[wendy-site] loaded ${SUBJECTS.length} subjects from ${data.source}` +
+    (data.generatedAt ? ` (synced ${data.generatedAt})` : ""));
+
+  buildHero(SUBJECTS, data.heroPhotos);
+  buildFeatured(SUBJECTS, data.featured);
+  buildGrid(SUBJECTS, data.gridShoots, data.excludeShoots, data.leadPhotos);
+  buildFilters(SUBJECTS);
+  bindContactReveal();
+  bindShoot();
+});
