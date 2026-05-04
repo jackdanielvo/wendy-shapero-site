@@ -76,6 +76,9 @@ function loadSubjects() {
       gridShoots: Array.isArray(synced.gridShoots) ? synced.gridShoots.slice() : null,
       excludeShoots: Array.isArray(synced.excludeShoots) ? synced.excludeShoots.slice() : null,
       leadPhotos: (synced.leadPhotos && typeof synced.leadPhotos === "object") ? { ...synced.leadPhotos } : null,
+      // Editorial mode: when categories is non-null, the home page renders
+      // one carousel section per category instead of Featured + grid.
+      categories: Array.isArray(synced.categories) ? synced.categories.slice() : null,
       subjects: synced.subjects.map((s, i) => ({
         id: s.id || s.slug,
         cat: s.cat || "events",
@@ -573,6 +576,153 @@ function buildFeatured(subjects, featuredSlugs) {
   }, { passive: false });
 }
 
+// ============================================================
+// CATEGORY SECTION (editorial mode)
+//
+// Renders one Spencer-style carousel section per category. Each tile is
+// a different photo from the same Pixieset collection; tapping any tile
+// opens that collection in the existing fullscreen shoot view (matches
+// what Wendy/Jack chose: viewers see the full set in one place rather
+// than clicking in and out of a single-photo lightbox).
+//
+// The DOM is built dynamically and appended below the About section,
+// so the home page can have any number of category sections (4–7 is
+// the sweet spot per the editorial decisions).
+// ============================================================
+function buildCategorySection(subj, catConfig, anchorBefore) {
+  const main = document.querySelector("main");
+  if (!main || !subj) return;
+  const photos = subj.photoUrls || [];
+  if (!photos.length) return;
+
+  const section = document.createElement("section");
+  section.className = "featured category-section";
+  section.dataset.slug = catConfig.slug;
+  const labelHtml = escapeHtml(catConfig.label || subj.label || subj.id);
+  const subHtml = catConfig.subtitle
+    ? `<p class="featured-sub">${escapeHtml(catConfig.subtitle)}</p>`
+    : "";
+  section.innerHTML = `
+    <h2 class="display">${labelHtml}</h2>
+    ${subHtml}
+    <div class="featured-carousel" tabindex="0"
+         role="region" aria-roledescription="carousel" aria-label="${labelHtml}">
+    </div>
+    <div class="featured-dots" aria-hidden="true"></div>
+  `;
+  // Insert above the contact spacer so each section sits in the editorial
+  // flow between About and Contact.
+  if (anchorBefore && anchorBefore.parentNode === main) {
+    main.insertBefore(section, anchorBefore);
+  } else {
+    main.appendChild(section);
+  }
+
+  const carousel = section.querySelector(".featured-carousel");
+  const dotsEl   = section.querySelector(".featured-dots");
+  let active = Math.min(photos.length - 1, Math.floor(photos.length / 2));
+
+  // Build a tile per photo. All tiles in this section share the same
+  // "open the shoot" target — clicking the focal one always opens this
+  // category's full gallery view.
+  const tiles = photos.map((url, i) => {
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "ftile";
+    tile.setAttribute(
+      "aria-label",
+      `${labelHtml} — photo ${i + 1} of ${photos.length}`
+    );
+    tile.innerHTML = `<img src="${url}" alt="" loading="lazy"/>`;
+    tile.addEventListener("click", () => {
+      if (i === active) openShoot(subj.id);
+      else { active = i; layout(); }
+    });
+    carousel.appendChild(tile);
+    return tile;
+  });
+
+  const dots = photos.map((_, i) => {
+    const dot = document.createElement("button");
+    dot.setAttribute("aria-label", `Show photo ${i + 1}`);
+    dot.addEventListener("click", () => { active = i; layout(); });
+    dotsEl.appendChild(dot);
+    return dot;
+  });
+
+  function layout() {
+    tiles.forEach((tile, i) => {
+      const rel = i - active;
+      tile.classList.remove("active", "flank-left", "flank-right", "far-left", "far-right");
+      if (rel === 0)        tile.classList.add("active");
+      else if (rel === -1)  tile.classList.add("flank-left");
+      else if (rel === 1)   tile.classList.add("flank-right");
+      else if (rel < -1)    tile.classList.add("far-left");
+      else                  tile.classList.add("far-right");
+    });
+    dots.forEach((dot, i) => dot.classList.toggle("on", i === active));
+  }
+  layout();
+
+  // Same nav surface as Featured Work: keyboard arrows, mouse wheel,
+  // touch/mouse drag-to-advance.
+  carousel.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" && active > 0) { active--; layout(); e.preventDefault(); }
+    else if (e.key === "ArrowRight" && active < tiles.length - 1) { active++; layout(); e.preventDefault(); }
+  });
+
+  let dragStartX = null, dragStartT = 0, didDrag = false;
+  carousel.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    dragStartX = e.clientX; dragStartT = performance.now(); didDrag = false;
+    try { carousel.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  carousel.addEventListener("pointermove", (e) => {
+    if (dragStartX === null) return;
+    if (Math.abs(e.clientX - dragStartX) > 8) didDrag = true;
+  });
+  carousel.addEventListener("pointerup", (e) => {
+    if (dragStartX === null) return;
+    const dx = e.clientX - dragStartX;
+    const dt = performance.now() - dragStartT;
+    dragStartX = null;
+    if (!didDrag) return;
+    carousel.addEventListener("click", (ce) => {
+      ce.stopPropagation(); ce.preventDefault();
+    }, { capture: true, once: true });
+    const fast = Math.abs(dx) > 20 && Math.abs(dx) / Math.max(dt, 1) > 0.4;
+    if (!(Math.abs(dx) > 50 || fast)) return;
+    if (dx > 0 && active > 0) { active--; layout(); }
+    else if (dx < 0 && active < tiles.length - 1) { active++; layout(); }
+  });
+  carousel.addEventListener("pointercancel", () => { dragStartX = null; didDrag = false; });
+
+  let wheelLockUntil = 0;
+  carousel.addEventListener("wheel", (e) => {
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) < 4) return;
+    const wantsForward = delta > 0;
+    const canForward   = active < tiles.length - 1;
+    const canBackward  = active > 0;
+    if (wantsForward && !canForward)   return;
+    if (!wantsForward && !canBackward) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now < wheelLockUntil) return;
+    if (wantsForward) active++; else active--;
+    layout();
+    wheelLockUntil = now + 350;
+  }, { passive: false });
+}
+
+// Tiny helper so HTML strings injected via innerHTML can't introduce XSS
+// from data file values.
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // Resolve the thumbnail URL for a grid tile. Falls back to the shoot's
 // first photo when no override is configured for this subject.
 function resolveLeadPhoto(subj, leadPhotos) {
@@ -892,9 +1042,34 @@ document.addEventListener("DOMContentLoaded", () => {
     (data.generatedAt ? ` (synced ${data.generatedAt})` : ""));
 
   buildHero(SUBJECTS, data.heroPhotos);
-  buildFeatured(SUBJECTS, data.featured);
-  buildGrid(SUBJECTS, data.gridShoots, data.excludeShoots, data.leadPhotos);
-  buildFilters(SUBJECTS);
+
+  if (Array.isArray(data.categories) && data.categories.length) {
+    // Editorial mode: hide the legacy Featured Work + All Shoots sections
+    // and render one carousel section per category between About and the
+    // contact spacer.
+    const featured = document.querySelector(".featured");
+    const allWork  = document.querySelector(".all-work");
+    if (featured) featured.style.display = "none";
+    if (allWork)  allWork.style.display  = "none";
+    // Insert each category section before the contact spacer (which sits
+    // after </main>, so we anchor before the all-work section that DOES
+    // live inside main).
+    const anchor = allWork || null;
+    for (const cat of data.categories) {
+      const subj = SUBJECT_BY_ID[cat.slug];
+      if (!subj) {
+        console.warn(`[wendy-site] category "${cat.slug}" has no synced data; skipping.`);
+        continue;
+      }
+      buildCategorySection(subj, cat, anchor);
+    }
+  } else {
+    // Legacy mode: original Featured Work carousel + All Shoots grid + filters
+    buildFeatured(SUBJECTS, data.featured);
+    buildGrid(SUBJECTS, data.gridShoots, data.excludeShoots, data.leadPhotos);
+    buildFilters(SUBJECTS);
+  }
+
   bindContactReveal();
   bindShoot();
 });
