@@ -9,17 +9,20 @@
   --ink: #0c0c0c;
   --muted: #6b6b6b;
   --ghost: #d4d4d2;
-  --accent: #ff6b6b;          /* coral pink — Wendy's existing brand color */
+  /* Accent — used for hover states and links. Dark charcoal so the
+     palette stays in the blacks-and-grays family Wendy asked for; the
+     photos themselves carry all the color. */
+  --accent: #2a2a2a;
   --rule: #ececec;
   --shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.18), 0 6px 18px -12px rgba(0, 0, 0, 0.12);
   --radius: 14px;
   --max: 1400px;
   --pad-x: clamp(20px, 5vw, 80px);
-  /* Caveat is the playful handwritten display font used site-wide for
-     headers (WENDYPIX, Featured Work, All Shoots, Contact). To swap to a
-     different display look, change "Caveat" here AND in the Google Fonts
-     link in index.html. */
-  --display-font: "Caveat", "Brush Script MT", cursive, sans-serif;
+  /* Editorial Helvetica display font for site-wide headers (WENDYPIX,
+     FEATURED WORK, ALL SHOOTS, CONTACT). Helvetica regular at large
+     sizes reads tall and architectural — same family as jackdanielvo.
+     System font, no Google Fonts fetch needed. */
+  --display-font: "Helvetica", "Arial", "Helvetica Neue", sans-serif;
   --serif-font: "Instrument Serif", Georgia, serif;
   --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -115,14 +118,13 @@ button { cursor: pointer; font-family: inherit; }
 
 .display {
   font-family: var(--display-font);
-  /* Caveat at 700 has roughly the visual weight of Anton at 400; bump it
-     so headers feel substantial rather than flimsy. */
-  font-weight: 700;
-  letter-spacing: 0;       /* handwritten fonts shouldn't be letter-spaced */
+  /* Helvetica regular reads as tall and architectural at display sizes;
+     bold weights crowd the counters and lose verticality. */
+  font-weight: 400;
+  letter-spacing: -0.02em;  /* tight tracking for editorial feel */
   margin: 0;
-  /* No uppercase: Caveat is handwritten cursive and reads poorly in ALL
-     CAPS. The HTML uses natural Title Case ("Featured Work", etc.). */
-  line-height: 1;
+  text-transform: uppercase;
+  line-height: 0.92;
 }
 
 .kicker {
@@ -163,33 +165,24 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — an SVG image (WendyPix.svg) so we
-   get its multi-color, slightly distressed hand-lettered style. The h1
-   wrapper keeps semantics; the img inside is what's actually displayed. */
-.hero h1.hero-title {
-  margin: 0 0 clamp(20px, 4vh, 60px);
-  /* Center the wordmark and let it fade up on load. */
-  display: flex;
-  justify-content: center;
+/* The big WENDYPIX brand wordmark — uppercase Helvetica regular, in ink
+   black so the photos carry all the color on the page. Same proportions
+   as jackdanielvo's title: tall and architectural, tight tracking,
+   tight line-height. */
+.hero h1.display.brand {
+  font-family: "Helvetica", "Arial", "Helvetica Neue", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  line-height: 0.82;
+  color: var(--ink);
+  font-size: clamp(64px, 13vw, 220px);
 }
-.hero h1.hero-title img {
-  display: block;
-  width: clamp(300px, 70vw, 900px);
-  height: auto;
-  /* Subtle entrance — fade-in + small upward slide, same easing curve
-     as everything else on the page. */
-  opacity: 0;
-  transform: translateY(0.4em);
-  animation: brand-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) 200ms forwards;
-}
-@keyframes brand-in {
-  to { opacity: 1; transform: translateY(0); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero h1.hero-title img {
-    opacity: 1; transform: none; animation: none;
-  }
-}
+.hero h1.display { color: var(--ink); }
+/* Two-tone wordmark: WENDY in ink, PIX in bright plum to give the brand
+   a small color accent without breaking the grayscale rest-of-page. */
+.hero h1.display.brand .brand-wendy { color: var(--ink); }
+.hero h1.display.brand .brand-pix   { color: #b347b9; }
 .hero h1.display {
   color: #8e3a8c;
 }
@@ -811,11 +804,11 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   bottom: clamp(160px, 22vh, 260px);
   margin: 0;
   font-family: var(--display-font);
-  font-weight: 700;
+  font-weight: 400;
   font-size: clamp(100px, 24vw, 420px);
   line-height: 0.85;
   color: var(--bg);
-  letter-spacing: 0;       /* Caveat is connected/cursive; no tracking */
+  letter-spacing: -0.02em;
   user-select: none;
   white-space: nowrap;
   /* scaleY is driven by --reveal (set by the scroll listener in JS).

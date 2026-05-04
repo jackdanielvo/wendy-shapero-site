@@ -791,25 +791,38 @@ function setYear() {
   if (el) el.textContent = new Date().getFullYear();
 }
 
-// Wrap each character of WENDY SHAPERO in a span so CSS can stagger a
-// per-letter fade-up entrance. Run once at load.
+// Wrap each character of the brand wordmark in a span so CSS can stagger
+// a per-letter fade-up entrance. Recurses into element children (e.g.
+// <span class="brand-wendy">) so the wrapping spans we use for two-tone
+// coloring are preserved — the .char spans land *inside* them. Run once
+// at load.
 function splitTitle() {
   const title = document.querySelector(".hero h1.display");
   if (!title || title.dataset.split) return;
-  const text = title.textContent;
-  title.innerHTML = "";
-  text.split("").forEach((c, i) => {
-    const span = document.createElement("span");
-    if (c === " ") {
-      span.className = "char char--space";
-      span.innerHTML = "&nbsp;";
-    } else {
-      span.className = "char";
-      span.textContent = c;
+  let i = 0;
+  function processNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const frag = document.createDocumentFragment();
+      for (const c of node.textContent) {
+        const span = document.createElement("span");
+        if (c === " ") {
+          span.className = "char char--space";
+          span.innerHTML = "&nbsp;";
+        } else {
+          span.className = "char";
+          span.textContent = c;
+        }
+        span.style.setProperty("--i", i++);
+        frag.appendChild(span);
+      }
+      node.parentNode.replaceChild(frag, node);
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // Recurse — but copy the children list first because replaceChild
+      // mutates it during the loop.
+      Array.from(node.childNodes).forEach(processNode);
     }
-    span.style.setProperty("--i", i);
-    title.appendChild(span);
-  });
+  }
+  Array.from(title.childNodes).forEach(processNode);
   title.dataset.split = "1";
 }
 function bindReveal() {

@@ -11,12 +11,12 @@
   <meta property="og:description" content="Headshots, portraits, products and moments. Based in Los Angeles." />
   <meta property="og:type" content="website" />
 
-  <!-- Fonts. Caveat is the playful, handwritten display font used site-wide
-       for headers (WENDYPIX, FEATURED WORK, ALL SHOOTS, CONTACT, etc.).
-       Inter handles body copy; Instrument Serif handles the italic bio. -->
+  <!-- Fonts. The display headers use Helvetica (system font, no fetch
+       needed). Inter handles body copy; Instrument Serif handles the
+       italic bio passages. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -39,12 +39,7 @@
         <p class="caps muted"><a href="mailto:wendy@wendypix.com">wendy@wendypix.com</a></p>
       </div>
 
-      <!-- The brand wordmark is an SVG so we get the multi-color, slightly
-           distressed lettering. The h1 wrapper keeps the heading semantic;
-           the alt text gives screen readers and bots the wordmark text. -->
-      <h1 class="hero-title">
-        <img src="WendyPix.svg" alt="WENDYPIX" />
-      </h1>
+      <h1 class="display brand"><span class="brand-wendy">WENDY</span><span class="brand-pix">PIX</span></h1>
 
       <div class="hero__mid">
         <div class="hero__images" id="heroImages" aria-hidden="true">
@@ -52,7 +47,7 @@
         </div>
       </div>
 
-      <p class="display sub">Photographer,<br/>Portraits &amp; Moments</p>
+      <p class="display sub">PHOTOGRAPHER,<br/>PORTRAITS &amp; MOMENTS</p>
 
       <div class="services">
         <p class="caps">Available for</p>
@@ -68,7 +63,7 @@
          rotated. Click a flank to rotate it into focus; click the focal
          tile to open the shoot. Arrow keys navigate, mouse wheel advances. -->
     <section class="featured" id="work" style="display:none">
-      <h2 class="display">Featured Work</h2>
+      <h2 class="display">FEATURED WORK</h2>
       <p class="featured-sub">Hand-picked sessions worth a closer look</p>
 
       <div class="featured-carousel" id="featuredCarousel" tabindex="0"
@@ -108,7 +103,7 @@
 
     <!-- ALL WORK with category filter -->
     <section class="all-work">
-      <h2 class="display secondary">All Shoots,<br/>Take a Look</h2>
+      <h2 class="display secondary">ALL SHOOTS,<br/>TAKE A LOOK</h2>
 
       <nav class="filters" id="filters" aria-label="Filter by category">
         <!-- Filter buttons rendered dynamically from the loaded subjects -->
@@ -131,7 +126,7 @@
        reveal of a tall fixed element by its scrolling cover. -->
   <section class="contact" id="contact">
     <div class="contact-inner">
-      <h2 class="contact-mega">Contact</h2>
+      <h2 class="contact-mega">CONTACT</h2>
       <div class="contact-info">
         <p><a href="mailto:wendy@wendypix.com">WENDY@WENDYPIX.COM</a></p>
         <p><a href="tel:+18183830102">(818) 383-0102</a></p>
