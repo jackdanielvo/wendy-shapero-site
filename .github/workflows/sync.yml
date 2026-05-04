@@ -32,12 +32,16 @@ jobs:
       - name: Sync from Pixieset
         run: node scripts/sync-pixieset.js
 
-      - name: Commit refreshed photos.json (if changed)
+      - name: Commit refreshed data (if changed)
         run: |
-          if [[ -n "$(git status --porcelain data/photos.json)" ]]; then
+          # The sync script writes both data/photos.json and data/photos.js
+          # (the .js mirror is what the static site actually loads). Commit
+          # both if either changed. The skip-ci tag prevents a recursive
+          # workflow run on the bot's own commit.
+          if [[ -n "$(git status --porcelain data/)" ]]; then
             git config user.name  "wendy-pix-bot"
             git config user.email "actions@github.com"
-            git add data/photos.json
+            git add data/photos.json data/photos.js
             git commit -m "chore(sync): refresh from Pixieset [skip ci]"
             git push
           else

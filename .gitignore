@@ -16,3 +16,8 @@ node_modules/
 # Local env
 .env
 .env.local
+
+# Development-only previews / one-off artifacts
+preview-*.png
+meta_*.webp
+wendy-portait.jpg
