@@ -163,20 +163,32 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — solid plum, uppercase Helvetica at
-   regular weight (matches the title style on jackdanielvo.com). The
-   counter-intuitive bit: weight 400, NOT bold. Regular-weight Helvetica
-   reads as tall and architectural at display sizes; bold weights crowd
-   the counters and lose the slim verticality. Tight tracking and tight
-   line-height complete the look. */
-.hero h1.display.brand {
-  font-family: "Helvetica", "Arial", "Helvetica Neue", sans-serif;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: -0.03em;
-  line-height: 0.82;
-  color: #8e3a8c;
-  font-size: clamp(64px, 13vw, 220px);
+/* The big WENDYPIX brand wordmark — an SVG image (WendyPix.svg) so we
+   get its multi-color, slightly distressed hand-lettered style. The h1
+   wrapper keeps semantics; the img inside is what's actually displayed. */
+.hero h1.hero-title {
+  margin: 0 0 clamp(20px, 4vh, 60px);
+  /* Center the wordmark and let it fade up on load. */
+  display: flex;
+  justify-content: center;
+}
+.hero h1.hero-title img {
+  display: block;
+  width: clamp(300px, 70vw, 900px);
+  height: auto;
+  /* Subtle entrance — fade-in + small upward slide, same easing curve
+     as everything else on the page. */
+  opacity: 0;
+  transform: translateY(0.4em);
+  animation: brand-in 1.1s cubic-bezier(0.22, 1, 0.36, 1) 200ms forwards;
+}
+@keyframes brand-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero h1.hero-title img {
+    opacity: 1; transform: none; animation: none;
+  }
 }
 .hero h1.display {
   color: #8e3a8c;

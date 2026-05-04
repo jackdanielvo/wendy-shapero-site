@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1072 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="WENDYPIX">
+  <title>WENDYPIX</title>
+  <defs>
+    
+    <filter id="wobble-1" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="n"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+    <filter id="wobble-2" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="11" result="n"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+    <filter id="wobble-3" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="27" result="n"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.5" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+    <filter id="wobble-4" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.025" numOctaves="2" seed="42" result="n"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+    <filter id="wobble-5" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.019" numOctaves="2" seed="58" result="n"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4.2" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+  </defs>
+
+  <g transform="translate(112.5 277) rotate(-3)" filter="url(#wobble-1)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">W</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#e94f7c" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">W</text>
+  </g>
+  <g transform="translate(254 282) rotate(2)" filter="url(#wobble-2)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">E</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#95d3a8" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">E</text>
+  </g>
+  <g transform="translate(378 278) rotate(-1)" filter="url(#wobble-3)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">N</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#6fc3da" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">N</text>
+  </g>
+  <g transform="translate(512 282) rotate(3)" filter="url(#wobble-4)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">D</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#f3c95a" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">D</text>
+  </g>
+  <g transform="translate(641 279) rotate(-2)" filter="url(#wobble-5)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">Y</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#f08769" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">Y</text>
+  </g>
+  <g transform="translate(802.5 277) rotate(1)" filter="url(#wobble-1)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">P</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#88c5e8" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">P</text>
+  </g>
+  <g transform="translate(891.5 281) rotate(-2)" filter="url(#wobble-2)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">I</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#f7a8b8" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">I</text>
+  </g>
+  <g transform="translate(980.5 278) rotate(2)" filter="url(#wobble-3)">
+    <text x="0" y="0" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#ffffff" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">X</text>
+    <text x="5" y="6" text-anchor="middle" font-family="Anton, &#39;Arial Narrow&#39;, Impact, sans-serif" font-size="240" fill="#95d3a8" stroke="#1b1b1b" stroke-width="3" paint-order="stroke fill">X</text>
+  </g>
+</svg>
