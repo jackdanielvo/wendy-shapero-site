@@ -501,6 +501,26 @@ async function loadConfigFromGitHub() {
 }
 
 async function saveConfigToGitHub() {
+  // Re-fetch the current SHA right before PUT. The Contents API requires
+  // the file's *current* blob SHA, and our cached value can go stale (if
+  // the workflow committed something, the page was open a long time, or
+  // the load somehow returned without a SHA). Re-reading is one extra
+  // request but it's small (the file is ~2KB) and makes save bulletproof.
+  const getUrl = `https://api.github.com/repos/${state.repo}/contents/${CONFIG_PATH}?ref=${encodeURIComponent(state.branch)}`;
+  const head = await fetch(getUrl, { headers: await ghHeaders() });
+  if (head.status === 401) throw new Error("Token rejected — sign out and sign in with a fresh token.");
+  if (head.status === 404) throw new Error(`Couldn't find ${CONFIG_PATH} in ${state.repo}@${state.branch}. Did the repo name change?`);
+  if (!head.ok) {
+    const t = await head.text();
+    throw new Error(`GitHub: ${head.status} ${head.statusText}\n${t.slice(0, 300)}`);
+  }
+  const headData = await head.json();
+  const currentSha = headData.sha;
+  if (!currentSha) {
+    throw new Error("GitHub didn't return a SHA for the config file. Reload this page and try again.");
+  }
+  state.configSha = currentSha;
+
   // Merge edits into the full config (preserves all other fields)
   const next = { ...state.config, featured: state.featured, excludeShoots: Array.from(state.excluded) };
   const body = JSON.stringify(next, null, 2) + "\n";
@@ -514,7 +534,7 @@ async function saveConfigToGitHub() {
     body: JSON.stringify({
       message: "admin: update featured + hidden shoots",
       content: b64,
-      sha: state.configSha,
+      sha: currentSha,
       branch: state.branch,
     }),
   });
