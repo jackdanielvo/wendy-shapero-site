@@ -432,6 +432,35 @@ function buildFeatured(subjects, featuredSlugs) {
       active++; layout(); e.preventDefault();
     }
   });
+
+  // Mouse-wheel nav. Wheeling up while hovering the carousel = previous,
+  // wheeling down = next. Throttled so a single gesture advances at most
+  // one step. Once the carousel is at either end, wheel events pass
+  // through and the page scrolls normally — so the user is never trapped.
+  let wheelLockUntil = 0;
+  carousel.addEventListener("wheel", (e) => {
+    // Prefer whichever axis the input is dominantly using. Most mice send
+    // deltaY; some trackpads send deltaX for horizontal wheels.
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) < 4) return;          // ignore stray micro-events
+
+    const wantsForward = delta > 0;
+    const canForward   = active < tiles.length - 1;
+    const canBackward  = active > 0;
+    // At the edges, let the page scroll naturally — don't trap the user.
+    if (wantsForward && !canForward)   return;
+    if (!wantsForward && !canBackward) return;
+
+    e.preventDefault();                       // we're consuming this event
+    const now = performance.now();
+    if (now < wheelLockUntil) return;         // throttle: 1 advance per gesture
+
+    if (wantsForward) active++; else active--;
+    layout();
+    // ~350ms cooldown — long enough to absorb macOS momentum-scroll trains
+    // but short enough that a deliberate second flick still registers.
+    wheelLockUntil = now + 350;
+  }, { passive: false });
 }
 
 // Resolve the thumbnail URL for a grid tile. Falls back to the shoot's
