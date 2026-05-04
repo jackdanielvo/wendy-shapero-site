@@ -163,15 +163,18 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — solid plum, in clean uppercase
-   Helvetica (overrides the site-wide Caveat handwritten display). The
-   intent: a strong, modern logotype anchoring the page above the more
-   playful handwritten section headers below. */
+/* The big WENDYPIX brand wordmark — solid plum, uppercase Helvetica at
+   regular weight (matches the title style on jackdanielvo.com). The
+   counter-intuitive bit: weight 400, NOT bold. Regular-weight Helvetica
+   reads as tall and architectural at display sizes; bold weights crowd
+   the counters and lose the slim verticality. Tight tracking and tight
+   line-height complete the look. */
 .hero h1.display.brand {
-  font-family: "Helvetica Neue", "Helvetica", "Arial", sans-serif;
-  font-weight: 900;        /* Helvetica Black — punchy logotype weight */
+  font-family: "Helvetica", "Arial", "Helvetica Neue", sans-serif;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: -0.02em; /* Helvetica looks crisp with a touch of tightening */
+  letter-spacing: -0.03em;
+  line-height: 0.82;
   color: #8e3a8c;
   font-size: clamp(64px, 13vw, 220px);
 }
