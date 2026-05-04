@@ -53,6 +53,26 @@
       </div>
     </section>
 
+    <!-- FEATURED WORK — Spencer-style carousel. Only renders if Wendy
+         has curated a list in scripts/pixieset.config.json (otherwise the
+         All Work section below already shows every shoot).
+         Mechanics: a focal tile sits centered with the shoot title in a
+         pill below it; flanking tiles peek in from each side, slightly
+         rotated. Click a flank to rotate it into focus; click the focal
+         tile to open the shoot. Arrow keys navigate, mouse wheel advances. -->
+    <section class="featured" id="work" style="display:none">
+      <h2 class="display">FEATURED WORK</h2>
+      <p class="featured-sub">Hand-picked sessions worth a closer look</p>
+
+      <div class="featured-carousel" id="featuredCarousel" tabindex="0"
+           role="region" aria-roledescription="carousel" aria-label="Featured shoots">
+        <!-- Carousel tiles injected by JS -->
+      </div>
+      <div class="featured-dots" id="featuredDots" aria-hidden="true">
+        <!-- Position dots injected by JS -->
+      </div>
+    </section>
+
     <!-- ABOUT / BIO -->
     <section class="about" id="about">
       <div class="about__photo">
@@ -76,26 +96,6 @@
           Stylistically she works moment to moment and celebrates spontaneity and levity.
           <a class="link" href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">Schedule a free 15-minute discovery call</a> to plan your next shoot.
         </p>
-      </div>
-    </section>
-
-    <!-- FEATURED WORK — Spencer-style carousel. Only renders if Wendy
-         has curated a list in scripts/pixieset.config.json (otherwise the
-         All Work section below already shows every shoot).
-         Mechanics: a focal tile sits centered with the shoot title in a
-         pill below it; flanking tiles peek in from each side, slightly
-         rotated. Click a flank to rotate it into focus; click the focal
-         tile to open the shoot. Arrow keys navigate. -->
-    <section class="featured" id="work" style="display:none">
-      <h2 class="display">FEATURED WORK</h2>
-      <p class="featured-sub">Hand-picked sessions worth a closer look</p>
-
-      <div class="featured-carousel" id="featuredCarousel" tabindex="0"
-           role="region" aria-roledescription="carousel" aria-label="Featured shoots">
-        <!-- Carousel tiles injected by JS -->
-      </div>
-      <div class="featured-dots" id="featuredDots" aria-hidden="true">
-        <!-- Position dots injected by JS -->
       </div>
     </section>
 
