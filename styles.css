@@ -156,7 +156,20 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDY SHAPERO title — solid plum. */
+/* The big WENDYPIX brand wordmark — solid plum, hand-drawn marker font.
+   Knewave's letterforms have organic strokes and slight irregularity that
+   reads as playful without being cartoony. The rest of the site keeps
+   Anton for its display headers (FEATURED WORK, ALL SHOOTS, CONTACT). */
+.hero h1.display.brand {
+  font-family: "Knewave", "Anton", "Helvetica Neue", Arial, sans-serif;
+  color: #8e3a8c;
+  /* Knewave has more visual weight than Anton at the same size, so dial
+     it back a little. Tighter line-height since the chunky strokes need
+     less breathing room. */
+  font-size: clamp(60px, 11vw, 180px);
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
 .hero h1.display {
   color: #8e3a8c;
 }
