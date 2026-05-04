@@ -250,6 +250,24 @@ function openLightbox(url) {
 }
 function startHeroDrift(row) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // On touch devices the row is a scroll-snap carousel (see CSS @media).
+  // Bounds-clamping each card to the viewport would pull off-screen cards
+  // back to the visible edge — wrong on a scrollable container — so skip
+  // it on touch. Wander still runs, the spring just stays at rest with
+  // no mouse input.
+  const isTouch = window.matchMedia("(hover: none)").matches ||
+                  window.matchMedia("(pointer: coarse)").matches;
+  // On mobile, also center the carousel on the middle card on first load
+  // so the user sees a balanced view (one centered, neighbors peeking).
+  if (isTouch) {
+    setTimeout(() => {
+      const cards = row.querySelectorAll(".hero__image");
+      if (cards.length >= 3) {
+        const middle = cards[Math.floor(cards.length / 2)];
+        middle.scrollIntoView({ behavior: "auto", inline: "center", block: "nearest" });
+      }
+    }, 100);
+  }
   const imgs = Array.from(row.querySelectorAll("img"));
   const start = performance.now();
   let lastT = start;
@@ -358,9 +376,12 @@ function startHeroDrift(row) {
       sp.vy += aY * dt; sp.y += sp.vy * dt;
       sp.vr += aR * dt; sp.r += sp.vr * dt;
 
-      // Composite + clamp so the card stays on-screen even mid-overshoot.
+      // Composite + clamp so the card stays on-screen even mid-overshoot —
+      // but skip the clamp on touch, where the row is a scrollable
+      // carousel and "viewport bounds" don't apply per-card.
       const b = bounds[i];
-      const x = clamp(wx + sp.x, b.minX, b.maxX);
+      const composedX = wx + sp.x;
+      const x = isTouch ? composedX : clamp(composedX, b.minX, b.maxX);
       imgs[i].style.setProperty("--ox", x.toFixed(2) + "px");
       imgs[i].style.setProperty("--oy", (wy + sp.y).toFixed(2) + "px");
       imgs[i].style.setProperty("--rot", (wr + sp.r).toFixed(2) + "deg");

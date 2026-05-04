@@ -310,6 +310,50 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   .hero__image img { animation: none; opacity: 1; }
 }
 
+/* On phones the desktop layout (5 rotated cards in a fixed flex row) packs
+   them all into ~380px and they overlap into one. Convert the row to a
+   horizontal scroll-snap carousel: each card becomes a comfortable 56vw
+   wide, the row scrolls under your finger, and snaps to whichever card
+   is centered. Tapping still opens the shoot (or lightbox). */
+@media (max-width: 640px) {
+  .hero__images {
+    overflow-x: auto;
+    overflow-y: visible;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    /* Hide scrollbar — visual cue is the partial-card peek alone */
+    scrollbar-width: none;
+    /* Padding lets the first and last cards center under scroll-snap */
+    padding: 14px 22vw;
+    gap: 18px;
+    height: auto;
+    max-width: none;
+    /* Don't fight scroll with vertical motion */
+    touch-action: pan-x;
+  }
+  .hero__images::-webkit-scrollbar { display: none; }
+
+  .hero__image {
+    width: 56vw;
+    height: auto;
+    flex-shrink: 0;
+    scroll-snap-align: center;
+  }
+  .hero__image img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+  }
+
+  /* Tone down the desktop rotations so cards read clearly in the swipe
+     view rather than overlapping their neighbors when one's centered. */
+  .hero__image:nth-child(1) img { --base-rot: -3deg; }
+  .hero__image:nth-child(2) img { --base-rot: -1.5deg; }
+  .hero__image:nth-child(3) img { --base-rot: 0deg; }
+  .hero__image:nth-child(4) img { --base-rot: 1.5deg; }
+  .hero__image:nth-child(5) img { --base-rot: 3deg; }
+}
+
 /* ============================================================
    ABOUT — two-column layout: portrait + bio
    ============================================================ */
