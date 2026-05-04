@@ -15,7 +15,11 @@
   --radius: 14px;
   --max: 1400px;
   --pad-x: clamp(20px, 5vw, 80px);
-  --display-font: "Anton", "Helvetica Neue", Arial, sans-serif;
+  /* Caveat is the playful handwritten display font used site-wide for
+     headers (WENDYPIX, Featured Work, All Shoots, Contact). To swap to a
+     different display look, change "Caveat" here AND in the Google Fonts
+     link in index.html. */
+  --display-font: "Caveat", "Brush Script MT", cursive, sans-serif;
   --serif-font: "Instrument Serif", Georgia, serif;
   --body-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -111,11 +115,14 @@ button { cursor: pointer; font-family: inherit; }
 
 .display {
   font-family: var(--display-font);
-  font-weight: 400;
-  letter-spacing: 0.005em;
+  /* Caveat at 700 has roughly the visual weight of Anton at 400; bump it
+     so headers feel substantial rather than flimsy. */
+  font-weight: 700;
+  letter-spacing: 0;       /* handwritten fonts shouldn't be letter-spaced */
   margin: 0;
-  text-transform: uppercase;
-  line-height: 0.92;
+  /* No uppercase: Caveat is handwritten cursive and reads poorly in ALL
+     CAPS. The HTML uses natural Title Case ("Featured Work", etc.). */
+  line-height: 1;
 }
 
 .kicker {
@@ -156,19 +163,13 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — solid plum, hand-drawn marker font.
-   Knewave's letterforms have organic strokes and slight irregularity that
-   reads as playful without being cartoony. The rest of the site keeps
-   Anton for its display headers (FEATURED WORK, ALL SHOOTS, CONTACT). */
+/* The big WENDYPIX brand wordmark — solid plum, in the site-wide
+   handwritten Caveat (inherited from --display-font via .display). */
 .hero h1.display.brand {
-  font-family: "Knewave", "Anton", "Helvetica Neue", Arial, sans-serif;
   color: #8e3a8c;
-  /* Knewave has more visual weight than Anton at the same size, so dial
-     it back a little. Tighter line-height since the chunky strokes need
-     less breathing room. */
-  font-size: clamp(60px, 11vw, 180px);
-  line-height: 1;
-  letter-spacing: 0.01em;
+  /* Caveat has wide letter advance; we can run it bigger than Anton was
+     at the same viewport. */
+  font-size: clamp(72px, 14vw, 240px);
 }
 .hero h1.display {
   color: #8e3a8c;
@@ -726,11 +727,11 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   bottom: clamp(160px, 22vh, 260px);
   margin: 0;
   font-family: var(--display-font);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(100px, 24vw, 420px);
   line-height: 0.85;
   color: var(--bg);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;       /* Caveat is connected/cursive; no tracking */
   user-select: none;
   white-space: nowrap;
   /* scaleY is driven by --reveal (set by the scroll listener in JS).
