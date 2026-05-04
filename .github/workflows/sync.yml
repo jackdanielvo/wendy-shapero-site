@@ -17,6 +17,14 @@ permissions:
   pages: write      # GitHub Pages deploy
   id-token: write   # GitHub Pages deploy
 
+# Serialize runs of this workflow so a second run can't try to push or
+# deploy while another is still in flight. Queued runs aren't cancelled —
+# we want every admin save to actually take effect, even if the user
+# clicked Save twice in quick succession.
+concurrency:
+  group: pages-sync-and-deploy
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -43,7 +51,19 @@ jobs:
             git config user.email "actions@github.com"
             git add data/photos.json data/photos.js
             git commit -m "chore(sync): refresh from Pixieset [skip ci]"
-            git push
+            # Race-protect: another workflow run might have pushed in the
+            # meantime. Pull-rebase first, then push. With the concurrency
+            # group above this should rarely trigger, but it's a safe
+            # fallback so a transient overlap can't fail the run.
+            for attempt in 1 2 3; do
+              git pull --rebase origin main || true
+              if git push; then
+                echo "Pushed on attempt $attempt"
+                break
+              fi
+              echo "Push attempt $attempt failed; retrying after pull --rebase"
+              sleep 2
+            done
           else
             echo "No changes from Pixieset."
           fi
