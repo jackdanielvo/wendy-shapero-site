@@ -361,6 +361,22 @@
       <div class="pool" id="featuredPool"></div>
     </section>
 
+    <!-- ---------- HERO CARDS ---------- -->
+    <section class="card">
+      <h2>Hero card photos</h2>
+      <p class="sub">Up to 5 photos float as cards under the WENDYPIX title. Use ‹ › to switch which photo of a shoot is shown.</p>
+
+      <h3>Currently in the hero <span class="count" id="heroCount">(0 of 5)</span></h3>
+      <ol class="featured-list" id="heroList"></ol>
+
+      <h3>Add a shoot to the hero</h3>
+      <div class="search">
+        <input id="heroSearch" placeholder="Search shoots…" />
+        <span class="count" id="heroPoolCount">(0)</span>
+      </div>
+      <div class="pool" id="heroPool"></div>
+    </section>
+
     <!-- ---------- HIDE FROM GRID ---------- -->
     <section class="card">
       <h2>Hide from the main grid</h2>
@@ -402,9 +418,16 @@ const state = {
   // Locally edited:
   featured: [],           // array of slugs in display order
   excluded: new Set(),    // slugs hidden from the grid
+  // Hero cards: ordered list of up to 5 entries. Each entry is one of:
+  //   { kind: "shoot", slug: "...", index: N }   (uses photos[N] of that shoot)
+  //   { kind: "url",   url: "https://..." }      (pinned URL, can't cycle photos)
+  // Stored in a normalized internal form regardless of which form the
+  // config used; serialized back to "slug", "slug#N", or { url } on save.
+  hero: [],
   // Snapshots so we can detect "dirty"
   initialFeatured: [],
   initialExcluded: new Set(),
+  initialHero: [],
 };
 
 // ---------- Storage ----------
@@ -496,8 +519,39 @@ async function loadConfigFromGitHub() {
   state.config    = cfg;
   state.featured  = Array.isArray(cfg.featured) ? cfg.featured.slice() : [];
   state.excluded  = new Set(Array.isArray(cfg.excludeShoots) ? cfg.excludeShoots : []);
+  state.hero      = parseHeroPhotos(cfg.heroPhotos);
   state.initialFeatured = state.featured.slice();
   state.initialExcluded = new Set(state.excluded);
+  state.initialHero = state.hero.map((h) => ({ ...h }));
+}
+
+// Parse the variety of forms heroPhotos can take in the config into our
+// normalized internal form: an array of { kind, slug, index } or { kind, url }.
+function parseHeroPhotos(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const e of arr) {
+    if (!e) continue;
+    if (typeof e === "string") {
+      const m = e.match(/^([\w-]+)(?:#(\d+))?$/);
+      if (!m) continue;
+      out.push({ kind: "shoot", slug: m[1], index: m[2] ? parseInt(m[2], 10) : 0 });
+    } else if (typeof e === "object") {
+      if (e.url) out.push({ kind: "url", url: e.url });
+      else if (e.slug) out.push({ kind: "shoot", slug: e.slug, index: e.index || 0 });
+    }
+  }
+  return out.slice(0, 5);
+}
+
+// Serialize back to the compact config form. Uses "slug" if index is 0,
+// "slug#N" otherwise; URL pins become { url } objects.
+function serializeHeroPhotos(hero) {
+  return hero.map((h) => {
+    if (h.kind === "url") return { url: h.url };
+    if (!h.index) return h.slug;
+    return `${h.slug}#${h.index}`;
+  });
 }
 
 async function saveConfigToGitHub() {
@@ -522,7 +576,12 @@ async function saveConfigToGitHub() {
   state.configSha = currentSha;
 
   // Merge edits into the full config (preserves all other fields)
-  const next = { ...state.config, featured: state.featured, excludeShoots: Array.from(state.excluded) };
+  const next = {
+    ...state.config,
+    featured: state.featured,
+    excludeShoots: Array.from(state.excluded),
+    heroPhotos: serializeHeroPhotos(state.hero),
+  };
   const body = JSON.stringify(next, null, 2) + "\n";
   // UTF-8 → base64
   const b64 = btoa(unescape(encodeURIComponent(body)));
@@ -548,6 +607,7 @@ async function saveConfigToGitHub() {
   state.config    = next;
   state.initialFeatured = state.featured.slice();
   state.initialExcluded = new Set(state.excluded);
+  state.initialHero = state.hero.map((h) => ({ ...h }));
 }
 
 async function triggerRebuild() {
@@ -594,6 +654,8 @@ function subjectsBySlug() {
 function renderAll() {
   renderFeatured();
   renderFeaturedPool();
+  renderHero();
+  renderHeroPool();
   renderHideGrid();
   updateSaveBar();
 }
@@ -688,6 +750,129 @@ $("featuredPool").addEventListener("click", (e) => {
   renderAll();
 });
 
+// ---------- Hero list ----------
+// Resolve a hero entry to its display thumbnail URL + photo count + title.
+function heroDisplay(entry) {
+  const map = subjectsBySlug();
+  if (entry.kind === "url") {
+    return { thumbUrl: entry.url, title: "(pinned URL)", count: 1, index: 0 };
+  }
+  const subj = map[entry.slug];
+  if (!subj) return { thumbUrl: "", title: entry.slug, count: 0, index: entry.index };
+  const photos = subj.photos || [];
+  const idx = Math.max(0, Math.min(entry.index, photos.length - 1));
+  return {
+    thumbUrl: photos[idx] || "",
+    title: subj.title || subj.slug,
+    count: photos.length,
+    index: idx,
+  };
+}
+
+function renderHero() {
+  const list = $("heroList");
+  list.innerHTML = "";
+  if (!state.hero.length) {
+    list.innerHTML = `<li class="empty" style="grid-template-columns:1fr">No hero photos picked yet — add one or more from below. If left empty, the site auto-picks a lead photo from up to 5 different categories.</li>`;
+  } else {
+    state.hero.forEach((entry, i) => {
+      const d = heroDisplay(entry);
+      const li = document.createElement("li");
+      li.dataset.i = i;
+      const photoNav = entry.kind === "shoot" && d.count > 1
+        ? `<button class="icon-btn" data-act="prev-photo" title="Previous photo of this shoot" ${d.index === 0 ? "disabled" : ""}>‹</button>
+           <span style="font-size:10px;letter-spacing:0.06em;color:var(--muted);font-weight:700;padding:0 6px">${d.index + 1}/${d.count}</span>
+           <button class="icon-btn" data-act="next-photo" title="Next photo of this shoot" ${d.index >= d.count - 1 ? "disabled" : ""}>›</button>`
+        : "";
+      li.innerHTML = `
+        <div class="pos">${String(i + 1).padStart(2, "0")}</div>
+        <div class="thumb">${d.thumbUrl ? `<img src="${d.thumbUrl}" alt="" loading="lazy"/>` : ""}</div>
+        <div class="info">
+          <div class="title">${escapeHtml(d.title)}</div>
+          <div class="meta">${entry.kind === "url" ? "URL" : escapeHtml(entry.slug)}</div>
+        </div>
+        <div class="ctrl">
+          ${photoNav}
+          <button class="icon-btn" data-act="up"   title="Move up"   aria-label="Move up"   ${i === 0 ? "disabled" : ""}>↑</button>
+          <button class="icon-btn" data-act="down" title="Move down" aria-label="Move down" ${i === state.hero.length - 1 ? "disabled" : ""}>↓</button>
+          <button class="icon-btn danger" data-act="rm" title="Remove" aria-label="Remove">✕</button>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+  }
+  $("heroCount").textContent = `(${state.hero.length} of 5)`;
+}
+
+$("heroList").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const li = e.target.closest("li[data-i]");
+  if (!li) return;
+  const i = parseInt(li.dataset.i, 10);
+  const entry = state.hero[i];
+  if (!entry) return;
+  const act = btn.dataset.act;
+  if (act === "up" && i > 0) {
+    [state.hero[i - 1], state.hero[i]] = [state.hero[i], state.hero[i - 1]];
+  } else if (act === "down" && i < state.hero.length - 1) {
+    [state.hero[i + 1], state.hero[i]] = [state.hero[i], state.hero[i + 1]];
+  } else if (act === "rm") {
+    state.hero.splice(i, 1);
+  } else if (act === "prev-photo" && entry.kind === "shoot" && entry.index > 0) {
+    entry.index--;
+  } else if (act === "next-photo" && entry.kind === "shoot") {
+    const subj = subjectsBySlug()[entry.slug];
+    const max = (subj && subj.photos ? subj.photos.length : 1) - 1;
+    if (entry.index < max) entry.index++;
+  }
+  renderAll();
+});
+
+function renderHeroPool() {
+  const pool = $("heroPool");
+  const q = ($("heroSearch").value || "").toLowerCase().trim();
+  pool.innerHTML = "";
+  const subs = (window.WENDY_PHOTOS.subjects || []).slice()
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  // Disable adding if hero already has 5
+  const heroSlugs = new Set(state.hero.filter((h) => h.kind === "shoot").map((h) => h.slug));
+  const full = state.hero.length >= 5;
+  let n = 0;
+  subs.forEach((subj) => {
+    const slug = subj.slug || subj.id;
+    const title = subj.title || slug;
+    if (q && !(`${slug} ${title} ${subj.cat || ""}`).toLowerCase().includes(q)) return;
+    n++;
+    const cover = subj.cover || (subj.photos && subj.photos[0]) || "";
+    const inHero = heroSlugs.has(slug);
+    const chip = document.createElement("button");
+    chip.className = "chip" + (inHero || full ? " in-list" : "");
+    chip.dataset.slug = slug;
+    chip.disabled = full && !inHero;
+    chip.innerHTML = `
+      <div class="ph" style="background-image:url('${cover}')"></div>
+      <div class="lbl">${escapeHtml(title)}</div>
+      <div class="cat">${escapeHtml(subj.cat || "")}</div>
+      ${full ? "" : `<span class="add-pill">+</span>`}
+    `;
+    pool.appendChild(chip);
+  });
+  $("heroPoolCount").textContent = full
+    ? "(5 of 5 — remove one to add another)"
+    : `(${n} shoot${n === 1 ? "" : "s"})`;
+}
+$("heroSearch").addEventListener("input", renderHeroPool);
+$("heroPool").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip[data-slug]");
+  if (!chip) return;
+  if (state.hero.length >= 5) return;
+  const slug = chip.dataset.slug;
+  // Allow same shoot twice if user wants — useful for "two photos from one shoot."
+  state.hero.push({ kind: "shoot", slug, index: 0 });
+  renderAll();
+});
+
 // ---------- Hide-from-grid toggles ----------
 function renderHideGrid() {
   const grid = $("hideGrid");
@@ -732,13 +917,20 @@ function isDirty() {
   }
   if (state.excluded.size !== state.initialExcluded.size) return true;
   for (const s of state.excluded) if (!state.initialExcluded.has(s)) return true;
+  if (state.hero.length !== state.initialHero.length) return true;
+  for (let i = 0; i < state.hero.length; i++) {
+    const a = state.hero[i], b = state.initialHero[i];
+    if (a.kind !== b.kind) return true;
+    if (a.kind === "shoot" && (a.slug !== b.slug || a.index !== b.index)) return true;
+    if (a.kind === "url" && a.url !== b.url) return true;
+  }
   return false;
 }
 function updateSaveBar() {
   const dirty = isDirty();
   $("save").disabled = !dirty;
   if (!dirty) {
-    $("saveInfo").innerHTML = `No unsaved changes. <b>${state.featured.length}</b> featured · <b>${state.excluded.size}</b> hidden.`;
+    $("saveInfo").innerHTML = `No unsaved changes. <b>${state.featured.length}</b> featured · <b>${state.hero.length}</b> hero · <b>${state.excluded.size}</b> hidden.`;
   } else {
     const fChange = state.featured.length - state.initialFeatured.length;
     const eChange = state.excluded.size - state.initialExcluded.size;
@@ -746,11 +938,24 @@ function updateSaveBar() {
     if (state.featured.length !== state.initialFeatured.length || !sameList(state.featured, state.initialFeatured)) {
       bits.push(`Featured changed (${state.featured.length} now${fChange ? `, ${fChange > 0 ? "+" : ""}${fChange}` : ""})`);
     }
+    if (heroChanged()) {
+      bits.push(`Hero changed (${state.hero.length} of 5)`);
+    }
     if (state.excluded.size !== state.initialExcluded.size) {
       bits.push(`${state.excluded.size} hidden${eChange ? ` (${eChange > 0 ? "+" : ""}${eChange})` : ""}`);
     }
     $("saveInfo").innerHTML = "Unsaved changes: <b>" + bits.join(" · ") + "</b>";
   }
+}
+function heroChanged() {
+  if (state.hero.length !== state.initialHero.length) return true;
+  for (let i = 0; i < state.hero.length; i++) {
+    const a = state.hero[i], b = state.initialHero[i];
+    if (a.kind !== b.kind) return true;
+    if (a.kind === "shoot" && (a.slug !== b.slug || a.index !== b.index)) return true;
+    if (a.kind === "url" && a.url !== b.url) return true;
+  }
+  return false;
 }
 function sameList(a, b) {
   if (a.length !== b.length) return false;
