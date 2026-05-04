@@ -11,11 +11,55 @@
     "anneschade"
   ],
   "_heroPhotos_help": "Hand-pick the 5 photos that appear in the hero card row. Each entry: 'slug' uses the shoot's first photo, 'slug#3' uses the 4th photo of that shoot (0-indexed), or { \"url\": \"https://...\" } pins any URL. Empty array = auto-pick lead photos from up to 5 different categories.",
-  "heroPhotos": [],
+  "heroPhotos": [
+    {
+      "url": "https://images.pixieset.com/61106038/c491a536b5974b284136c28b99d4ecfc-xxlarge.jpg"
+    },
+    "jadespurr",
+    {
+      "url": "https://images.pixieset.com/277585801/38bc587b4214e32d52b8ab3e00ee2c36-xxlarge.jpg"
+    },
+    "craigshoemaker",
+    {
+      "url": "https://images.pixieset.com/18805398/b7717acbe3686f519b4276e70e33223b-xxlarge.jpg"
+    }
+  ],
   "_gridShoots_help": "Allowlist of shoots for the main 'All Shoots' grid, in display order. Each entry is a slug. Empty array = show every shoot (default). Example: [\"kellykellykelly\", \"audreyandevelynbernie\", \"dylangrace\"]",
   "gridShoots": [],
   "_excludeShoots_help": "Blocklist of shoots to hide from the grid. Useful when you want 'everything except a few'. Slugs listed here are filtered out even if they appear in gridShoots. Example: [\"old-test-shoot\", \"private-family-2019\"]",
-  "excludeShoots": [],
+  "excludeShoots": [
+    "justinereiss",
+    "dylangrace",
+    "anissahickey",
+    "diningdivas",
+    "sheangels9725",
+    "sagfoundationwithmariewestbrookandjackdaniel",
+    "randysagvog",
+    "almas80th",
+    "chloe",
+    "katiechin",
+    "headshotsandhems",
+    "michellebush",
+    "jackdanielatthelab",
+    "heatheralexander",
+    "randyatthelab",
+    "sagfoundationmerylsteepcenteropening",
+    "brandibell",
+    "marylynn",
+    "jenniarcher",
+    "michellearkin",
+    "carriebartonjimmyandthehumdingers",
+    "cricket",
+    "wendy",
+    "ashleyatwood",
+    "kerri",
+    "sheangels",
+    "stephaniemackey",
+    "carlydurrer",
+    "davidtoback-2ndshoot",
+    "vanxmas",
+    "davidtoback-1"
+  ],
   "_leadPhotos_help": "Override which photo of a shoot is used as its thumbnail in the grid. Value is a number (zero-based index into that shoot's photo list), a 'slug#3' style string, or a full URL to pin any image. Example: { \"kellykellykelly\": 4, \"craigshoemaker\": \"https://images.pixieset.com/.../some-photo-xlarge.jpg\" }",
   "leadPhotos": {},
   "_categoryOverrides_help": "Force a specific category for individual shoots. Beats categoryRules. Example: { \"kellykellykelly\": \"events\", \"craigshoemaker\": \"headshots\" }",
