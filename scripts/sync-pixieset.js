@@ -303,6 +303,52 @@ function categoryFor(slug, title, rules, defaultCat, overrides) {
 }
 
 // -----------------------------------------------------------
+// Existing-subjects fallback
+//
+// When Pixieset blocks the runner (HTTP 403 from cloud IPs is common),
+// we still want to rebuild data/photos.* with the CURRENT config baked in
+// so that admin.html edits to featured/excluded/hero/etc. flow through to
+// the deployed site. To do that without re-fetching from Pixieset, we
+// load the subjects array from the previously-committed data file.
+//
+// Two formats are possible:
+//   - data/photos.json — the canonical JSON (written by this script)
+//   - data/photos.js   — the JS wrapper the static site loads at runtime.
+//                        It's an IIFE that sets window.WENDY_PHOTOS, so we
+//                        execute it in a fake `window` to extract subjects.
+// -----------------------------------------------------------
+function loadExistingSubjects() {
+  // 1) Canonical JSON — fastest, simplest.
+  try {
+    if (fs.existsSync(OUT_PATH)) {
+      const j = JSON.parse(fs.readFileSync(OUT_PATH, "utf8"));
+      if (j && Array.isArray(j.subjects)) return j.subjects;
+    }
+  } catch (e) {
+    console.warn("  Couldn't parse data/photos.json: " + e.message);
+  }
+  // 2) Fall back to data/photos.js — run the IIFE in a sandboxed `window`.
+  //    Both compact-format and full-format outputs expose
+  //    window.WENDY_PHOTOS.subjects so this works regardless of which one
+  //    is currently committed.
+  try {
+    if (fs.existsSync(OUT_JS_PATH)) {
+      const code = fs.readFileSync(OUT_JS_PATH, "utf8");
+      const win = {};
+      // The wrapper expects a `window` global. We pass our fake one and
+      // the IIFE assigns to it, leaving subjects on win.WENDY_PHOTOS.
+      new Function("window", code)(win);
+      if (win.WENDY_PHOTOS && Array.isArray(win.WENDY_PHOTOS.subjects)) {
+        return win.WENDY_PHOTOS.subjects;
+      }
+    }
+  } catch (e) {
+    console.warn("  Couldn't parse data/photos.js: " + e.message);
+  }
+  return [];
+}
+
+// -----------------------------------------------------------
 // Main
 // -----------------------------------------------------------
 async function main() {
@@ -321,22 +367,27 @@ async function main() {
     const slug = x.startsWith("http") ? x.replace(/\/$/, "").split("/").pop() : x.replace(/\/+|\\+/g, "");
     if (slug && !slugs.includes(slug)) slugs.push(slug);
   }
-  if (!slugs.length) {
-    // Pixieset 403s requests from some cloud IPs (notably GitHub Actions
-    // runners). Rather than failing the whole workflow — which would block
-    // the deploy step from running — we exit gracefully. The deploy step
-    // will publish whatever data/photos.js is already committed in the repo,
-    // so the live site stays online even if a sync run gets bot-blocked.
+  // If Pixieset blocked us, keep going — but reuse the subjects that the
+  // PREVIOUS sync committed to data/photos.js. We'll still rewrite the
+  // output file at the end with the CURRENT config (featured, hero, hidden,
+  // ...) baked in, which is what makes admin.html edits flow through to
+  // the deployed site even when a runner can't reach Pixieset.
+  let pixiesetReachable = slugs.length > 0;
+  if (!pixiesetReachable) {
     console.warn(
       "No collections discovered (likely a Pixieset 403 from this runner's IP). " +
-      "Skipping data update; the existing data/photos.js will be deployed as-is."
+      "Reusing previously synced subjects so the current config still bakes into data/photos.*"
     );
-    process.exit(0);
   }
 
-  // 3) For each collection: fetch landing page → extract collectionId →
-  //    fetch all photos via the JSON API → produce a Subject record.
-  const subjects = [];
+  // 3) Build the subjects list. If Pixieset was reachable, fetch each
+  //    collection's photos. Otherwise, fall back to the subjects we
+  //    committed last time so we can still re-bake the config into output.
+  let subjects = [];
+  if (!pixiesetReachable) {
+    subjects = loadExistingSubjects();
+    console.log(`  Reusing ${subjects.length} previously synced subjects.`);
+  }
   for (const slug of slugs) {
     const url = new URL(slug + "/", cfg.homepage).toString();
     try {
