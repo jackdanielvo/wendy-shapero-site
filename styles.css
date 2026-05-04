@@ -253,7 +253,6 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  pointer-events: none; /* visual only; clicks fall through to nothing */
 }
 .hero__image {
   position: relative;
@@ -263,6 +262,19 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  /* Cards are real <button> elements now (tappable). Reset native button
+     chrome so they look like the photo cards they are. */
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  /* On touch devices the tap-highlight overlay is distracting on top of
+     the rotation transform. Suppress it; the active-state below gives a
+     more on-brand response. */
+  -webkit-tap-highlight-color: transparent;
+}
+.hero__image:active img {
+  filter: brightness(1.06);
 }
 .hero__image img {
   width: 100%;
@@ -917,6 +929,53 @@ body.shoot-open .contact { display: none; }
 
 /* When the shoot is open, lock body scroll */
 body.shoot-open { overflow: hidden; }
+
+/* ============================================================
+   LIGHTBOX — fullscreen single-photo view, used when a hero card is
+   URL-pinned (no shoot to open into). Tap or click to dismiss.
+   ============================================================ */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(0, 0, 0, 0.93);
+  display: grid;
+  place-items: center;
+  padding: clamp(20px, 5vw, 60px);
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+  cursor: zoom-out;
+}
+.lightbox.open { opacity: 1; }
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+  display: block;
+}
+.lightbox__close {
+  position: absolute;
+  top: clamp(16px, 3vw, 28px);
+  right: clamp(16px, 3vw, 28px);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 24px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  transition: background 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.lightbox__close:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: rotate(90deg);
+}
 
 /* ============================================================
    Reveal-on-scroll

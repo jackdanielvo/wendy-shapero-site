@@ -136,18 +136,31 @@ function buildHero(subjects, heroPhotosConfig) {
   const row = document.getElementById("heroImages");
   if (!row) return;
   row.innerHTML = "";
-  // Pick 5 lead photos from across categories for variety, OR honor Wendy's
-  // explicit heroPhotos curation from the config.
+  // Pick 5 hero entries — each carries the photo URL and (optionally) the
+  // subject id so the card can open the corresponding shoot on tap.
   const heroes = pickHeroes(subjects, heroPhotosConfig, 5);
-  heroes.forEach((url) => {
-    const wrap = document.createElement("div");
+  heroes.forEach(({ url, subjectId }) => {
+    const wrap = document.createElement("button");
+    wrap.type = "button";
     wrap.className = "hero__image";
+    wrap.setAttribute(
+      "aria-label",
+      subjectId ? "View this shoot" : "View this photo full size"
+    );
     const img = document.createElement("img");
     img.src = url;
     img.alt = "";
     img.loading = "eager";
     img.decoding = "async";
     wrap.appendChild(img);
+    // On click/tap: shoot-linked cards open the shoot view (showing every
+    // photo in the shoot). URL-pinned cards have no shoot to open, so
+    // they pop a fullscreen lightbox of just that photo.
+    wrap.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (subjectId) openShoot(subjectId);
+      else openLightbox(url);
+    });
     row.appendChild(wrap);
   });
   startHeroDrift(row);
@@ -169,14 +182,21 @@ function resolveHeroEntry(entry, byId) {
     const subj = byId[m[1]];
     if (!subj) return null;
     const idx = m[2] ? parseInt(m[2], 10) : 0;
-    return subj.photoUrls[idx] || subj.photoUrls[0];
+    return {
+      url: subj.photoUrls[idx] || subj.photoUrls[0],
+      subjectId: subj.id,
+    };
   }
   if (typeof entry === "object") {
-    if (entry.url) return entry.url;
+    // URL-pinned: we have no shoot association, so subjectId stays null.
+    if (entry.url) return { url: entry.url, subjectId: null };
     if (entry.slug) {
       const subj = byId[entry.slug];
       if (!subj) return null;
-      return subj.photoUrls[entry.index || 0] || subj.photoUrls[0];
+      return {
+        url: subj.photoUrls[entry.index || 0] || subj.photoUrls[0],
+        subjectId: subj.id,
+      };
     }
   }
   return null;
@@ -195,11 +215,38 @@ function pickHeroes(subjects, heroPhotosConfig, n) {
   // 2) Auto: lead photo from up to n distinct categories, then fill with the rest.
   const byCat = new Map();
   for (const s of subjects) {
-    if (!byCat.has(s.cat)) byCat.set(s.cat, s.photoUrls[0]);
+    if (!byCat.has(s.cat)) byCat.set(s.cat, { url: s.photoUrls[0], subjectId: s.id });
   }
   const fromCats = Array.from(byCat.values()).slice(0, n);
-  const extras = subjects.map(s => s.photoUrls[0]).filter(u => !fromCats.includes(u));
+  const taken = new Set(fromCats.map((h) => h.url));
+  const extras = subjects
+    .filter((s) => !taken.has(s.photoUrls[0]))
+    .map((s) => ({ url: s.photoUrls[0], subjectId: s.id }));
   return [...fromCats, ...extras].slice(0, n);
+}
+
+// Fullscreen single-photo viewer for URL-pinned hero cards (no shoot to
+// open). Tap or click anywhere on it (or press Esc) to dismiss.
+function openLightbox(url) {
+  const lb = document.createElement("div");
+  lb.className = "lightbox";
+  lb.innerHTML =
+    `<button class="lightbox__close" aria-label="Close">&times;</button>` +
+    `<img src="${url}" alt="" />`;
+  document.body.appendChild(lb);
+  document.body.classList.add("shoot-open");
+  function close() {
+    lb.classList.remove("open");
+    document.body.classList.remove("shoot-open");
+    document.removeEventListener("keydown", onKey);
+    setTimeout(() => lb.remove(), 250);
+  }
+  function onKey(e) { if (e.key === "Escape") close(); }
+  lb.addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+  // Force one frame so the open class triggers a transition rather than
+  // appearing instantly.
+  requestAnimationFrame(() => lb.classList.add("open"));
 }
 function startHeroDrift(row) {
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
