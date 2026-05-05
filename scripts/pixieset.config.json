@@ -4,7 +4,8 @@
   "extraCollections": [],
   "_categories_help": "EDITORIAL MODE. When this array is non-empty, the site renders one carousel section per entry instead of a big 'All Shoots' grid, and the sync ONLY fetches these named collections (Wendy's other public Pixieset galleries become invisible to the site). Each entry: { slug: required Pixieset URL key, label: section heading, subtitle: optional italic subhead }. Leave this empty to keep the current 'show every collection' behavior. Example: [{ \"slug\": \"headshots\", \"label\": \"Headshots\", \"subtitle\": \"Actors, executives, voiceover\" }]",
   "categories": [
-    { "slug": "headshots-men", "label": "Headshots — Men", "subtitle": "Actors, executives, voiceover" }
+    { "slug": "headshots-women", "label": "Headshots — Women", "subtitle": "Actors, executives, voiceover" },
+    { "slug": "headshots-men",   "label": "Headshots — Men",   "subtitle": "Actors, executives, voiceover" }
   ],
   "_featured_help": "Slugs of shoots for the 'Featured Work' section, in display order. Leave empty to hide that section and let all shoots flow into the main 'All Shoots' grid below.",
   "featured": [
@@ -17,10 +18,11 @@
   "_heroPhotos_help": "Hand-pick the 5 photos that appear in the hero card row. Each entry: 'slug' uses the shoot's first photo, 'slug#3' uses the 4th photo of that shoot (0-indexed), or { \"url\": \"https://...\" } pins any URL. Empty array = auto-pick lead photos from up to 5 different categories.",
   "heroPhotos": [
     "craig-shoemaker",
+    "jade-spurr",
     "adam-arkin",
-    "evan-carver",
+    "janie-wilkes",
     "robert-peters",
-    "nicholas-heart"
+    "carin-gilfry"
   ],
   "_gridShoots_help": "Allowlist of shoots for the main 'All Shoots' grid, in display order. Each entry is a slug. Empty array = show every shoot (default). Example: [\"kellykellykelly\", \"audreyandevelynbernie\", \"dylangrace\"]",
   "gridShoots": [],

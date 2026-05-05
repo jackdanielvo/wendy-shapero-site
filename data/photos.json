@@ -1,18 +1,24 @@
 {
-  "generatedAt": "2026-05-05T17:33:07.073Z",
+  "generatedAt": "2026-05-05T18:07:17.730Z",
   "source": "local",
   "featured": [],
   "heroPhotos": [
     "craig-shoemaker",
+    "jade-spurr",
     "adam-arkin",
-    "evan-carver",
+    "janie-wilkes",
     "robert-peters",
-    "nicholas-heart"
+    "carin-gilfry"
   ],
   "gridShoots": [],
   "excludeShoots": [],
   "leadPhotos": {},
   "categories": [
+    {
+      "slug": "headshots-women",
+      "label": "Headshots — Women",
+      "subtitle": "Actors, executives, voiceover"
+    },
     {
       "slug": "headshots-men",
       "label": "Headshots — Men",
@@ -20,6 +26,90 @@
     }
   ],
   "subjects": [
+    {
+      "id": "jade-spurr",
+      "slug": "jade-spurr",
+      "cat": "headshots-women",
+      "title": "Jade Spurr",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/01-jade-spurr/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/01-jade-spurr/01-lead.jpg",
+        "photos/headshots-women/01-jade-spurr/02.jpg",
+        "photos/headshots-women/01-jade-spurr/03.jpg"
+      ]
+    },
+    {
+      "id": "carin-gilfry",
+      "slug": "carin-gilfry",
+      "cat": "headshots-women",
+      "title": "Carin Gilfry",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/02-carin-gilfry/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/02-carin-gilfry/01-lead.jpg",
+        "photos/headshots-women/02-carin-gilfry/02.jpg",
+        "photos/headshots-women/02-carin-gilfry/03.jpg"
+      ]
+    },
+    {
+      "id": "janie-wilkes",
+      "slug": "janie-wilkes",
+      "cat": "headshots-women",
+      "title": "Janie Wilkes",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/03-janie-wilkes/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/03-janie-wilkes/01-lead.jpg",
+        "photos/headshots-women/03-janie-wilkes/02.jpg",
+        "photos/headshots-women/03-janie-wilkes/03.jpg"
+      ]
+    },
+    {
+      "id": "lola",
+      "slug": "lola",
+      "cat": "headshots-women",
+      "title": "Lola",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/04-lola/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/04-lola/01-lead.jpg",
+        "photos/headshots-women/04-lola/02.jpg",
+        "photos/headshots-women/04-lola/03.jpg"
+      ]
+    },
+    {
+      "id": "cristina-milizia",
+      "slug": "cristina-milizia",
+      "cat": "headshots-women",
+      "title": "Cristina Milizia",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/05-cristina-milizia/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/05-cristina-milizia/01-lead.jpg",
+        "photos/headshots-women/05-cristina-milizia/02.jpg",
+        "photos/headshots-women/05-cristina-milizia/03.jpg"
+      ]
+    },
+    {
+      "id": "justine-reiss",
+      "slug": "justine-reiss",
+      "cat": "headshots-women",
+      "title": "Justine Reiss",
+      "date": null,
+      "url": null,
+      "cover": "photos/headshots-women/06-justine-reiss/01-lead.jpg",
+      "photos": [
+        "photos/headshots-women/06-justine-reiss/01-lead.jpg",
+        "photos/headshots-women/06-justine-reiss/02.jpg",
+        "photos/headshots-women/06-justine-reiss/03.jpg"
+      ]
+    },
     {
       "id": "evan-carver",
       "slug": "evan-carver",
