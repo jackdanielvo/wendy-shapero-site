@@ -933,15 +933,18 @@ body.shoot-open .contact { display: none; }
   flex-flow: row wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: clamp(14px, 1.6vw, 24px);
-  padding: clamp(30px, 6vh, 80px) clamp(16px, 4vw, 60px);
-  max-width: 1500px;
+  gap: clamp(12px, 1.4vw, 22px);
+  padding: clamp(30px, 6vh, 80px) clamp(14px, 3vw, 50px);
+  max-width: 1700px;
   width: 100%;
   margin: 0 auto;
 }
 .shoot__photo {
-  /* No cropping. Width follows the image's aspect ratio at this height. */
-  height: clamp(420px, 72vh, 760px);
+  /* No cropping. Width follows the image's aspect ratio at this height.
+     Height is bound by viewport WIDTH too (42vw), so 3 portrait photos
+     at ~2:3 ratio always fit horizontally on any desktop instead of
+     bouncing the third one to a new row. */
+  height: min(70vh, 42vw, 720px);
   flex: 0 0 auto;
   max-width: 100%;
   border-radius: var(--radius);
