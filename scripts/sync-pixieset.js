@@ -458,6 +458,21 @@ async function main() {
     );
   }
 
+  // Editorial mode hard guarantee: the OUTPUT subjects array only ever
+  // contains subjects whose slugs are listed in cfg.categories. This stops
+  // a previous legacy-mode data file from leaking 118 unrelated shoots
+  // into an editorial run via the fallback above.
+  if (editorialMode) {
+    const wanted = new Set(cfg.categories.map((c) => c && c.slug).filter(Boolean));
+    const before = subjects.length;
+    subjects = subjects.filter((s) => wanted.has(s.id || s.slug));
+    if (before !== subjects.length) {
+      console.log(
+        `Editorial filter: kept ${subjects.length} of ${before} subjects (only those in cfg.categories).`
+      );
+    }
+  }
+
   // 4) Write photos.json
   // Filter the featured list down to slugs we actually scraped, preserving
   // Wendy's curated order.
