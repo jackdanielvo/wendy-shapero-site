@@ -18,13 +18,15 @@ permissions:
   pages: write      # GitHub Pages deploy
   id-token: write   # GitHub Pages deploy
 
-# Serialize runs of this workflow so a second run can't try to push or
-# deploy while another is still in flight. Queued runs aren't cancelled —
-# we want every admin save to actually take effect, even if the user
-# clicked Save twice in quick succession.
+# Serialize runs of this workflow. cancel-in-progress: true means a new
+# push immediately cancels any older queued/running run for the same
+# group — the latest commit always wins, no backlog. (We previously had
+# false here to "preserve every save," but in practice that just stacks
+# up redundant runs and slows feedback. Each push always represents the
+# latest desired state, so cancelling older runs is correct.)
 concurrency:
   group: pages-sync-and-deploy
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   sync:
