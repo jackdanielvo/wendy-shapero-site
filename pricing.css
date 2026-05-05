@@ -1,0 +1,300 @@
+/* ============================================================
+   Pricing page — separate from the photo-driven editorial flow
+   on the home page. Same fonts and palette; tighter, more
+   document-like layout. Sharp corners, no card shadows on the
+   structural blocks (rate cards keep a quiet shadow so they
+   read as discrete options).
+   ============================================================ */
+
+.pricing-page {
+  /* Match home: body bg = bg-alt so the page feels of a piece. */
+  background: var(--bg-alt);
+}
+
+.pricing {
+  background: var(--bg);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 80px) clamp(60px, 8vw, 120px);
+  position: relative;
+  z-index: 2;
+}
+
+/* Top bar: back link / wordmark / year stamp ================== */
+.pricing__top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 16px;
+  padding-bottom: clamp(28px, 5vw, 56px);
+  border-bottom: 1px solid var(--rule);
+}
+.pricing__back {
+  justify-self: start;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  border: none;
+  padding-bottom: 0;
+}
+.pricing__back:hover { color: var(--ink); }
+.pricing__brand {
+  justify-self: center;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: clamp(20px, 2.5vw, 28px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  border: none;
+  padding-bottom: 0;
+}
+.pricing__brand .brand-wendy { color: var(--ink); }
+.pricing__brand .brand-pix   { color: #b347b9; }
+.pricing__year {
+  justify-self: end;
+  font-size: 11px;
+  margin: 0;
+}
+
+/* Intro / hero block ========================================== */
+.pricing__intro {
+  padding: clamp(40px, 7vw, 88px) 0 clamp(20px, 4vw, 48px);
+  border-bottom: 1px solid var(--rule);
+}
+.pricing__intro h1.display {
+  font-size: clamp(64px, 12vw, 160px);
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  margin: 0 0 clamp(20px, 3vw, 36px) 0;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.pricing__lede {
+  max-width: 60ch;
+  font-size: clamp(15px, 1.4vw, 17px);
+  color: var(--muted);
+  margin: 0;
+}
+
+/* A pricing block: section heading + sub + content ============ */
+.pricing__block {
+  padding: clamp(40px, 6vw, 72px) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.pricing__block h2.display {
+  font-size: clamp(28px, 3.6vw, 44px);
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.pricing__sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 clamp(20px, 3vw, 36px) 0;
+}
+.pricing__copy {
+  max-width: 60ch;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.pricing__fine {
+  max-width: 60ch;
+  margin: clamp(16px, 2.5vw, 28px) 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.pricing__fine.center { text-align: center; }
+
+/* Headshots: three-up rate cards ============================== */
+.rate-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(14px, 2vw, 24px);
+  margin: 0 0 clamp(24px, 3vw, 40px);
+}
+.rate-card {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: clamp(20px, 2.5vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
+}
+.rate-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--ink);
+}
+.rate-card__name {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin: 0;
+}
+.rate-card--featured .rate-card__name { color: #b347b9; }
+.rate-card__price {
+  margin: 0;
+  font-family: var(--display-font);
+  font-weight: 400;
+  font-size: clamp(36px, 4.5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.rate-card__price .amt { display: inline-block; }
+.rate-card__list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.rate-card__list li {
+  padding-left: 18px;
+  position: relative;
+}
+.rate-card__list li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 11px;
+  width: 8px; height: 1px;
+  background: var(--muted);
+}
+
+/* Add-ons table look (used under headshots) =================== */
+.addons {
+  border-top: 1px solid var(--rule);
+  padding-top: clamp(20px, 3vw, 32px);
+}
+.addons__head {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin: 0 0 14px 0;
+}
+.addons__list, .rate-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.addons__list li, .rate-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 15px;
+  align-items: baseline;
+}
+.addons__list li:last-child, .rate-list li:last-child {
+  border-bottom: none;
+}
+.addons__list li > span:first-child,
+.rate-list  li > span:first-child {
+  color: var(--ink);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.amt, .amt-inline {
+  font-family: var(--display-font);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.amt {
+  font-size: clamp(15px, 1.4vw, 18px);
+}
+.amt-inline { font-size: inherit; }
+
+/* CTA block at bottom ========================================= */
+.pricing__cta {
+  padding: clamp(56px, 8vw, 120px) 0 clamp(20px, 3vw, 40px);
+  text-align: center;
+}
+.pricing__cta h2.display {
+  font-size: clamp(36px, 6vw, 80px);
+  letter-spacing: -0.03em;
+  font-weight: 400;
+  text-transform: uppercase;
+  margin: 0 0 16px 0;
+  line-height: 0.95;
+}
+.pricing__cta-actions {
+  margin: clamp(24px, 4vw, 40px) 0 clamp(16px, 2vw, 24px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.btn {
+  display: inline-block;
+  padding: 14px 26px;
+  border: 1px solid var(--ink);
+  font-family: var(--body-font);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: transparent;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.btn:hover {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn--primary {
+  background: var(--ink);
+  color: var(--bg);
+}
+.btn--primary:hover {
+  background: #b347b9;
+  border-color: #b347b9;
+  color: #fff;
+}
+
+/* Footer ====================================================== */
+.pricing__footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px clamp(20px, 5vw, 80px) 48px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
+  background: var(--bg);
+  border-top: 1px solid var(--rule);
+  position: relative;
+  z-index: 2;
+}
+.pricing__footer p { margin: 0; }
+.pricing__footer a { border-bottom-color: var(--ghost); }
+
+/* Mobile tweaks =============================================== */
+@media (max-width: 640px) {
+  .pricing__top {
+    grid-template-columns: auto auto;
+    row-gap: 8px;
+  }
+  .pricing__year { grid-column: 1 / -1; justify-self: center; }
+  .pricing__intro h1.display { font-size: 22vw; }
+  .rate-cards { grid-template-columns: 1fr; }
+  .addons__list li, .rate-list li {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+  }
+  .amt { font-size: 17px; }
+  .btn { width: 100%; max-width: 320px; }
+}
