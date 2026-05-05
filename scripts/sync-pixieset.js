@@ -354,18 +354,36 @@ function loadExistingSubjects() {
 async function main() {
   const cfg = loadConfig();
   console.log(`Pixieset sync — homepage: ${cfg.homepage}`);
-  // 1) Read homepage and discover slugs
+  // 1) Decide what slugs to fetch.
+  //    EDITORIAL MODE (cfg.categories non-empty): fetch ONLY the listed
+  //      category collections, skip homepage scrape. Wendy's other public
+  //      Pixieset galleries are intentionally invisible to the site.
+  //    LEGACY MODE: scrape the public homepage and fetch every linked
+  //      collection, plus any extraCollections.
+  const editorialMode =
+    Array.isArray(cfg.categories) && cfg.categories.length > 0;
   let slugs = [];
-  try {
-    slugs = await discoverAllSlugs(cfg.homepage, cfg.maxPages || 20);
-    console.log(`  Discovered ${slugs.length} collections across all pages.`);
-  } catch (e) {
-    console.warn(`  Could not load homepage: ${e.message}`);
-  }
-  // 2) Add explicit extras
-  for (const x of cfg.extraCollections || []) {
-    const slug = x.startsWith("http") ? x.replace(/\/$/, "").split("/").pop() : x.replace(/\/+|\\+/g, "");
-    if (slug && !slugs.includes(slug)) slugs.push(slug);
+  if (editorialMode) {
+    slugs = cfg.categories
+      .map((c) => (c && typeof c === "object" ? c.slug : c))
+      .filter(Boolean);
+    console.log(
+      `Editorial mode: fetching ${slugs.length} curated category collections (skipping homepage scrape).`
+    );
+  } else {
+    try {
+      slugs = await discoverAllSlugs(cfg.homepage, cfg.maxPages || 20);
+      console.log(`  Discovered ${slugs.length} collections across all pages.`);
+    } catch (e) {
+      console.warn(`  Could not load homepage: ${e.message}`);
+    }
+    // 2) Add explicit extras (legacy only — editorial mode uses categories)
+    for (const x of cfg.extraCollections || []) {
+      const slug = x.startsWith("http")
+        ? x.replace(/\/$/, "").split("/").pop()
+        : x.replace(/\/+|\\+/g, "");
+      if (slug && !slugs.includes(slug)) slugs.push(slug);
+    }
   }
   // If Pixieset blocked us, keep going — but reuse the subjects that the
   // PREVIOUS sync committed to data/photos.js. We'll still rewrite the
@@ -428,6 +446,18 @@ async function main() {
     }
   }
 
+  // Editorial mode + every per-slug fetch failed = Pixieset blocked the
+  // runner. Don't wipe the editorial data — fall back to what's in
+  // data/photos.js so the live site keeps showing the last known categories.
+  if (editorialMode && !subjects.length) {
+    subjects = loadExistingSubjects();
+    console.warn(
+      `Editorial mode: all category fetches failed (likely Pixieset 403). ` +
+      `Reusing ${subjects.length} previously synced subjects so the live ` +
+      `site doesn't lose its editorial sections.`
+    );
+  }
+
   // 4) Write photos.json
   // Filter the featured list down to slugs we actually scraped, preserving
   // Wendy's curated order.
@@ -448,6 +478,9 @@ async function main() {
   const excludeShoots = (cfg.excludeShoots || []).slice();
   // leadPhotos is an object — pass through as-is; runtime resolves each entry.
   const leadPhotos = (cfg.leadPhotos && typeof cfg.leadPhotos === "object") ? { ...cfg.leadPhotos } : {};
+  // In editorial mode, pass categories through so the runtime renders one
+  // section per category. Null in legacy mode signals the runtime to fall
+  // back to the legacy Featured + All Shoots layout.
   const out = {
     generatedAt: new Date().toISOString(),
     source: cfg.homepage,
@@ -456,6 +489,7 @@ async function main() {
     gridShoots,
     excludeShoots,
     leadPhotos,
+    categories: editorialMode ? cfg.categories.slice() : null,
     subjects
   };
   fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
