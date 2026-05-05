@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-05T00:04:19.203Z",
+  "generatedAt": "2026-05-05T00:11:46.250Z",
   "source": "https://wendypix.pixieset.com/",
   "featured": [
     "audreyandevelynbernie",
@@ -56,6 +56,13 @@
     "davidtoback-1"
   ],
   "leadPhotos": {},
+  "categories": [
+    {
+      "slug": "headshotsmen",
+      "label": "Headshots — Men",
+      "subtitle": ""
+    }
+  ],
   "subjects": [
     {
       "id": "kellykellykelly",
