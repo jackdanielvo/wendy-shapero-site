@@ -947,6 +947,10 @@ body.shoot-open .contact { display: none; }
   height: min(70vh, 42vw, 720px);
   flex: 0 0 auto;
   max-width: 100%;
+  /* The element is a <figure>, which gets a UA-default
+     `margin: 1em 40px`. That horizontal margin is what was forcing the
+     third photo to wrap. Zero it. */
+  margin: 0;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
