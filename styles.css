@@ -951,7 +951,7 @@ body.shoot-open .contact { display: none; }
      `margin: 1em 40px`. That horizontal margin is what was forcing the
      third photo to wrap. Zero it. */
   margin: 0;
-  border-radius: var(--radius);
+  border-radius: 0;     /* sharp corners — let the photos read as photos */
   overflow: hidden;
   box-shadow: var(--shadow);
   background: var(--bg-alt);
