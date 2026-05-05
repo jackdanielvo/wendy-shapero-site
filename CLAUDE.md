@@ -25,7 +25,25 @@ Probably moving to `/Volumes/Hub SSD 2TB/Wendypix photo folders/wendy-shapero-si
 
 ## ⚠️ CURRENT STATE OF PLAY (the most important section)
 
-**We're mid-refactor: dropping Pixieset, switching to local photo storage.**
+**Architecture: local photos in repo, no GitHub Actions, Pages deploys from `main` branch directly.**
+
+Photos live in `photos/<category-slug>/<NN-person-slug>/*.jpg`. A small `scripts/build-photos.js` walks the tree and writes `data/photos.js`. Jack runs it locally before each push. GitHub Pages is configured to "Deploy from a branch: main / root" so every push deploys in ~30 seconds with no Actions involvement.
+
+The legacy Pixieset sync (`scripts/sync-pixieset.js`) and the GitHub Actions workflow (`.github/workflows/sync.yml`) were deleted as part of this simplification. If you find them resurrected somehow, they shouldn't be — local photos + branch deploy is the canonical pipeline now.
+
+### Day-to-day publishing flow
+
+When Jack adds/changes photos:
+
+```
+cd ~/Documents/VCSAR1\ Drone\ Training/wendy-shapero-site   # or wherever the repo lives
+node scripts/build-photos.js                                # regenerates data/photos.{js,json}
+git add -A
+git commit -m "Add headshots-women"
+git push
+```
+
+That's it. Pages picks up the push in ~30 seconds. No queue, no Actions, no waiting.
 
 ### Why we're abandoning Pixieset
 
