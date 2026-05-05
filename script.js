@@ -512,6 +512,7 @@ function buildFeatured(subjects, featuredSlugs) {
   // drag happened).
   let dragStartX = null;
   let dragStartT = 0;
+  let dragPointerId = null;
   let didDrag = false;
   let clickSwallow = null;    // currently-installed click suppressor, if any
   let swallowTimer = 0;
@@ -527,12 +528,23 @@ function buildFeatured(subjects, featuredSlugs) {
     clearSwallow();              // any stale suppressor must not survive
     dragStartX = e.clientX;
     dragStartT = performance.now();
+    dragPointerId = e.pointerId;
     didDrag = false;
-    try { carousel.setPointerCapture(e.pointerId); } catch (_) {}
+    // NOTE: we deliberately do NOT setPointerCapture here. Capturing on
+    // pointerdown breaks click synthesization on inner <button> tiles in
+    // some browsers (the click goes to the carousel, not the tile).
+    // We capture only once we've decided it's a drag — see pointermove.
   });
   carousel.addEventListener("pointermove", (e) => {
     if (dragStartX === null) return;
-    if (Math.abs(e.clientX - dragStartX) > 15) didDrag = true;
+    if (Math.abs(e.clientX - dragStartX) > 15) {
+      if (!didDrag) {
+        didDrag = true;
+        // Now that it's clearly a drag, take pointer capture so the gesture
+        // doesn't get hijacked if it leaves the carousel bounds.
+        try { carousel.setPointerCapture(dragPointerId); } catch (_) {}
+      }
+    }
   });
   carousel.addEventListener("pointerup", (e) => {
     if (dragStartX === null) return;
@@ -681,7 +693,7 @@ function buildCategorySection(people, catConfig, anchorBefore) {
     else if (e.key === "ArrowRight" && active < tiles.length - 1) { active++; layout(); e.preventDefault(); }
   });
 
-  let dragStartX = null, dragStartT = 0, didDrag = false;
+  let dragStartX = null, dragStartT = 0, dragPointerId = null, didDrag = false;
   let clickSwallow = null, swallowTimer = 0;
   function clearSwallow() {
     if (clickSwallow) {
@@ -693,12 +705,19 @@ function buildCategorySection(people, catConfig, anchorBefore) {
   carousel.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     clearSwallow();              // any stale suppressor must not survive
-    dragStartX = e.clientX; dragStartT = performance.now(); didDrag = false;
-    try { carousel.setPointerCapture(e.pointerId); } catch (_) {}
+    dragStartX = e.clientX; dragStartT = performance.now();
+    dragPointerId = e.pointerId; didDrag = false;
+    // Don't setPointerCapture here — it would block click synthesization
+    // on inner <button> tiles. Capture only once a drag is confirmed.
   });
   carousel.addEventListener("pointermove", (e) => {
     if (dragStartX === null) return;
-    if (Math.abs(e.clientX - dragStartX) > 15) didDrag = true;
+    if (Math.abs(e.clientX - dragStartX) > 15) {
+      if (!didDrag) {
+        didDrag = true;
+        try { carousel.setPointerCapture(dragPointerId); } catch (_) {}
+      }
+    }
   });
   carousel.addEventListener("pointerup", (e) => {
     if (dragStartX === null) return;
