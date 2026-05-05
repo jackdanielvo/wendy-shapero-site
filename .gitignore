@@ -21,3 +21,5 @@ node_modules/
 preview-*.png
 meta_*.webp
 wendy-portait.jpg
+.scratch-thumbs/
+*~

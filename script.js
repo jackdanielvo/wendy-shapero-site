@@ -580,25 +580,21 @@ function buildFeatured(subjects, featuredSlugs) {
 // CATEGORY SECTION (editorial mode)
 //
 // Renders one Spencer-style carousel section per category. Each tile is
-// a different photo from the same Pixieset collection; tapping any tile
-// opens that collection in the existing fullscreen shoot view (matches
-// what Wendy/Jack chose: viewers see the full set in one place rather
-// than clicking in and out of a single-photo lightbox).
+// the LEAD photo of a different *person* (subject) within that category.
+// Tapping any tile opens that person's full set of photos in the existing
+// fullscreen shoot view (currently 3 photos per person, by convention).
 //
-// The DOM is built dynamically and appended below the About section,
-// so the home page can have any number of category sections (4–7 is
-// the sweet spot per the editorial decisions).
+// The DOM is built dynamically and appended below the About section, so
+// the home page can have any number of category sections.
 // ============================================================
-function buildCategorySection(subj, catConfig, anchorBefore) {
+function buildCategorySection(people, catConfig, anchorBefore) {
   const main = document.querySelector("main");
-  if (!main || !subj) return;
-  const photos = subj.photoUrls || [];
-  if (!photos.length) return;
+  if (!main || !people || !people.length) return;
 
   const section = document.createElement("section");
   section.className = "featured category-section";
   section.dataset.slug = catConfig.slug;
-  const labelHtml = escapeHtml(catConfig.label || subj.label || subj.id);
+  const labelHtml = escapeHtml(catConfig.label || catConfig.slug);
   const subHtml = catConfig.subtitle
     ? `<p class="featured-sub">${escapeHtml(catConfig.subtitle)}</p>`
     : "";
@@ -620,20 +616,24 @@ function buildCategorySection(subj, catConfig, anchorBefore) {
 
   const carousel = section.querySelector(".featured-carousel");
   const dotsEl   = section.querySelector(".featured-dots");
-  let active = Math.min(photos.length - 1, Math.floor(photos.length / 2));
+  let active = Math.min(people.length - 1, Math.floor(people.length / 2));
 
-  // Build a tile per photo. All tiles in this section share the same
-  // "open the shoot" target — clicking the focal one always opens this
-  // category's full gallery view.
-  const tiles = photos.map((url, i) => {
+  // Build a tile per person. Each tile shows the person's lead photo and
+  // their name as a pill label below. Click opens their shoot.
+  const tiles = people.map((subj, i) => {
     const tile = document.createElement("button");
     tile.type = "button";
     tile.className = "ftile";
+    tile.dataset.subjectId = subj.id;
+    const personLabel = subj.label || subj.title || subj.id;
     tile.setAttribute(
       "aria-label",
-      `${labelHtml} — photo ${i + 1} of ${photos.length}`
+      `${personLabel} — open photos (${i + 1} of ${people.length})`
     );
-    tile.innerHTML = `<img src="${url}" alt="" loading="lazy"/>`;
+    const lead = (subj.photoUrls && subj.photoUrls[0]) || "";
+    tile.innerHTML =
+      `<img src="${lead}" alt="" loading="lazy"/>` +
+      `<span class="ftile__label caps">${escapeHtml(personLabel)}</span>`;
     tile.addEventListener("click", () => {
       if (i === active) openShoot(subj.id);
       else { active = i; layout(); }
@@ -642,9 +642,9 @@ function buildCategorySection(subj, catConfig, anchorBefore) {
     return tile;
   });
 
-  const dots = photos.map((_, i) => {
+  const dots = people.map((_, i) => {
     const dot = document.createElement("button");
-    dot.setAttribute("aria-label", `Show photo ${i + 1}`);
+    dot.setAttribute("aria-label", `Show person ${i + 1}`);
     dot.addEventListener("click", () => { active = i; layout(); });
     dotsEl.appendChild(dot);
     return dot;
@@ -1056,12 +1056,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // live inside main).
     const anchor = allWork || null;
     for (const cat of data.categories) {
-      const subj = SUBJECT_BY_ID[cat.slug];
-      if (!subj) {
-        console.warn(`[wendy-site] category "${cat.slug}" has no synced data; skipping.`);
+      // Collect every subject (person) whose `cat` matches this category.
+      // Each one becomes a tile in the section's carousel.
+      const peopleInCat = SUBJECTS.filter((s) => s.cat === cat.slug);
+      if (!peopleInCat.length) {
+        console.warn(`[wendy-site] category "${cat.slug}" has no people; skipping.`);
         continue;
       }
-      buildCategorySection(subj, cat, anchor);
+      buildCategorySection(peopleInCat, cat, anchor);
     }
   } else {
     // Legacy mode: original Featured Work carousel + All Shoots grid + filters

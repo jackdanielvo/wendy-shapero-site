@@ -1,13 +1,14 @@
-name: Sync from Pixieset & Deploy
+name: Build photos & Deploy
 
 # Triggers
-# 1. Cron: every 4 hours, automatically pulls Wendy's latest Pixieset uploads.
-# 2. workflow_dispatch: a manual "Refresh now" button (in the GitHub UI,
+# 1. workflow_dispatch: a manual "Refresh now" button (in the GitHub UI,
 #    or via a one-click bookmark using the GitHub API — see README).
-# 3. push to main: re-deploys whenever the source changes.
+# 2. push to main: rebuilds and re-deploys whenever any file changes.
+#
+# The cron schedule was removed when we moved off Pixieset — the photos
+# are now in the repo, so there's nothing to poll for. A push triggers
+# the build.
 on:
-  schedule:
-    - cron: "0 */4 * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -37,24 +38,19 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Sync from Pixieset
-        run: node scripts/sync-pixieset.js
+      - name: Build photos data file
+        run: node scripts/build-photos.js
 
       - name: Commit refreshed data (if changed)
         run: |
-          # The sync script writes both data/photos.json and data/photos.js
-          # (the .js mirror is what the static site actually loads). Commit
-          # both if either changed. The skip-ci tag prevents a recursive
-          # workflow run on the bot's own commit.
+          # build-photos.js writes data/photos.{js,json} from the local
+          # photos/ tree. Commit both if either changed. [skip ci] prevents
+          # the bot's own commit from re-triggering the workflow.
           if [[ -n "$(git status --porcelain data/)" ]]; then
             git config user.name  "wendy-pix-bot"
             git config user.email "actions@github.com"
             git add data/photos.json data/photos.js
-            git commit -m "chore(sync): refresh from Pixieset [skip ci]"
-            # Race-protect: another workflow run might have pushed in the
-            # meantime. Pull-rebase first, then push. With the concurrency
-            # group above this should rarely trigger, but it's a safe
-            # fallback so a transient overlap can't fail the run.
+            git commit -m "chore(build): rebuild photos data [skip ci]"
             for attempt in 1 2 3; do
               git pull --rebase origin main || true
               if git push; then
@@ -65,7 +61,7 @@ jobs:
               sleep 2
             done
           else
-            echo "No changes from Pixieset."
+            echo "data/photos.* already up to date."
           fi
 
       - name: Upload site artifact

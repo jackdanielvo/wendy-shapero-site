@@ -473,6 +473,17 @@ async function main() {
     }
   }
 
+  // Don't clobber data/photos.js with an empty subjects array. If we
+  // somehow ended up with zero subjects (Pixieset 403'd AND the existing
+  // file had no matching slugs), exiting early preserves the last known
+  // good data file rather than wiping the site to nothing.
+  if (!subjects.length) {
+    console.error(
+      "No subjects to write. Skipping output to preserve the previous data file."
+    );
+    process.exit(0);
+  }
+
   // 4) Write photos.json
   // Filter the featured list down to slugs we actually scraped, preserving
   // Wendy's curated order.

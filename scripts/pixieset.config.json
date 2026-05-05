@@ -4,7 +4,7 @@
   "extraCollections": [],
   "_categories_help": "EDITORIAL MODE. When this array is non-empty, the site renders one carousel section per entry instead of a big 'All Shoots' grid, and the sync ONLY fetches these named collections (Wendy's other public Pixieset galleries become invisible to the site). Each entry: { slug: required Pixieset URL key, label: section heading, subtitle: optional italic subhead }. Leave this empty to keep the current 'show every collection' behavior. Example: [{ \"slug\": \"headshots\", \"label\": \"Headshots\", \"subtitle\": \"Actors, executives, voiceover\" }]",
   "categories": [
-    { "slug": "headshotsmen", "label": "Headshots — Men", "subtitle": "" }
+    { "slug": "headshots-men", "label": "Headshots — Men", "subtitle": "Actors, executives, voiceover" }
   ],
   "_featured_help": "Slugs of shoots for the 'Featured Work' section, in display order. Leave empty to hide that section and let all shoots flow into the main 'All Shoots' grid below.",
   "featured": [
