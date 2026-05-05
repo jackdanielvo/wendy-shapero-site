@@ -513,8 +513,18 @@ function buildFeatured(subjects, featuredSlugs) {
   let dragStartX = null;
   let dragStartT = 0;
   let didDrag = false;
+  let clickSwallow = null;    // currently-installed click suppressor, if any
+  let swallowTimer = 0;
+  function clearSwallow() {
+    if (clickSwallow) {
+      carousel.removeEventListener("click", clickSwallow, { capture: true });
+      clickSwallow = null;
+    }
+    if (swallowTimer) { clearTimeout(swallowTimer); swallowTimer = 0; }
+  }
   carousel.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    clearSwallow();              // any stale suppressor must not survive
     dragStartX = e.clientX;
     dragStartT = performance.now();
     didDrag = false;
@@ -522,7 +532,7 @@ function buildFeatured(subjects, featuredSlugs) {
   });
   carousel.addEventListener("pointermove", (e) => {
     if (dragStartX === null) return;
-    if (Math.abs(e.clientX - dragStartX) > 8) didDrag = true;
+    if (Math.abs(e.clientX - dragStartX) > 15) didDrag = true;
   });
   carousel.addEventListener("pointerup", (e) => {
     if (dragStartX === null) return;
@@ -530,15 +540,15 @@ function buildFeatured(subjects, featuredSlugs) {
     const dt = performance.now() - dragStartT;
     dragStartX = null;
     if (!didDrag) return;        // pure tap — let the tile click fire
-    // Swallow the click that a pointerup synthesizes, so a drag that
-    // ends on a tile doesn't accidentally trigger that tile's click.
-    carousel.addEventListener("click", (ce) => {
-      ce.stopPropagation(); ce.preventDefault();
-    }, { capture: true, once: true });
     // Threshold: 50px static, or 20px + 0.4 px/ms flick for snappy users
     const fast = Math.abs(dx) > 20 && Math.abs(dx) / Math.max(dt, 1) > 0.4;
     const isSwipe = Math.abs(dx) > 50 || fast;
     if (!isSwipe) return;
+    // Only install the click swallow when we actually advance — otherwise a
+    // small drag that doesn't move the carousel would still nuke the tap.
+    clickSwallow = (ce) => { ce.stopPropagation(); ce.preventDefault(); clearSwallow(); };
+    carousel.addEventListener("click", clickSwallow, { capture: true });
+    swallowTimer = setTimeout(clearSwallow, 500);  // safety: don't outlive the gesture
     if (dx > 0 && active > 0) { active--; layout(); }
     else if (dx < 0 && active < tiles.length - 1) { active++; layout(); }
   });
@@ -672,14 +682,23 @@ function buildCategorySection(people, catConfig, anchorBefore) {
   });
 
   let dragStartX = null, dragStartT = 0, didDrag = false;
+  let clickSwallow = null, swallowTimer = 0;
+  function clearSwallow() {
+    if (clickSwallow) {
+      carousel.removeEventListener("click", clickSwallow, { capture: true });
+      clickSwallow = null;
+    }
+    if (swallowTimer) { clearTimeout(swallowTimer); swallowTimer = 0; }
+  }
   carousel.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    clearSwallow();              // any stale suppressor must not survive
     dragStartX = e.clientX; dragStartT = performance.now(); didDrag = false;
     try { carousel.setPointerCapture(e.pointerId); } catch (_) {}
   });
   carousel.addEventListener("pointermove", (e) => {
     if (dragStartX === null) return;
-    if (Math.abs(e.clientX - dragStartX) > 8) didDrag = true;
+    if (Math.abs(e.clientX - dragStartX) > 15) didDrag = true;
   });
   carousel.addEventListener("pointerup", (e) => {
     if (dragStartX === null) return;
@@ -687,11 +706,13 @@ function buildCategorySection(people, catConfig, anchorBefore) {
     const dt = performance.now() - dragStartT;
     dragStartX = null;
     if (!didDrag) return;
-    carousel.addEventListener("click", (ce) => {
-      ce.stopPropagation(); ce.preventDefault();
-    }, { capture: true, once: true });
     const fast = Math.abs(dx) > 20 && Math.abs(dx) / Math.max(dt, 1) > 0.4;
-    if (!(Math.abs(dx) > 50 || fast)) return;
+    const isSwipe = Math.abs(dx) > 50 || fast;
+    if (!isSwipe) return;
+    // Only install click swallow when we actually advance the carousel.
+    clickSwallow = (ce) => { ce.stopPropagation(); ce.preventDefault(); clearSwallow(); };
+    carousel.addEventListener("click", clickSwallow, { capture: true });
+    swallowTimer = setTimeout(clearSwallow, 500);
     if (dx > 0 && active > 0) { active--; layout(); }
     else if (dx < 0 && active < tiles.length - 1) { active++; layout(); }
   });
