@@ -926,18 +926,23 @@ body.shoot-open .contact { display: none; }
 
 .shoot__body {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(20px, 3vw, 40px);
+  display: grid;
+  /* Auto-fit equal-width columns. Each photo gets at least 280px.
+     With 3 vertical headshots this lays them out as a tight row of 3. */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: stretch;
+  gap: clamp(16px, 2vw, 28px);
   padding: clamp(30px, 6vh, 80px) clamp(16px, 4vw, 60px);
-  max-width: 1200px;
+  max-width: 1400px;
   width: 100%;
   margin: 0 auto;
 }
 .shoot__photo {
+  /* Each tile is the same height — derived from viewport — and crops
+     the photo to fill it. Gives the row a clean, gallery-tight rhythm
+     no matter what the source photos' aspect ratios are. */
   width: 100%;
-  max-width: 900px;
+  height: clamp(420px, 70vh, 720px);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
@@ -947,11 +952,19 @@ body.shoot-open .contact { display: none; }
   animation: shoot-photo-in 0.9s var(--ease) forwards;
 }
 .shoot__photo:nth-child(1) { animation-delay: 80ms; }
-.shoot__photo:nth-child(2) { animation-delay: 220ms; max-width: 760px; align-self: flex-end; }
-.shoot__photo:nth-child(3) { animation-delay: 360ms; max-width: 700px; align-self: flex-start; }
-.shoot__photo:nth-child(4) { animation-delay: 500ms; max-width: 820px; }
-.shoot__photo:nth-child(5) { animation-delay: 640ms; max-width: 680px; align-self: center; }
-.shoot__photo img { width: 100%; height: auto; display: block; }
+.shoot__photo:nth-child(2) { animation-delay: 200ms; }
+.shoot__photo:nth-child(3) { animation-delay: 320ms; }
+.shoot__photo:nth-child(4) { animation-delay: 440ms; }
+.shoot__photo:nth-child(5) { animation-delay: 560ms; }
+.shoot__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Bias the crop toward the upper portion so faces don't get clipped
+     on photos with more headroom than the row's aspect ratio. */
+  object-position: center 30%;
+  display: block;
+}
 @keyframes shoot-photo-in {
   to { opacity: 1; transform: translateY(0); }
 }
@@ -971,6 +984,9 @@ body.shoot-open .contact { display: none; }
   .shoot__crumb { display: none; }
   .shoot__nav button .caps { display: none; }
   .shoot__nav button { padding: 8px 12px; }
+  /* Single column, taller tiles, on phones */
+  .shoot__body { grid-template-columns: 1fr; gap: 18px; }
+  .shoot__photo { height: clamp(380px, 60vh, 540px); }
 }
 
 /* When the shoot is open, lock body scroll */
