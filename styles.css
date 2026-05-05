@@ -926,23 +926,24 @@ body.shoot-open .contact { display: none; }
 
 .shoot__body {
   flex: 1;
-  display: grid;
-  /* Auto-fit equal-width columns. Each photo gets at least 280px.
-     With 3 vertical headshots this lays them out as a tight row of 3. */
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  align-items: stretch;
-  gap: clamp(16px, 2vw, 28px);
+  /* Justified-row treatment: every photo gets the same height,
+     widths are determined by each photo's natural aspect ratio.
+     Photos that don't fit on one row wrap to the next. */
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(14px, 1.6vw, 24px);
   padding: clamp(30px, 6vh, 80px) clamp(16px, 4vw, 60px);
-  max-width: 1400px;
+  max-width: 1500px;
   width: 100%;
   margin: 0 auto;
 }
 .shoot__photo {
-  /* Each tile is the same height — derived from viewport — and crops
-     the photo to fill it. Gives the row a clean, gallery-tight rhythm
-     no matter what the source photos' aspect ratios are. */
-  width: 100%;
-  height: clamp(420px, 70vh, 720px);
+  /* No cropping. Width follows the image's aspect ratio at this height. */
+  height: clamp(420px, 72vh, 760px);
+  flex: 0 0 auto;
+  max-width: 100%;
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
@@ -957,12 +958,9 @@ body.shoot-open .contact { display: none; }
 .shoot__photo:nth-child(4) { animation-delay: 440ms; }
 .shoot__photo:nth-child(5) { animation-delay: 560ms; }
 .shoot__photo img {
-  width: 100%;
   height: 100%;
-  object-fit: cover;
-  /* Bias the crop toward the upper portion so faces don't get clipped
-     on photos with more headroom than the row's aspect ratio. */
-  object-position: center 30%;
+  width: auto;
+  max-width: 100%;
   display: block;
 }
 @keyframes shoot-photo-in {
@@ -984,9 +982,10 @@ body.shoot-open .contact { display: none; }
   .shoot__crumb { display: none; }
   .shoot__nav button .caps { display: none; }
   .shoot__nav button { padding: 8px 12px; }
-  /* Single column, taller tiles, on phones */
-  .shoot__body { grid-template-columns: 1fr; gap: 18px; }
-  .shoot__photo { height: clamp(380px, 60vh, 540px); }
+  /* Single column at natural aspect ratio on phones */
+  .shoot__body { flex-direction: column; align-items: center; gap: 18px; }
+  .shoot__photo { height: auto; width: 100%; max-width: 560px; }
+  .shoot__photo img { height: auto; width: 100%; }
 }
 
 /* When the shoot is open, lock body scroll */
