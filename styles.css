@@ -1016,10 +1016,15 @@ body.shoot-open { overflow: hidden; }
 }
 .lightbox.open { opacity: 1; }
 .lightbox img {
-  max-width: 100%;
-  max-height: 100%;
+  /* `max-width: 100%` doesn't constrain inside an auto-sized grid cell,
+     so peg the cap to the viewport directly (minus the lightbox's
+     padding so we never bleed past the edges). */
+  max-width: calc(100vw - clamp(40px, 10vw, 120px));
+  max-height: calc(100vh - clamp(40px, 10vw, 120px));
+  width: auto;
+  height: auto;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
   display: block;
 }
