@@ -8,10 +8,10 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css?v=2026-05-05-row4" />
-  <link rel="stylesheet" href="pricing.css?v=2026-05-05" />
+  <link rel="stylesheet" href="pricing.css?v=2026-05-05-v2" />
 </head>
 <body class="pricing-page">
 
@@ -25,6 +25,7 @@
 
   <main class="pricing">
 
+    <!-- TOP BAR -->
     <header class="pricing__top">
       <a class="pricing__back caps" href="index.html" aria-label="Back to WendyPix home">&larr; <span>Back</span></a>
       <a class="pricing__brand" href="index.html" aria-label="WendyPix home">
@@ -33,150 +34,190 @@
       <p class="pricing__year caps muted">2026 Rate Card</p>
     </header>
 
-    <section class="pricing__intro">
-      <h1 class="display">RATES</h1>
+    <!-- HERO -->
+    <section class="pricing__hero">
+      <p class="eyebrow">Rates &amp; packages</p>
+      <h1 class="display headline">RATES.</h1>
       <p class="pricing__lede">
-        Every session includes a pre-shoot consultation, on-set lighting and
-        direction, and a private online gallery for image selection. All
-        prices in USD.
+        Plain pricing. Fair sessions. Photos you'll actually use.
+        Every shoot includes a pre-shoot consultation, on-set lighting and
+        direction, and a private online gallery for your selects.
+      </p>
+      <p class="pricing__lede pricing__lede--small">
+        All prices in USD &middot; Los Angeles &amp; Southern California
       </p>
     </section>
 
-    <!-- HEADSHOTS -->
-    <section class="pricing__block">
-      <h2 class="display secondary">HEADSHOTS</h2>
-      <p class="pricing__sub">Actors, executives, voiceover talent.</p>
+    <!-- 01. HEADSHOTS -->
+    <section class="block" id="headshots">
+      <p class="block__num">01.</p>
+      <h2 class="block__title">Headshots.</h2>
+
+      <div class="callout">
+        <p class="callout__eyebrow">Who this is for</p>
+        <p class="callout__body">
+          Actors building a reel. Executives who need an updated profile.
+          Voice-over and on-camera talent. Anyone whose face is the
+          job.
+        </p>
+      </div>
 
       <div class="rate-cards">
         <article class="rate-card">
-          <p class="rate-card__name caps">Essential</p>
-          <p class="rate-card__price"><span class="amt">$600</span></p>
+          <p class="rate-card__name">Essential</p>
+          <p class="rate-card__price">$600</p>
+          <p class="rate-card__tag">1-hour session</p>
           <ul class="rate-card__list">
-            <li>1-hour session</li>
             <li>Up to 2 looks</li>
             <li>3 retouched final images</li>
+            <li>Online gallery for selects</li>
           </ul>
         </article>
 
         <article class="rate-card rate-card--featured">
-          <p class="rate-card__name caps">Standard</p>
-          <p class="rate-card__price"><span class="amt">$850</span></p>
+          <p class="rate-card__flag">Most popular</p>
+          <p class="rate-card__name">Standard</p>
+          <p class="rate-card__price">$850</p>
+          <p class="rate-card__tag">1.5-hour session</p>
           <ul class="rate-card__list">
-            <li>1.5-hour session</li>
             <li>Up to 4 looks</li>
             <li>6 retouched final images</li>
+            <li>Online gallery for selects</li>
           </ul>
         </article>
 
         <article class="rate-card">
-          <p class="rate-card__name caps">Premium</p>
-          <p class="rate-card__price"><span class="amt">$1,400</span></p>
+          <p class="rate-card__name">Premium</p>
+          <p class="rate-card__price">$1,400</p>
+          <p class="rate-card__tag">2-hour session</p>
           <ul class="rate-card__list">
-            <li>2-hour session</li>
             <li>Unlimited looks</li>
             <li>10 retouched final images</li>
             <li>Hair &amp; makeup included</li>
+            <li>Online gallery for selects</li>
           </ul>
         </article>
       </div>
 
-      <div class="addons">
-        <p class="addons__head caps">Add-ons</p>
-        <ul class="addons__list">
-          <li><span>Additional retouched image</span><span class="amt">$45</span></li>
-          <li><span>Additional half-hour on set</span><span class="amt">$150</span></li>
-          <li><span>Hair &amp; makeup artist on set</span><span class="amt">$200</span></li>
-          <li><span>Commercial &amp; advertising usage license</span><span class="amt">$250–$750</span></li>
-        </ul>
-      </div>
+      <p class="addons__head">Add-ons</p>
+      <ul class="ledger">
+        <li><span>Additional retouched image</span><span class="amt">$45</span></li>
+        <li><span>Additional half-hour on set</span><span class="amt">$150</span></li>
+        <li><span>Hair &amp; makeup artist on set</span><span class="amt">$200</span></li>
+        <li><span>Commercial &amp; advertising usage license</span><span class="amt">$250–$750</span></li>
+      </ul>
     </section>
 
-    <!-- LIFESTYLE & COMMERCIAL -->
-    <section class="pricing__block">
-      <h2 class="display secondary">LIFESTYLE &amp; COMMERCIAL</h2>
-      <p class="pricing__sub">
-        Pricing varies with deliverables and usage rights. Final quote follows a brief call.
-      </p>
+    <!-- 02. LIFESTYLE -->
+    <section class="block" id="lifestyle">
+      <p class="block__num">02.</p>
+      <h2 class="block__title">Lifestyle &amp; commercial.</h2>
 
-      <ul class="rate-list">
+      <div class="callout">
+        <p class="callout__eyebrow">How this works</p>
+        <p class="callout__body">
+          Pricing varies with deliverables and usage rights — final quote
+          follows a brief call so we can scope the shoot, the licensing,
+          and the team you'll need on set.
+        </p>
+      </div>
+
+      <ul class="ledger ledger--lg">
         <li><span>2-hour solo / brand portrait</span><span class="amt">$1,500</span></li>
         <li><span>Half-day (4 hours) lifestyle</span><span class="amt">$2,800</span></li>
         <li><span>Full day (8 hours) commercial</span><span class="amt">$4,800+</span></li>
       </ul>
 
-      <p class="pricing__fine">
+      <p class="block__note">
         Includes lighting, retouched selects, and a release-ready gallery.
-        Usage rights licensed separately based on scope: web-only, broadcast,
+        Usage rights priced separately by scope: web-only, broadcast,
         exclusivity, term.
       </p>
     </section>
 
-    <!-- EVENTS -->
-    <section class="pricing__block">
-      <h2 class="display secondary">EVENTS</h2>
-      <p class="pricing__sub">Hourly, two-hour minimum.</p>
+    <!-- 03. EVENTS -->
+    <section class="block" id="events">
+      <p class="block__num">03.</p>
+      <h2 class="block__title">Events.</h2>
 
-      <ul class="rate-list">
-        <li><span>Standard event coverage</span><span class="amt">$350 / hour</span></li>
-        <li><span>Corporate, conference, fundraiser</span><span class="amt">$400 / hour</span></li>
-        <li><span>Half-day (4 hrs · includes one assistant)</span><span class="amt">$1,800</span></li>
-        <li><span>Full day (8 hrs · includes one assistant)</span><span class="amt">$3,800</span></li>
+      <div class="callout">
+        <p class="callout__eyebrow">Booking minimum</p>
+        <p class="callout__body">
+          Hourly pricing with a two-hour minimum. Half- and full-day
+          packages include one assistant on set.
+        </p>
+      </div>
+
+      <ul class="ledger ledger--lg">
+        <li><span>Standard event coverage</span><span class="amt">$350 / hr</span></li>
+        <li><span>Corporate, conference, fundraiser</span><span class="amt">$400 / hr</span></li>
+        <li><span>Half-day (4 hrs · with assistant)</span><span class="amt">$1,800</span></li>
+        <li><span>Full day (8 hrs · with assistant)</span><span class="amt">$3,800</span></li>
       </ul>
 
-      <p class="pricing__fine">
+      <p class="block__note">
         Galleries delivered within 7 business days. Same-day previews
         available — <span class="amt-inline">$250</span>.
       </p>
     </section>
 
-    <!-- TRAVEL -->
-    <section class="pricing__block">
-      <h2 class="display secondary">TRAVEL</h2>
+    <!-- 04. TRAVEL -->
+    <section class="block" id="travel">
+      <p class="block__num">04.</p>
+      <h2 class="block__title">Travel.</h2>
 
-      <ul class="rate-list">
+      <ul class="ledger ledger--lg">
         <li><span>Within 30 miles of Los Angeles</span><span class="amt">Included</span></li>
         <li><span>Beyond 30 miles</span><span class="amt">$0.85 / mile</span></li>
-        <li><span>Travel time on round-trips over 90 minutes</span><span class="amt">$175 / hour</span></li>
+        <li><span>Travel time on round-trips over 90 minutes</span><span class="amt">$175 / hr</span></li>
         <li><span>Out-of-state shoots</span><span class="amt">Cost + 10%</span></li>
       </ul>
 
-      <p class="pricing__fine">
-        Out-of-state pricing covers airfare, lodging, per diem and parking
+      <p class="block__note">
+        Out-of-state pricing covers airfare, lodging, per diem, and parking
         billed at cost with a 10% coordination fee.
       </p>
     </section>
 
-    <!-- SCHEDULING -->
-    <section class="pricing__block">
-      <h2 class="display secondary">SCHEDULING</h2>
+    <!-- 05. SCHEDULING -->
+    <section class="block" id="scheduling">
+      <p class="block__num">05.</p>
+      <h2 class="block__title">Scheduling.</h2>
 
-      <p class="pricing__copy">
-        A 50% non-refundable retainer holds the date. Balance is due 24 hours
-        before the session. One reschedule is permitted with 14 days&rsquo;
-        notice. Bookings are made via email or the contact form on the home
-        page.
+      <div class="callout">
+        <p class="callout__eyebrow">How dates are held</p>
+        <p class="callout__body">
+          A 50% non-refundable retainer holds the date. The balance is
+          due 24 hours before the session. One reschedule is permitted
+          with 14 days&rsquo; notice.
+        </p>
+      </div>
+
+      <p class="block__copy">
+        Bookings are made by email or through the contact form on the
+        home page. Most sessions are confirmed within 24 hours.
       </p>
     </section>
 
     <!-- CTA -->
-    <section class="pricing__cta">
-      <h2 class="display">READY TO SHOOT?</h2>
-      <p class="pricing__copy">
-        Tell me about your project and your timeline. Quotes within 1
+    <section class="cta">
+      <p class="eyebrow">Let's make something</p>
+      <h2 class="cta__headline">Ready to shoot?</h2>
+      <p class="cta__copy">
+        Tell me about your project and your timeline. Quotes within one
         business day.
       </p>
-      <p class="pricing__cta-actions">
+      <p class="cta__actions">
         <a class="btn btn--primary" href="mailto:wendy@wendypix.com?subject=Booking%20inquiry">Email Wendy</a>
         <a class="btn" href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">15-min discovery call</a>
       </p>
-      <p class="pricing__fine center">
+      <p class="cta__small">
         wendy@wendypix.com &nbsp;&middot;&nbsp; (818) 383-0102
       </p>
     </section>
 
   </main>
 
-  <!-- Tiny footer so the page isn't right at the viewport edge -->
   <footer class="pricing__footer">
     <p class="caps muted">All photographs &copy; <span id="year"></span> Wendy Shapero.</p>
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
@@ -185,7 +226,7 @@
   <script>
     // Year stamp
     document.getElementById("year").textContent = new Date().getFullYear();
-    // Theme toggle (mirrors index.html behavior). Persists in localStorage.
+    // Theme toggle (mirrors index.html behavior).
     (function () {
       const root = document.documentElement;
       const saved = localStorage.getItem("wendypix-theme");

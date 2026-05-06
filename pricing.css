@@ -1,26 +1,41 @@
 /* ============================================================
-   Pricing page — separate from the photo-driven editorial flow
-   on the home page. Same fonts and palette; tighter, more
-   document-like layout. Sharp corners, no card shadows on the
-   structural blocks (rate cards keep a quiet shadow so they
-   read as discrete options).
+   Pricing page — modernized rate card.
+   Reference: bold numbered headers + hairline rules + warm
+   cream callout panels with a plum accent stripe + generous
+   reading-friendly type. Designed to feel inviting and
+   distinctly more "designed" than a typical rate sheet.
    ============================================================ */
 
+:root {
+  /* Page-only tokens. Cream callout, charcoal eyebrow text, plum
+     accent. The cream is intentionally warm to play against the
+     plum and against Wendy's primarily-grayscale photo style. */
+  --cream: #f1ece2;
+  --cream-rule: #e2dccf;
+  --plum: #b347b9;
+  --plum-deep: #8e2c94;
+  --hi: #1b1b1b;        /* even darker than --ink for the heaviest headers */
+}
+[data-theme="dark"] {
+  --cream: #1c1a17;
+  --cream-rule: #2b2823;
+  --hi: #fafafa;
+}
+
 .pricing-page {
-  /* Match home: body bg = bg-alt so the page feels of a piece. */
   background: var(--bg-alt);
 }
 
 .pricing {
   background: var(--bg);
-  max-width: 1100px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 80px) clamp(60px, 8vw, 120px);
+  padding: clamp(28px, 5vw, 64px) clamp(24px, 6vw, 96px) clamp(56px, 8vw, 120px);
   position: relative;
   z-index: 2;
 }
 
-/* Top bar: back link / wordmark / year stamp ================== */
+/* TOP BAR ===================================================== */
 .pricing__top {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -49,79 +64,129 @@
   padding-bottom: 0;
 }
 .pricing__brand .brand-wendy { color: var(--ink); }
-.pricing__brand .brand-pix   { color: #b347b9; }
+.pricing__brand .brand-pix   { color: var(--plum); }
 .pricing__year {
   justify-self: end;
   font-size: 11px;
   margin: 0;
 }
 
-/* Intro / hero block ========================================== */
-.pricing__intro {
-  padding: clamp(40px, 7vw, 88px) 0 clamp(20px, 4vw, 48px);
-  border-bottom: 1px solid var(--rule);
+/* HERO ======================================================== */
+.pricing__hero {
+  padding: clamp(48px, 8vw, 112px) 0 clamp(40px, 6vw, 88px);
 }
-.pricing__intro h1.display {
-  font-size: clamp(64px, 12vw, 160px);
-  letter-spacing: -0.04em;
-  line-height: 0.85;
-  margin: 0 0 clamp(20px, 3vw, 36px) 0;
-  font-weight: 400;
+.eyebrow {
+  font-family: var(--body-font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
+  color: var(--plum);
+  margin: 0 0 clamp(20px, 3vw, 32px) 0;
+}
+.pricing__hero .headline {
+  font-family: var(--body-font);    /* Inter looks crisper at extreme weights */
+  font-weight: 900;
+  font-size: clamp(80px, 16vw, 200px);
+  letter-spacing: -0.045em;
+  line-height: 0.85;
+  color: var(--hi);
+  margin: 0 0 clamp(24px, 4vw, 44px) 0;
+  text-transform: none;
 }
 .pricing__lede {
   max-width: 60ch;
-  font-size: clamp(15px, 1.4vw, 17px);
+  font-size: clamp(17px, 1.6vw, 22px);
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0 0 clamp(12px, 2vw, 20px) 0;
+}
+.pricing__lede--small {
+  font-size: 13px;
+  letter-spacing: 0.06em;
   color: var(--muted);
-  margin: 0;
-}
-
-/* A pricing block: section heading + sub + content ============ */
-.pricing__block {
-  padding: clamp(40px, 6vw, 72px) 0;
-  border-bottom: 1px solid var(--rule);
-}
-.pricing__block h2.display {
-  font-size: clamp(28px, 3.6vw, 44px);
-  letter-spacing: -0.02em;
-  margin: 0 0 8px 0;
-  font-weight: 400;
   text-transform: uppercase;
 }
-.pricing__sub {
-  color: var(--muted);
-  font-size: 14px;
-  margin: 0 0 clamp(20px, 3vw, 36px) 0;
-}
-.pricing__copy {
-  max-width: 60ch;
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.7;
-}
-.pricing__fine {
-  max-width: 60ch;
-  margin: clamp(16px, 2.5vw, 28px) 0 0;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.65;
-}
-.pricing__fine.center { text-align: center; }
 
-/* Headshots: three-up rate cards ============================== */
+/* NUMBERED BLOCK ============================================= */
+.block {
+  padding: clamp(48px, 7vw, 96px) 0;
+  border-top: 1px solid var(--rule);
+}
+.block__num {
+  font-family: var(--body-font);
+  font-weight: 800;
+  font-size: clamp(13px, 1.4vw, 16px);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 8px 0;
+}
+.block__title {
+  font-family: var(--body-font);
+  font-weight: 900;
+  font-size: clamp(40px, 6.4vw, 88px);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  color: var(--hi);
+  margin: 0 0 clamp(28px, 4vw, 48px) 0;
+  padding-bottom: clamp(20px, 3vw, 36px);
+  border-bottom: 1px solid var(--ink);
+  text-transform: none;
+}
+.block__copy {
+  max-width: 60ch;
+  font-size: clamp(16px, 1.4vw, 18px);
+  line-height: 1.65;
+  color: var(--ink);
+  margin: 0;
+}
+.block__note {
+  max-width: 60ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: clamp(20px, 3vw, 32px) 0 0;
+}
+
+/* CALLOUT (warm cream w/ plum stripe) ======================== */
+.callout {
+  background: var(--cream);
+  border-left: 4px solid var(--plum);
+  padding: clamp(20px, 3vw, 32px) clamp(20px, 3.5vw, 40px);
+  margin: 0 0 clamp(28px, 4vw, 44px) 0;
+}
+.callout__eyebrow {
+  font-family: var(--body-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--plum-deep);
+  margin: 0 0 12px 0;
+}
+[data-theme="dark"] .callout__eyebrow { color: var(--plum); }
+.callout__body {
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.55;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* RATE CARDS (Headshots tiers) =============================== */
 .rate-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: clamp(14px, 2vw, 24px);
-  margin: 0 0 clamp(24px, 3vw, 40px);
+  margin: 0 0 clamp(36px, 5vw, 56px);
 }
 .rate-card {
+  position: relative;
   background: var(--bg);
   border: 1px solid var(--rule);
-  padding: clamp(20px, 2.5vw, 32px);
+  padding: clamp(24px, 3vw, 36px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
 }
 .rate-card:hover {
@@ -129,108 +194,147 @@
   box-shadow: var(--shadow);
   border-color: var(--ink);
 }
-.rate-card__name {
-  font-size: 11px;
+.rate-card--featured {
+  background: var(--cream);
+  border-color: var(--cream-rule);
+}
+.rate-card--featured:hover { border-color: var(--plum); }
+.rate-card__flag {
+  position: absolute;
+  top: -10px;
+  left: clamp(20px, 3vw, 32px);
+  background: var(--plum);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  margin: 0;
+}
+.rate-card__name {
+  font-family: var(--body-font);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--muted);
   margin: 0;
 }
-.rate-card--featured .rate-card__name { color: #b347b9; }
+.rate-card--featured .rate-card__name { color: var(--plum-deep); }
+[data-theme="dark"] .rate-card--featured .rate-card__name { color: var(--plum); }
 .rate-card__price {
-  margin: 0;
-  font-family: var(--display-font);
-  font-weight: 400;
-  font-size: clamp(36px, 4.5vw, 56px);
+  margin: 6px 0 0;
+  font-family: var(--body-font);
+  font-weight: 900;
+  font-size: clamp(40px, 5.5vw, 64px);
   line-height: 1;
-  letter-spacing: -0.03em;
-  color: var(--ink);
+  letter-spacing: -0.04em;
+  color: var(--hi);
 }
-.rate-card__price .amt { display: inline-block; }
+.rate-card__tag {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
 .rate-card__list {
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
+  gap: 8px;
+  font-size: 15px;
   color: var(--ink);
+  line-height: 1.45;
 }
 .rate-card__list li {
-  padding-left: 18px;
+  padding-left: 20px;
   position: relative;
 }
 .rate-card__list li::before {
   content: "";
   position: absolute;
-  left: 0; top: 11px;
-  width: 8px; height: 1px;
-  background: var(--muted);
+  left: 0; top: 12px;
+  width: 10px; height: 1px;
+  background: var(--plum);
 }
 
-/* Add-ons table look (used under headshots) =================== */
-.addons {
-  border-top: 1px solid var(--rule);
-  padding-top: clamp(20px, 3vw, 32px);
-}
+/* LEDGER (line-by-line price list) =========================== */
 .addons__head {
+  font-family: var(--body-font);
+  font-weight: 700;
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
   color: var(--muted);
-  margin: 0 0 14px 0;
+  margin: clamp(28px, 4vw, 40px) 0 14px;
 }
-.addons__list, .rate-list {
+.ledger {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
 }
-.addons__list li, .rate-list li {
+.ledger li {
   display: flex;
   justify-content: space-between;
   gap: 24px;
-  padding: 14px 0;
+  padding: clamp(14px, 1.6vw, 20px) 0;
   border-bottom: 1px solid var(--rule);
-  font-size: 15px;
+  font-size: clamp(15px, 1.4vw, 17px);
   align-items: baseline;
-}
-.addons__list li:last-child, .rate-list li:last-child {
-  border-bottom: none;
-}
-.addons__list li > span:first-child,
-.rate-list  li > span:first-child {
   color: var(--ink);
+}
+.ledger li:last-child { border-bottom: none; }
+.ledger li > span:first-child {
   flex: 1 1 auto;
   min-width: 0;
 }
+.ledger--lg li {
+  padding: clamp(18px, 2vw, 24px) 0;
+  font-size: clamp(16px, 1.6vw, 19px);
+}
 .amt, .amt-inline {
-  font-family: var(--display-font);
-  font-weight: 400;
+  font-family: var(--body-font);
+  font-weight: 800;
   letter-spacing: -0.01em;
-  color: var(--ink);
+  color: var(--hi);
   white-space: nowrap;
 }
 .amt {
-  font-size: clamp(15px, 1.4vw, 18px);
+  font-size: clamp(17px, 1.6vw, 21px);
 }
-.amt-inline { font-size: inherit; }
+.ledger--lg .amt { font-size: clamp(18px, 1.9vw, 24px); }
+.amt-inline { font-weight: 700; }
 
-/* CTA block at bottom ========================================= */
-.pricing__cta {
-  padding: clamp(56px, 8vw, 120px) 0 clamp(20px, 3vw, 40px);
+/* CTA ========================================================= */
+.cta {
   text-align: center;
+  padding: clamp(64px, 9vw, 128px) 0 clamp(20px, 3vw, 40px);
+  border-top: 1px solid var(--rule);
 }
-.pricing__cta h2.display {
-  font-size: clamp(36px, 6vw, 80px);
-  letter-spacing: -0.03em;
-  font-weight: 400;
-  text-transform: uppercase;
-  margin: 0 0 16px 0;
-  line-height: 0.95;
+.cta__headline {
+  font-family: var(--body-font);
+  font-weight: 900;
+  font-size: clamp(40px, 7vw, 96px);
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  color: var(--hi);
+  margin: 8px 0 16px;
+  text-transform: none;
 }
-.pricing__cta-actions {
-  margin: clamp(24px, 4vw, 40px) 0 clamp(16px, 2vw, 24px);
+.cta__copy {
+  max-width: 50ch;
+  margin: 0 auto;
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.6;
+  color: var(--muted);
+}
+.cta__actions {
+  margin: clamp(28px, 4vw, 44px) 0 clamp(20px, 3vw, 28px);
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -238,10 +342,11 @@
 }
 .btn {
   display: inline-block;
-  padding: 14px 26px;
+  padding: 16px 30px;
   border: 1px solid var(--ink);
   font-family: var(--body-font);
   font-size: 13px;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink);
@@ -258,16 +363,23 @@
   color: var(--bg);
 }
 .btn--primary:hover {
-  background: #b347b9;
-  border-color: #b347b9;
+  background: var(--plum);
+  border-color: var(--plum);
   color: #fff;
 }
+.cta__small {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
-/* Footer ====================================================== */
+/* FOOTER ===================================================== */
 .pricing__footer {
-  max-width: 1100px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 24px clamp(20px, 5vw, 80px) 48px;
+  padding: 24px clamp(24px, 6vw, 96px) 48px;
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
@@ -281,20 +393,24 @@
 .pricing__footer p { margin: 0; }
 .pricing__footer a { border-bottom-color: var(--ghost); }
 
-/* Mobile tweaks =============================================== */
-@media (max-width: 640px) {
+/* MOBILE ===================================================== */
+@media (max-width: 700px) {
   .pricing__top {
     grid-template-columns: auto auto;
     row-gap: 8px;
   }
   .pricing__year { grid-column: 1 / -1; justify-self: center; }
-  .pricing__intro h1.display { font-size: 22vw; }
+  .pricing__hero .headline { font-size: 26vw; }
+  .block__title { font-size: 12vw; padding-bottom: 18px; }
   .rate-cards { grid-template-columns: 1fr; }
-  .addons__list li, .rate-list li {
+  .ledger li {
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     align-items: flex-start;
   }
-  .amt { font-size: 17px; }
+  .amt { font-size: 19px; }
+  .ledger--lg .amt { font-size: 22px; }
   .btn { width: 100%; max-width: 320px; }
+  .callout { padding-left: 22px; }
+  .cta__headline { font-size: 14vw; }
 }
