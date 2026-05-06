@@ -361,13 +361,18 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
 @media (max-width: 640px) {
   .hero__images {
     overflow-x: auto;
+    /* When one axis is non-visible (overflow-x: auto here), browsers
+       silently treat the other as `auto` too — the spec calls this
+       "implied overflow propagation". So the container clips
+       vertically too, and the absolutely-positioned category labels
+       at bottom: -34px got cropped off. Padding-bottom expands the
+       container's interior so labels live INSIDE it instead of
+       hanging into clipped territory. */
     overflow-y: visible;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    /* Hide scrollbar — visual cue is the partial-card peek alone */
     scrollbar-width: none;
-    /* Padding lets the first and last cards center under scroll-snap */
-    padding: 14px 22vw;
+    padding: 14px 22vw 56px;
     gap: 18px;
     height: auto;
     max-width: none;
