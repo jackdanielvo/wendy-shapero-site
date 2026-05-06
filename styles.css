@@ -177,15 +177,16 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-bottom: clamp(20px, 4vh, 60px);
 }
 
-/* The big WENDYPIX brand wordmark — uppercase Helvetica regular, in ink
-   black so the photos carry all the color on the page. Same proportions
-   as jackdanielvo's title: tall and architectural, tight tracking,
-   tight line-height. */
+/* The big WENDYPIX brand wordmark — Inter Black 900 to match the
+   editorial display treatment used across the rest of the site
+   (FEATURED WORK, ALL SHOOTS, the RATES headline on /pricing). The
+   WENDY half stays in ink and the PIX half stays in plum, so the
+   color identity reads even at the heavier weight. */
 .hero h1.display.brand {
-  font-family: "Helvetica", "Arial", "Helvetica Neue", sans-serif;
-  font-weight: 400;
+  font-family: var(--body-font);
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.045em;
   line-height: 0.82;
   color: var(--ink);
   font-size: clamp(64px, 13vw, 220px);

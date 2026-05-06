@@ -55,10 +55,10 @@
 .pricing__back:hover { color: var(--ink); }
 .pricing__brand {
   justify-self: center;
-  font-family: var(--display-font);
-  font-weight: 400;
+  font-family: var(--body-font);
+  font-weight: 900;
   font-size: clamp(20px, 2.5vw, 28px);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.045em;
   line-height: 1;
   border: none;
   padding-bottom: 0;
