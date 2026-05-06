@@ -936,31 +936,26 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
   .contact-mega {
-    /* Mobile drops the scaleY-grows-with-scroll animation entirely.
-       The trade-off it makes on a small portrait viewport — where
-       "CONTACT" can't be very wide and therefore can't be very tall
-       at natural size — was to either grow up from the bottom (gray
-       space above at low/mid scroll) or grow down from the top (gray
-       space below). Both leave a chunk of empty panel mid-scroll.
-       Instead, we hold the word at a constant large size (scaleY 8,
-       same magnitude desktop reaches at peak) and reveal it with
-       opacity. No growing gap above or below at any scroll position
-       — the word fills the upper viewport from the moment it fades
-       in until it fades out. */
-    top: clamp(8px, 2vh, 24px);
-    bottom: auto;
-    transform: translateX(-50%) scaleY(8);
-    transform-origin: center top;
+    /* Natural size, no scaleY stretching. The word renders at its
+       font-size with no vertical distortion. Positioned just above
+       the row's peak top edge so when the user scrolls in, CONTACT
+       sits a small fixed gap above the rising row instead of leaving
+       a huge gray strip between them. */
+    bottom: clamp(220px, 32vh, 320px);
+    top: auto;
+    transform: translateX(-50%);
+    transform-origin: center bottom;
     opacity: var(--reveal, 0);
+    /* Bumped font-size since the word isn't being stretched anymore;
+       22vw is the largest cap that still fits 7 letters of CONTACT
+       horizontally on portrait phones. */
+    font-size: min(22vw, 240px);
+    line-height: 0.85;
   }
   .contact-links {
-    /* Row keeps the scaleY animation: it grows up from invisible at
-       the bottom of the panel toward CONTACT as the user scrolls in.
-       Combined with CONTACT's fixed-size + opacity reveal above, the
-       row "rises up to meet" the giant word — the only thing
-       changing during scroll is the row, so there's no growing gray
-       strip above or below CONTACT. The gap between them shrinks
-       cleanly as the row grows. */
+    /* Row keeps its scaleY growth animation — visible motion lives
+       here now, since CONTACT above is static. The row grows up
+       from the bottom toward CONTACT as the user scrolls in. */
     white-space: normal;
     font-size: min(15vw, 80px);
     line-height: 1.0;
