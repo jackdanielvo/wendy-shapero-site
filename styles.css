@@ -936,18 +936,17 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
   .contact-mega {
-    /* CONTACT's bottom edge dynamically tracks the row's growing top.
-       The row is anchored at 8vh from viewport bottom; its natural
-       height (15vw font × 1.0 line-height × 3 stacked lines = 45vw,
-       which is roughly 22-26vh on portrait phones) grows linearly
-       with --reveal. Setting CONTACT's bottom to (8vh + reveal*26vh)
-       keeps it ~2-4vh above the row's current top at every scroll
-       position — no widening gray gap between the two as scroll
-       progresses, no overlap at peak. */
-    bottom: calc(8vh + var(--reveal, 0) * 26vh);
-    /* 8× peak compensates for the much smaller natural font-size on
-       phones so the dramatic stretch lands the same way visually. */
+    /* On mobile, anchor the word at the TOP of the panel and have it
+       grow DOWNWARD as scroll progresses. With the desktop pattern
+       (bottom-anchored, growing up), low-to-mid scroll progress left
+       a big gray strip above the word that filled most of the
+       viewport. Top-anchored growth keeps the gray strip above the
+       word tiny (~2vh) at every scroll position — the word always
+       sits near the top, just gets taller as it grows. */
+    top: clamp(8px, 2vh, 24px);
+    bottom: auto;
     transform: translateX(-50%) scaleY(calc(var(--reveal, 0) * 8));
+    transform-origin: center top;
   }
   .contact-links {
     white-space: normal;
@@ -957,10 +956,9 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
     line-height: 1.0;
     letter-spacing: -0.05em;
     /* scaleY peak 1.0 — grows from invisible to natural size, no
-       overshoot. The CONTACT bottom calc above is tuned for this
-       multiplier; bumping this changes the gap geometry. */
+       overshoot. */
     transform: scaleY(calc(var(--reveal, 0) * 1.0));
-    bottom: 8vh;
+    bottom: clamp(48px, 8vh, 90px);
   }
   .contact-link {
     display: block;
