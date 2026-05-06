@@ -935,33 +935,56 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    viewport with the stretched word — same "billboard" effect as
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
-  /* Mobile lays the words out at the TOP of the contact panel rather
-     than the bottom. This eliminates gray space above the words — the
-     gray panel just continues below them. CONTACT sits at top:4vh in
-     its natural size, the RATES./CALL./BOOK. row sits directly under
-     it and animates with scroll. */
-  .contact-mega {
-    top: 4vh;
+  /* Mobile: ditch the fixed-position scroll-reveal panel entirely.
+     The 100vh fixed panel was forcing a huge gray rectangle behind
+     the words regardless of where we positioned them, since mobile-
+     sized words can't fill that much screen without scaleY tricks
+     the user doesn't want. Instead, contact becomes a normal-flow
+     block at the end of the page — the panel only takes the height
+     it actually needs to hold the words plus modest padding. Words
+     still fade in via opacity tied to --reveal; no scaleY anywhere. */
+  body {
+    /* Page background goes back to white on mobile since there's no
+       longer a fixed gray contact panel for it to seamlessly blend
+       into. The contact section paints its own gray bg. */
+    background: var(--bg);
+  }
+  .contact-spacer { display: none; }
+  .contact {
+    position: static;
+    height: auto;
+    z-index: auto;
+    padding: clamp(60px, 10vh, 120px) 6vw clamp(40px, 6vh, 80px);
+  }
+  .contact-inner {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: clamp(16px, 3vh, 32px);
+  }
+  .contact-mega,
+  .contact-links,
+  .copyright {
+    position: static;
+    transform: none;
+    top: auto;
     bottom: auto;
-    transform: translateX(-50%);
-    transform-origin: center top;
-    opacity: var(--reveal, 0);
+    left: auto;
+    right: auto;
+  }
+  .contact-mega {
+    opacity: var(--reveal, 1);
     font-size: min(18vw, 200px);
     line-height: 0.85;
   }
   .contact-links {
-    /* Row anchored just below CONTACT and grows DOWNWARD as scroll
-       progresses. transform-origin: center top means the top edge
-       stays parked at the row's top:16vh anchor (right under
-       CONTACT) and the bottom expands with scaleY. */
-    top: 16vh;
-    bottom: auto;
-    white-space: normal;
+    opacity: var(--reveal, 1);
     font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
-    transform: scaleY(calc(var(--reveal, 0) * 1.0));
-    transform-origin: center top;
+    white-space: normal;
   }
   .contact-link {
     display: block;
