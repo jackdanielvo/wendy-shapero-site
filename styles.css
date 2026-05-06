@@ -800,10 +800,11 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
      when scaleY grows the word stretches *upward* only — the bottom
      edge stays put. Same anchor strategy as jackdanielvo and Spencer's.
      Now uses Inter Black to match the Rates page treatment — heavier,
-     more architectural, more confident. */
+     more architectural, more confident. Bottom is pushed up to make
+     room for the bigger RATES.CALL.BOOK. row below. */
   position: absolute;
   left: 50%;
-  bottom: clamp(220px, 30vh, 360px);
+  bottom: clamp(290px, 42vh, 480px);
   margin: 0;
   font-family: var(--body-font);
   font-weight: 900;
@@ -826,26 +827,32 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   -webkit-text-stroke: 1px var(--ghost);
 }
 
-/* Row of three big bold words: RATES CALL BOOK ================
+/* Row of three big bold words: RATES. CALL. BOOK. ============
    They butt edge-to-edge (no spaces in HTML between the <a>s), so
-   visual separation comes purely from each word's color. The row
-   shares the scroll-reveal animation but with a much smaller peak
-   (1.4) so the words remain readable rather than stretched. */
+   visual separation comes purely from each word's color — and the
+   trailing period on each (which inherits the link's color, so the
+   period belongs to the word it follows). The row shares the
+   scroll-reveal animation but with a much smaller peak (1.4) so the
+   words remain readable rather than stretched. */
 .contact-links {
   position: absolute;
   left: 0; right: 0;
-  bottom: clamp(70px, 11vh, 130px);
+  bottom: clamp(80px, 12vh, 150px);
   text-align: center;
   font-family: var(--body-font);
   font-weight: 900;
-  font-size: clamp(48px, 11vw, 180px);
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  /* As big as can fit on a single line including periods. The tight
+     -0.06em tracking + 0.85 line-height matches the condensed,
+     architectural feel of the RATES headline on the pricing page. */
+  font-size: clamp(64px, 15vw, 260px);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
   white-space: nowrap;
-  /* scaleY tied to the same --reveal, smaller peak so the row reaches
-     natural-ish size + a touch of stretch by the time the user is at
-     the bottom of scroll. */
-  transform: scaleY(calc(var(--reveal, 0) * 1.4));
+  /* scaleY tied to the same --reveal — smaller peak (1.3) so the row
+     reaches natural-ish size + a touch of stretch by the time the
+     user is at the bottom of scroll, without colliding with the
+     stretched CONTACT word above. */
+  transform: scaleY(calc(var(--reveal, 0) * 1.3));
   transform-origin: center bottom;
   will-change: transform;
   user-select: none;
