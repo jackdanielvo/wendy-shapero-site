@@ -14,6 +14,10 @@
      photos themselves carry all the color. */
   --accent: #2a2a2a;
   --rule: #ececec;
+  /* Mid-gray for the CONTACT panel — matches jackdanielvo.com's
+     contact section. Used by both .contact and body (body matches so
+     the slide-up reveal blends seamlessly). */
+  --contact-bg: #d8d8d8;
   --shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.18), 0 6px 18px -12px rgba(0, 0, 0, 0.12);
   --radius: 14px;
   --max: 1400px;
@@ -35,6 +39,7 @@
   --muted: #9a9a9a;
   --ghost: #2a2a2a;
   --rule: #1f1f1f;
+  --contact-bg: #1c1c1c;
   --shadow: 0 30px 60px -25px rgba(0, 0, 0, 0.6), 0 6px 18px -12px rgba(0, 0, 0, 0.5);
 }
 
@@ -45,8 +50,9 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   /* The body's background is the CONTACT panel color so that as <main>
-     scrolls up off the top, the fixed footer underneath blends seamlessly. */
-  background: var(--bg-alt);
+     scrolls up off the top, the fixed footer underneath blends seamlessly.
+     Now matches the gray contact panel (jackdanielvo style). */
+  background: var(--contact-bg);
   color: var(--ink);
   font-family: var(--body-font);
   font-size: 16px;
@@ -786,9 +792,14 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   height: 100vh;
   height: 100dvh;
   z-index: 1;
-  background: var(--bg-alt);
+  /* Mid-gray panel matching jackdanielvo.com — the giant white
+     CONTACT word reads against this. Body uses the same gray below
+     so the slide-up reveal is seamless. */
+  background: var(--contact-bg);
   overflow: hidden;
-  padding: 0 clamp(20px, 4vw, 60px);
+  /* Tight horizontal padding so the giant word can run nearly to the
+     viewport edges, like jackdanielvo. */
+  padding: 0 clamp(10px, 2vw, 30px);
 }
 .contact-inner {
   position: relative;
@@ -796,29 +807,24 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   height: 100%;
 }
 .contact-mega {
-  /* Same Helvetica-regular treatment as jackdanielvo.com's CONTACT —
-     that's where this animation pattern is borrowed from, so the
-     letterforms should match. Inter Black has noticeably wider
-     glyphs than Helvetica regular, and switching to it caused the
-     word to clip past the viewport edges on resize. Back to the
-     system Helvetica family at weight 400.
-     Anchored to the bottom: scaleY grows from the bottom upward,
-     leaving the bottom edge fixed in place. */
+  /* Matches jackdanielvo.com's CONTACT exactly — Helvetica Neue Black
+     (weight 900), tight tracking, white-on-gray. Helvetica Neue is
+     listed first so macOS picks up its "Black" cut; Arial Black is
+     the Windows fallback that has comparable weight. */
   position: absolute;
   left: 50%;
-  bottom: clamp(260px, 36vh, 420px);
+  bottom: clamp(220px, 32vh, 360px);
   margin: 0;
-  font-family: var(--display-font);
-  font-weight: 400;
-  /* Sized so the 7 letters of CONTACT always fit the viewport.
-     Helvetica regular caps avg ≈0.66em wide, with -0.02em tracking
-     the word's effective width is ≈4.5em; a 20vw cap puts the word
-     at ~91vw of viewport — inside the .contact's horizontal padding
-     at every desktop width. */
-  font-size: min(20vw, 380px);
+  font-family: "Helvetica Neue", "Helvetica", "Arial Black", Arial, sans-serif;
+  font-weight: 900;
+  /* Helvetica Neue Black caps are ~0.78em wide; with -0.05em tracking
+     applied between 7 letters the word's effective width is ≈5.11em.
+     A min(18vw, 360px) cap keeps the word inside the viewport at
+     every desktop width even with .contact's horizontal padding. */
+  font-size: min(18vw, 360px);
   line-height: 0.85;
   color: var(--bg);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.05em;
   user-select: none;
   white-space: nowrap;
   /* scaleY: --reveal is the 0–1 scroll progress set by JS on :root.
