@@ -123,14 +123,20 @@ button { cursor: pointer; font-family: inherit; }
 .muted { color: var(--muted); font-weight: 500; }
 
 .display {
-  font-family: var(--display-font);
-  /* Helvetica regular reads as tall and architectural at display sizes;
-     bold weights crowd the counters and lose verticality. */
-  font-weight: 400;
-  letter-spacing: -0.02em;  /* tight tracking for editorial feel */
+  /* Heavy editorial display weight, matching the RATES headline on
+     the /pricing page. Inter Black at -0.045em tracking + 0.85
+     line-height reads as confident and architectural — same
+     character at every section header on the site, so the home
+     page and the pricing page feel like one design system.
+     The WENDYPIX wordmark (.hero h1.display.brand) and the giant
+     CONTACT mega (.contact-mega) both have their own font-family
+     overrides further down, so they're unaffected by this change. */
+  font-family: var(--body-font);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 0.85;
   margin: 0;
   text-transform: uppercase;
-  line-height: 0.92;
 }
 
 .kicker {
