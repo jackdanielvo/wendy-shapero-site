@@ -954,15 +954,19 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
     opacity: var(--reveal, 0);
   }
   .contact-links {
-    /* Row also drops scaleY animation on mobile — same opacity-only
-       reveal as the word above, so the gap between them stays
-       constant regardless of scroll progress. */
+    /* Row keeps the scaleY animation: it grows up from invisible at
+       the bottom of the panel toward CONTACT as the user scrolls in.
+       Combined with CONTACT's fixed-size + opacity reveal above, the
+       row "rises up to meet" the giant word — the only thing
+       changing during scroll is the row, so there's no growing gray
+       strip above or below CONTACT. The gap between them shrinks
+       cleanly as the row grows. */
     white-space: normal;
     font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
-    transform: none;
-    opacity: var(--reveal, 0);
+    transform: scaleY(calc(var(--reveal, 0) * 1.0));
+    transform-origin: center bottom;
     bottom: clamp(48px, 8vh, 90px);
   }
   .contact-link {
