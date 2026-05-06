@@ -934,19 +934,19 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    to 8× and pulling the bottom anchor up to 40vh fills the upper
    viewport with the stretched word — same "billboard" effect as
    desktop, just calibrated for portrait phones. */
-@media (max-width: 640px) {
-  /* Mobile: ditch the fixed-position scroll-reveal panel entirely.
-     The 100vh fixed panel was forcing a huge gray rectangle behind
-     the words regardless of where we positioned them, since mobile-
-     sized words can't fill that much screen without scaleY tricks
-     the user doesn't want. Instead, contact becomes a normal-flow
-     block at the end of the page — the panel only takes the height
-     it actually needs to hold the words plus modest padding. Words
-     still fade in via opacity tied to --reveal; no scaleY anywhere. */
+@media (max-width: 900px) {
+  /* Compact contact: ditch the fixed-position scroll-reveal panel
+     entirely on phones, tablets in portrait, and phones in landscape.
+     The 100vh fixed panel forced a huge gray rectangle behind the
+     words regardless of where we positioned them, since the words
+     can't fill that much screen without scaleY tricks the user
+     doesn't want. Instead, contact becomes a normal-flow block at
+     the end of the page — the panel only takes the height it
+     actually needs to hold the words plus modest padding. The 900px
+     breakpoint covers iPhones (any orientation), small tablets, and
+     a comfortable margin past 640px so landscape phones get the
+     compact layout too. */
   body {
-    /* Page background goes back to white on mobile since there's no
-       longer a fixed gray contact panel for it to seamlessly blend
-       into. The contact section paints its own gray bg. */
     background: var(--bg);
   }
   .contact-spacer { display: none; }
