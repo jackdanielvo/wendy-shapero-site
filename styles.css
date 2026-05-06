@@ -796,28 +796,35 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   height: 100%;
 }
 .contact-mega {
-  /* Anchored to the bottom of the panel (above the row of links) so
-     when scaleY grows the word stretches *upward* only — the bottom
-     edge stays put. Same anchor strategy as jackdanielvo and Spencer's.
-     Now uses Inter Black to match the Rates page treatment — heavier,
-     more architectural, more confident. Bottom is pushed up to make
-     room for the bigger RATES.CALL.BOOK. row below. */
+  /* Same Helvetica-regular treatment as jackdanielvo.com's CONTACT —
+     that's where this animation pattern is borrowed from, so the
+     letterforms should match. Inter Black has noticeably wider
+     glyphs than Helvetica regular, and switching to it caused the
+     word to clip past the viewport edges on resize. Back to the
+     system Helvetica family at weight 400.
+     Anchored to the bottom: scaleY grows from the bottom upward,
+     leaving the bottom edge fixed in place. */
   position: absolute;
   left: 50%;
-  bottom: clamp(290px, 42vh, 480px);
+  bottom: clamp(260px, 36vh, 420px);
   margin: 0;
-  font-family: var(--body-font);
-  font-weight: 900;
-  font-size: clamp(110px, 26vw, 460px);
-  line-height: 0.82;
+  font-family: var(--display-font);
+  font-weight: 400;
+  /* Sized so the 7 letters of CONTACT always fit the viewport.
+     Helvetica regular caps avg ≈0.66em wide, with -0.02em tracking
+     the word's effective width is ≈4.5em; a 20vw cap puts the word
+     at ~91vw of viewport — inside the .contact's horizontal padding
+     at every desktop width. */
+  font-size: min(20vw, 380px);
+  line-height: 0.85;
   color: var(--bg);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.02em;
   user-select: none;
   white-space: nowrap;
-  /* scaleY: --reveal is the 0–1 scroll progress set by JS on the root.
-     We multiply by 4.2 here for the giant word's dramatic stretch.
-     transform-origin: center bottom = bottom edge stays anchored;
-     the top edge sweeps upward as the word grows. */
+  /* scaleY: --reveal is the 0–1 scroll progress set by JS on :root.
+     ×4.2 for the giant word's dramatic stretch — same magnitude
+     jackdanielvo uses. transform-origin: center bottom anchors the
+     bottom edge so only the top sweeps upward as the word grows. */
   transform: translateX(-50%) scaleY(calc(var(--reveal, 0) * 4.2));
   transform-origin: center bottom;
   will-change: transform;
