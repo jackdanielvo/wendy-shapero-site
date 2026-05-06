@@ -936,29 +936,31 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
   .contact-mega {
-    /* Higher anchor leaves room for the stacked link column below
-       and lets the stretch fill more of the screen above. */
-    bottom: clamp(220px, 40vh, 320px);
-    /* 8× peak instead of 4.2× — compensates for the much smaller
-       natural font-size on phones so the dramatic stretch lands the
-       same way visually. */
+    /* CONTACT's bottom edge dynamically tracks the row's growing top.
+       The row is anchored at 8vh from viewport bottom; its natural
+       height (15vw font × 1.0 line-height × 3 stacked lines = 45vw,
+       which is roughly 22-26vh on portrait phones) grows linearly
+       with --reveal. Setting CONTACT's bottom to (8vh + reveal*26vh)
+       keeps it ~2-4vh above the row's current top at every scroll
+       position — no widening gray gap between the two as scroll
+       progresses, no overlap at peak. */
+    bottom: calc(8vh + var(--reveal, 0) * 26vh);
+    /* 8× peak compensates for the much smaller natural font-size on
+       phones so the dramatic stretch lands the same way visually. */
     transform: translateX(-50%) scaleY(calc(var(--reveal, 0) * 8));
   }
   .contact-links {
     white-space: normal;
     /* Make each word its own line by inserting line breaks between
        them via display: block on the inline-block links. */
-    font-size: min(18vw, 100px);
+    font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
-    /* Smaller scaleY peak (1.0 instead of 1.3) so the stacked
-       column doesn't grow up into the CONTACT word's territory at
-       full scroll. The 0→1 reveal still produces a clear grow-in
-       from invisible to natural size. */
+    /* scaleY peak 1.0 — grows from invisible to natural size, no
+       overshoot. The CONTACT bottom calc above is tuned for this
+       multiplier; bumping this changes the gap geometry. */
     transform: scaleY(calc(var(--reveal, 0) * 1.0));
-    /* Pull the row down a touch on phones so the gap between row top
-       and CONTACT bottom stays comfortable at peak. */
-    bottom: clamp(56px, 9vh, 100px);
+    bottom: 8vh;
   }
   .contact-link {
     display: block;
