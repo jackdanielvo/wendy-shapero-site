@@ -245,7 +245,11 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   width: 100%;
   display: flex;
   justify-content: center;
-  margin: clamp(-40px, -4vh, -10px) 0 clamp(-30px, -3vh, 0px) 0;
+  /* Top margin stays negative so the cards tuck up under the
+     wordmark like before. Bottom margin is now positive so the
+     category labels (which hang ~34px below each card) have room
+     to sit before the PHOTOGRAPHER subtitle below. */
+  margin: clamp(-40px, -4vh, -10px) 0 clamp(40px, 6vh, 70px) 0;
   position: relative;
   z-index: 1;
 }
@@ -308,17 +312,19 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
 .hero__image:nth-child(4) img { --base-rot:   8deg; --idx: 3; }
 .hero__image:nth-child(5) img { --base-rot:  16deg; --idx: 4; }
 
-/* Always-visible category label inside each hero card. The card is
-   now a category navigator (click → scroll to that category section),
-   so the visitor needs to know which card leads where without
-   hovering. The label sits in the natural empty space inside the card
-   (below the centered, rotated image) so it doesn't overflow into the
-   subtitle below the hero, and it stays horizontal regardless of the
-   image's tilt. */
+/* Always-visible category label below each hero card. The card is
+   now a category navigator (click → scroll to that category section)
+   so visitors need to know which card leads where without hovering.
+   Position is BELOW the card (bottom: -34px) rather than inside it —
+   the cards' rotated images fill most of the card's box on shorter
+   viewports and would otherwise overlap the label. The .hero__images
+   container has padding-bottom (and .hero__mid drops its negative
+   bottom margin) to make sure labels stay inside the section's flow
+   instead of bleeding into the subtitle below. */
 .hero__image__label {
   position: absolute;
   left: 50%;
-  bottom: 14px;
+  bottom: -34px;
   transform: translateX(-50%);
   font-family: var(--body-font);
   font-weight: 700;
@@ -329,7 +335,7 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   white-space: nowrap;
   pointer-events: none;     /* clicks pass through to the parent button */
   transition: color 0.25s var(--ease), transform 0.25s var(--ease);
-  z-index: 2;               /* sit above any rotated image edge */
+  z-index: 2;
 }
 .hero__image:hover .hero__image__label {
   color: #b347b9;           /* brand plum on hover */
@@ -337,13 +343,6 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
 }
 [data-theme="dark"] .hero__image__label {
   color: var(--ink);
-}
-/* On mobile (carousel mode), the cards size by aspect-ratio so the
-   container has no extra empty space — pull the label below the
-   image instead, with extra bottom padding on the row to fit it. */
-@media (max-width: 640px) {
-  .hero__images { padding-bottom: 38px; }
-  .hero__image__label { bottom: -26px; }
 }
 
 @keyframes hero-card-in {
