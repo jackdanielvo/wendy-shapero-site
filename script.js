@@ -325,13 +325,14 @@ function startHeroDrift(row) {
       // Idle wander
       pX: i * 1.7 + 0.3, pY: i * 2.1 + 1.1, pR: i * 1.3 + 0.7,
       aX: 12 + (i % 2) * 5,                 // softer than before — spring carries more of the energy
-      aY:  9 + ((i + 1) % 2) * 4,
+      aY:  5 + ((i + 1) % 2) * 2,           // tighter Y wander so cards don't drift into adjacent text
       aR: 0.7 + (i % 3) * 0.3,
       sX: 0.34 + i * 0.04, sY: 0.27 + i * 0.05, sR: 0.21 + i * 0.03,
       // Spring "depths" — outer cards target a bigger offset on cursor extremes.
-      // Smaller than before so the bouncing feels contained, not chaotic.
+      // Y depth halved from prior version so mouse-driven motion stays
+      // inside the row's allotted space on shorter laptop viewports.
       depthX: idx * 80,
-      depthY: 38 - Math.abs(idx) * 11,
+      depthY: 18 - Math.abs(idx) * 5,
       depthR: idx * 5,
       // Spring physics constants per axis. Slightly varied per card so they
       // don't all wobble in lockstep — feels more like Jell-O than a rigid rig.
@@ -421,11 +422,16 @@ function startHeroDrift(row) {
       // Composite + clamp so the card stays on-screen even mid-overshoot —
       // but skip the clamp on touch, where the row is a scrollable
       // carousel and "viewport bounds" don't apply per-card.
+      // Y is also clamped to a hard ±25px safety range so on shorter
+      // viewports the cards don't drift up into the title or down into
+      // the category labels below.
       const b = bounds[i];
       const composedX = wx + sp.x;
+      const composedY = wy + sp.y;
       const x = isTouch ? composedX : clamp(composedX, b.minX, b.maxX);
+      const y = isTouch ? composedY : clamp(composedY, -25, 25);
       imgs[i].style.setProperty("--ox", x.toFixed(2) + "px");
-      imgs[i].style.setProperty("--oy", (wy + sp.y).toFixed(2) + "px");
+      imgs[i].style.setProperty("--oy", y.toFixed(2) + "px");
       imgs[i].style.setProperty("--rot", (wr + sp.r).toFixed(2) + "deg");
     }
     rafId = requestAnimationFrame(frame);
