@@ -841,13 +841,15 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   text-align: center;
   font-family: var(--body-font);
   font-weight: 900;
-  /* Sized to fit the viewport. RATES.CALL.BOOK. is 16 characters of
-     heavy Inter Black (which is wider per-glyph than non-display
-     weights). At -0.08em tracking the row's effective width is
-     ≈8em, so a 11.5vw cap keeps the row inside ~92vw — safe at every
-     desktop width. The 0.85 line-height + heavy 900 weight matches
-     the condensed feel of the RATES headline on /pricing. */
-  font-size: min(11.5vw, 200px);
+  /* Sized to fit the viewport at all desktop widths. The row is
+     "RATES.CALL.BOOK." — 16 characters of Inter Black, where each
+     uppercase glyph is ~0.69em wide, periods are 0.29em wide, and
+     -0.08em letter-spacing tightens by 1.28em. Net effective width
+     is ≈8.6em. Parent .contact has up to 120px of horizontal
+     padding, so available width at a 1500px viewport is ~1380px.
+     A 10vw cap puts the row at ≈86vw of viewport — comfortably
+     inside the available space at every desktop width. */
+  font-size: min(10vw, 180px);
   line-height: 0.85;
   letter-spacing: -0.08em;
   white-space: nowrap;
