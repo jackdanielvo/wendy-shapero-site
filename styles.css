@@ -841,12 +841,15 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   text-align: center;
   font-family: var(--body-font);
   font-weight: 900;
-  /* As big as can fit on a single line including periods. The tight
-     -0.06em tracking + 0.85 line-height matches the condensed,
-     architectural feel of the RATES headline on the pricing page. */
-  font-size: clamp(64px, 15vw, 260px);
+  /* Sized to fit the viewport. RATES.CALL.BOOK. is 16 characters; with
+     -0.06em tracking the row's effective width is ≈6.94em. To keep it
+     inside the viewport with breathing room, font-size is capped at
+     ≈13vw via min() — bigger than that and BOOK. would clip off the
+     right edge. The 0.85 line-height + heavy 900 weight match the
+     condensed, architectural feel of the RATES headline on /pricing. */
+  font-size: min(13vw, 220px);
   line-height: 0.85;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.07em;
   white-space: nowrap;
   /* scaleY tied to the same --reveal — smaller peak (1.3) so the row
      reaches natural-ish size + a touch of stretch by the time the
@@ -856,6 +859,23 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   transform-origin: center bottom;
   will-change: transform;
   user-select: none;
+}
+
+/* On narrow screens, drop to a vertical stack — each word on its own
+   line, still big and bold. The whole stack still scaleY-animates
+   together. */
+@media (max-width: 640px) {
+  .contact-links {
+    white-space: normal;
+    /* Make each word its own line by inserting line breaks between
+       them via display: block on the inline-block links. */
+    font-size: min(20vw, 120px);
+    line-height: 1.0;
+    letter-spacing: -0.05em;
+  }
+  .contact-link {
+    display: block;
+  }
 }
 .contact-link {
   display: inline-block;
@@ -870,9 +890,12 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    between the other two without competing. */
 .contact-link--rates { color: #b347b9; }
 .contact-link--call  { color: var(--ink); }
-.contact-link--book  { color: #7d7872; }
+/* BOOK: a darker warm gray than the previous #7d7872 so all three
+   words read at similar visual weight. Light enough to still be
+   distinct from CALL's ink, dark enough to feel heavy. */
+.contact-link--book  { color: #3a3530; }
 [data-theme="dark"] .contact-link--call  { color: var(--ink); }
-[data-theme="dark"] .contact-link--book  { color: #a8a29a; }
+[data-theme="dark"] .contact-link--book  { color: #c2bcb3; }
 
 .copyright {
   position: absolute;
