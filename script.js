@@ -135,38 +135,77 @@ let SUBJECT_BY_ID = {};
 // ============================================================
 // HERO — Spencer-style floating photo row
 // ============================================================
-function buildHero(subjects, heroPhotosConfig) {
+function buildHero(subjects, categories, heroPhotosConfig) {
   const row = document.getElementById("heroImages");
   if (!row) return;
   row.innerHTML = "";
-  // Pick 5 hero entries — each carries the photo URL and (optionally) the
-  // subject id so the card can open the corresponding shoot on tap.
-  const heroes = pickHeroes(subjects, heroPhotosConfig, 5);
-  heroes.forEach(({ url, subjectId }) => {
+  // Each hero card represents a CATEGORY rather than a single shoot.
+  // Click a card to scroll to that category's section on the page.
+  // The card photo is auto-picked as the first photo of the first
+  // subject in the category — but heroPhotos config can override this
+  // per category by listing a specific subject slug (or "slug#index").
+  const overrides = buildHeroOverrideMap(subjects, heroPhotosConfig);
+  (categories || []).slice(0, 5).forEach((cat) => {
+    const subjectsInCat = subjects.filter((s) => s.cat === cat.slug);
+    if (!subjectsInCat.length) return;
+    const override = overrides[cat.slug];
+    const photoUrl = override || subjectsInCat[0].photoUrls[0];
+    const label = cat.label || cat.slug;
+
     const wrap = document.createElement("button");
     wrap.type = "button";
     wrap.className = "hero__image";
-    wrap.setAttribute(
-      "aria-label",
-      subjectId ? "View this shoot" : "View this photo full size"
-    );
+    wrap.dataset.targetSlug = cat.slug;
+    wrap.setAttribute("aria-label", `Browse ${label}`);
+
     const img = document.createElement("img");
-    img.src = url;
+    img.src = photoUrl;
     img.alt = "";
     img.loading = "eager";
     img.decoding = "async";
     wrap.appendChild(img);
-    // On click/tap: shoot-linked cards open the shoot view (showing every
-    // photo in the shoot). URL-pinned cards have no shoot to open, so
-    // they pop a fullscreen lightbox of just that photo.
+
+    // Always-visible category label below the photo. We keep it inside
+    // the same .hero__image button so the entire card (photo + label)
+    // is one click target — no risk of taps falling through.
+    const labelEl = document.createElement("span");
+    labelEl.className = "hero__image__label caps";
+    labelEl.textContent = label;
+    wrap.appendChild(labelEl);
+
+    // Click a card → smooth-scroll to that category's <section>.
     wrap.addEventListener("click", (e) => {
       e.preventDefault();
-      if (subjectId) openShoot(subjectId);
-      else openLightbox(url);
+      const target = document.querySelector(
+        `.category-section[data-slug="${cat.slug}"]`
+      );
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     row.appendChild(wrap);
   });
   startHeroDrift(row);
+}
+
+// Walk heroPhotos config and build a map of category-slug → photo URL,
+// so any explicit picks in the config win over the auto-default ("first
+// photo of first subject in the category"). The first entry that
+// resolves into a category fills that category's slot; later entries
+// for the same category are ignored. Useful when Wendy wants a
+// specific shot to represent a category in the hero row.
+function buildHeroOverrideMap(subjects, heroPhotosConfig) {
+  const map = {};
+  if (!Array.isArray(heroPhotosConfig)) return map;
+  const byId = Object.fromEntries(subjects.map((s) => [s.id, s]));
+  for (const entry of heroPhotosConfig) {
+    const resolved = resolveHeroEntry(entry, byId);
+    if (!resolved) continue;
+    // Find which category this photo's subject belongs to.
+    const subj = resolved.subjectId ? byId[resolved.subjectId] : null;
+    const cat = subj ? subj.cat : null;
+    if (!cat || map[cat]) continue;  // already filled
+    map[cat] = resolved.url;
+  }
+  return map;
 }
 
 // Resolve a single heroPhotos config entry into a photo URL.
@@ -1081,7 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log(`[wendy-site] loaded ${SUBJECTS.length} subjects from ${data.source}` +
     (data.generatedAt ? ` (synced ${data.generatedAt})` : ""));
 
-  buildHero(SUBJECTS, data.heroPhotos);
+  buildHero(SUBJECTS, data.categories, data.heroPhotos);
 
   if (Array.isArray(data.categories) && data.categories.length) {
     // Editorial mode: hide the legacy Featured Work + All Shoots sections
