@@ -975,12 +975,16 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
     right: auto;
   }
   .contact-mega {
-    opacity: var(--reveal, 1);
+    /* No --reveal-driven opacity on mobile. The JS still publishes
+       --reveal based on the scroll-runway pattern that no longer
+       applies in this layout, so it would leave the word at opacity
+       0 for most of the page. Default opacity (1) means the word
+       is just visible when the user scrolls to the contact section
+       in normal flow — same way any other section appears. */
     font-size: min(18vw, 200px);
     line-height: 0.85;
   }
   .contact-links {
-    opacity: var(--reveal, 1);
     font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
