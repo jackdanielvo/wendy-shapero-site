@@ -1037,13 +1037,14 @@ function bindReveal() {
 function bindContactReveal() {
   const word = document.querySelector(".contact-mega");
   if (!word) return;
-  const MAX = 4.2;             // peak scaleY at the bottom of the page
-  // Reveal range: the last N viewports of scroll. The .contact-spacer in
-  // CSS must be sized to N viewports too — that alignment is what makes
-  // the word be at scaleY(0) exactly when the contact panel first peeks
-  // out from behind <main>, and reach scaleY(MAX) at the end of scroll.
-  // (Same value jackdanielvo.com uses — 2 viewports of scroll for the
-  // full 0 → 4.2 ramp, half during the panel reveal, half after.)
+  // The reveal range is the last N viewports of scroll. The
+  // .contact-spacer in CSS must be sized to the same number of
+  // viewports — that alignment makes scroll progress hit 0 exactly
+  // when the contact panel first peeks out, and 1 at the very end
+  // of the page.
+  // We now publish progress as a 0–1 number on :root, and CSS does the
+  // per-element multiplication (×4.2 for the giant word, ×1.4 for the
+  // RATES/CALL/BOOK row). One source of truth, two stretch magnitudes.
   const RANGE_VH = 2;
   let raf = 0;
 
@@ -1055,8 +1056,7 @@ function bindContactReveal() {
     const range = Math.max(1, vh * RANGE_VH);
     const start = maxScroll - range;
     const progress = Math.min(1, Math.max(0, (window.scrollY - start) / range));
-    const reveal = (progress * MAX).toFixed(3);
-    word.style.setProperty("--reveal", reveal);
+    doc.style.setProperty("--reveal", progress.toFixed(4));
   }
   function onScroll() {
     if (!raf) raf = requestAnimationFrame(update);

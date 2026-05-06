@@ -796,25 +796,28 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   height: 100%;
 }
 .contact-mega {
-  /* Anchored to the bottom of the panel (just above the contact info)
-     so when scaleY grows the word stretches *upward* only — the bottom
-     edge stays put. Same anchor strategy as jackdanielvo and Spencer's. */
+  /* Anchored to the bottom of the panel (above the row of links) so
+     when scaleY grows the word stretches *upward* only — the bottom
+     edge stays put. Same anchor strategy as jackdanielvo and Spencer's.
+     Now uses Inter Black to match the Rates page treatment — heavier,
+     more architectural, more confident. */
   position: absolute;
   left: 50%;
-  bottom: clamp(160px, 22vh, 260px);
+  bottom: clamp(220px, 30vh, 360px);
   margin: 0;
-  font-family: var(--display-font);
-  font-weight: 400;
-  font-size: clamp(100px, 24vw, 420px);
-  line-height: 0.85;
+  font-family: var(--body-font);
+  font-weight: 900;
+  font-size: clamp(110px, 26vw, 460px);
+  line-height: 0.82;
   color: var(--bg);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.045em;
   user-select: none;
   white-space: nowrap;
-  /* scaleY is driven by --reveal (set by the scroll listener in JS).
-     transform-origin: center bottom = the bottom edge stays anchored;
-     the top edge sweeps upward as the word stretches. */
-  transform: translateX(-50%) scaleY(var(--reveal, 0));
+  /* scaleY: --reveal is the 0–1 scroll progress set by JS on the root.
+     We multiply by 4.2 here for the giant word's dramatic stretch.
+     transform-origin: center bottom = bottom edge stays anchored;
+     the top edge sweeps upward as the word grows. */
+  transform: translateX(-50%) scaleY(calc(var(--reveal, 0) * 4.2));
   transform-origin: center bottom;
   will-change: transform;
 }
@@ -822,26 +825,48 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   color: var(--bg-alt);
   -webkit-text-stroke: 1px var(--ghost);
 }
-.contact-info {
-  /* Pinned near the bottom so it sits below the stretched word. */
+
+/* Row of three big bold words: RATES CALL BOOK ================
+   They butt edge-to-edge (no spaces in HTML between the <a>s), so
+   visual separation comes purely from each word's color. The row
+   shares the scroll-reveal animation but with a much smaller peak
+   (1.4) so the words remain readable rather than stretched. */
+.contact-links {
   position: absolute;
   left: 0; right: 0;
-  bottom: clamp(70px, 12vh, 120px);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: center;
+  bottom: clamp(70px, 11vh, 130px);
   text-align: center;
+  font-family: var(--body-font);
+  font-weight: 900;
+  font-size: clamp(48px, 11vw, 180px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+  /* scaleY tied to the same --reveal, smaller peak so the row reaches
+     natural-ish size + a touch of stretch by the time the user is at
+     the bottom of scroll. */
+  transform: scaleY(calc(var(--reveal, 0) * 1.4));
+  transform-origin: center bottom;
+  will-change: transform;
+  user-select: none;
 }
-.contact-info p {
-  margin: 0;
-  font-size: 12px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 700;
+.contact-link {
+  display: inline-block;
+  padding: 0;
+  border: none;
+  text-decoration: none;
+  transition: opacity 0.2s var(--ease), transform 0.3s var(--ease);
 }
-.contact-info a { border-bottom: none; }
-.contact-info a:hover { color: var(--accent); }
+.contact-link:hover { opacity: 0.65; }
+/* Three different colors carry the word breaks. RATES is the brand
+   plum; CALL is the page ink; BOOK is a mid-warm gray so it sits
+   between the other two without competing. */
+.contact-link--rates { color: #b347b9; }
+.contact-link--call  { color: var(--ink); }
+.contact-link--book  { color: #7d7872; }
+[data-theme="dark"] .contact-link--call  { color: var(--ink); }
+[data-theme="dark"] .contact-link--book  { color: #a8a29a; }
+
 .copyright {
   position: absolute;
   left: 0; right: 0;

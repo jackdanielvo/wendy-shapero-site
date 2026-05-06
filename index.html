@@ -20,7 +20,7 @@
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
-  <link rel="stylesheet" href="styles.css?v=2026-05-05-row4" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-05-contact" />
 </head>
 <body>
 
@@ -124,18 +124,19 @@
   <div class="contact-spacer" aria-hidden="true"></div>
 
   <!-- CONTACT — pinned to the viewport behind main, revealed as main
-       scrolls up off the top. The "accordion" feel is just the natural
-       reveal of a tall fixed element by its scrolling cover. -->
+       scrolls up off the top. The giant word + row of links both
+       scaleY-stretch with scroll progress (different magnitudes). The
+       three link words sit edge-to-edge with no whitespace between
+       them — color alone separates them. -->
   <section class="contact" id="contact">
     <div class="contact-inner">
       <h2 class="contact-mega">CONTACT</h2>
-      <div class="contact-info">
-        <p><a href="mailto:wendy@wendypix.com">WENDY@WENDYPIX.COM</a></p>
-        <p><a href="tel:+18183830102">(818) 383-0102</a></p>
-        <p><a href="pricing.html">RATES</a></p>
-        <p><a href="https://instagram.com/wendypix" target="_blank" rel="noopener">INSTAGRAM</a></p>
-        <p><a href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">15-MIN FREE CONSULT</a></p>
-      </div>
+      <!--
+        IMPORTANT: keep the three <a> elements with NO whitespace between
+        their tags. Any space (newline, indentation) renders as a literal
+        gap between words and breaks the edge-to-edge effect.
+      -->
+      <div class="contact-links" id="contactLinks"><a class="contact-link contact-link--rates" href="pricing.html">RATES</a><a class="contact-link contact-link--call" href="tel:+18183830102">CALL</a><a class="contact-link contact-link--book" href="mailto:wendy@wendypix.com?subject=Booking%20inquiry">BOOK</a></div>
       <p class="copyright">All photographs &copy; <span id="year"></span> Wendy Shapero. Based in Los Angeles.</p>
     </div>
   </section>
@@ -161,6 +162,6 @@
   <!-- Auto-synced data from Pixieset (optional). If missing, the site
        falls back to its built-in dataset, so it never breaks. -->
   <script src="data/photos.js" onerror="window.WENDY_PHOTOS_MISSING=true"></script>
-  <script src="script.js"></script>
+  <script src="script.js?v=2026-05-05-contact"></script>
 </body>
 </html>
