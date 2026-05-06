@@ -935,34 +935,33 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    viewport with the stretched word — same "billboard" effect as
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
+  /* Mobile lays the words out at the TOP of the contact panel rather
+     than the bottom. This eliminates gray space above the words — the
+     gray panel just continues below them. CONTACT sits at top:4vh in
+     its natural size, the RATES./CALL./BOOK. row sits directly under
+     it and animates with scroll. */
   .contact-mega {
-    /* Natural size, no scaleY stretching. The word renders at its
-       font-size with no vertical distortion. Positioned just above
-       the row's peak top edge so when the user scrolls in, CONTACT
-       sits a small fixed gap above the rising row instead of leaving
-       a huge gray strip between them. */
-    bottom: clamp(220px, 32vh, 320px);
-    top: auto;
+    top: 4vh;
+    bottom: auto;
     transform: translateX(-50%);
-    transform-origin: center bottom;
+    transform-origin: center top;
     opacity: var(--reveal, 0);
-    /* Bumped font-size since the word isn't being stretched anymore;
-       22vw is the largest cap that still fits 7 letters of CONTACT
-       horizontally on portrait phones. */
-    font-size: min(22vw, 240px);
+    font-size: min(18vw, 200px);
     line-height: 0.85;
   }
   .contact-links {
-    /* Row keeps its scaleY growth animation — visible motion lives
-       here now, since CONTACT above is static. The row grows up
-       from the bottom toward CONTACT as the user scrolls in. */
+    /* Row anchored just below CONTACT and grows DOWNWARD as scroll
+       progresses. transform-origin: center top means the top edge
+       stays parked at the row's top:16vh anchor (right under
+       CONTACT) and the bottom expands with scaleY. */
+    top: 16vh;
+    bottom: auto;
     white-space: normal;
     font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
     transform: scaleY(calc(var(--reveal, 0) * 1.0));
-    transform-origin: center bottom;
-    bottom: clamp(48px, 8vh, 90px);
+    transform-origin: center top;
   }
   .contact-link {
     display: block;
