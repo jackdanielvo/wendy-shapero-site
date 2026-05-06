@@ -990,8 +990,22 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
     letter-spacing: -0.05em;
     white-space: normal;
   }
-  .contact-link {
+  /* Higher specificity (.contact .contact-link, .contact .copyright)
+     because the BASE .contact-link and .copyright rules sit AFTER
+     this @media block in source order. At equal specificity (0,1,0)
+     the later rule wins, so without these compound selectors the
+     base `display: inline-block` and `position: absolute` would clobber
+     the mobile values, making the words flow inline and the copyright
+     overlap them. Specificity 0,2,0 here beats the base. */
+  .contact .contact-link {
     display: block;
+  }
+  .contact .copyright {
+    position: static;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    margin: 0;
   }
 }
 .contact-link {
