@@ -936,28 +936,33 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    desktop, just calibrated for portrait phones. */
 @media (max-width: 640px) {
   .contact-mega {
-    /* On mobile, anchor the word at the TOP of the panel and have it
-       grow DOWNWARD as scroll progresses. With the desktop pattern
-       (bottom-anchored, growing up), low-to-mid scroll progress left
-       a big gray strip above the word that filled most of the
-       viewport. Top-anchored growth keeps the gray strip above the
-       word tiny (~2vh) at every scroll position — the word always
-       sits near the top, just gets taller as it grows. */
+    /* Mobile drops the scaleY-grows-with-scroll animation entirely.
+       The trade-off it makes on a small portrait viewport — where
+       "CONTACT" can't be very wide and therefore can't be very tall
+       at natural size — was to either grow up from the bottom (gray
+       space above at low/mid scroll) or grow down from the top (gray
+       space below). Both leave a chunk of empty panel mid-scroll.
+       Instead, we hold the word at a constant large size (scaleY 8,
+       same magnitude desktop reaches at peak) and reveal it with
+       opacity. No growing gap above or below at any scroll position
+       — the word fills the upper viewport from the moment it fades
+       in until it fades out. */
     top: clamp(8px, 2vh, 24px);
     bottom: auto;
-    transform: translateX(-50%) scaleY(calc(var(--reveal, 0) * 8));
+    transform: translateX(-50%) scaleY(8);
     transform-origin: center top;
+    opacity: var(--reveal, 0);
   }
   .contact-links {
+    /* Row also drops scaleY animation on mobile — same opacity-only
+       reveal as the word above, so the gap between them stays
+       constant regardless of scroll progress. */
     white-space: normal;
-    /* Make each word its own line by inserting line breaks between
-       them via display: block on the inline-block links. */
     font-size: min(15vw, 80px);
     line-height: 1.0;
     letter-spacing: -0.05em;
-    /* scaleY peak 1.0 — grows from invisible to natural size, no
-       overshoot. */
-    transform: scaleY(calc(var(--reveal, 0) * 1.0));
+    transform: none;
+    opacity: var(--reveal, 0);
     bottom: clamp(48px, 8vh, 90px);
   }
   .contact-link {
