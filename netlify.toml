@@ -1,0 +1,21 @@
+[build]
+  publish = "."
+  command = "node scripts/build-photos.js"
+  functions = "netlify/functions"
+
+# Pretty URLs: /book → /book.html, /pricing → /pricing.html, etc.
+[[redirects]]
+  from = "/book"
+  to = "/book.html"
+  status = 200
+
+[[redirects]]
+  from = "/pricing"
+  to = "/pricing.html"
+  status = 200
+
+# Functions live under /api/* publicly to keep URLs clean
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

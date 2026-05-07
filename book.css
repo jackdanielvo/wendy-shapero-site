@@ -1,0 +1,234 @@
+/* ============================================================
+   Book page — extends pricing.css. Booking-specific UI:
+   slot picker, intake form, confirmation.
+   ============================================================ */
+
+.book-page .pricing { max-width: 980px; }
+
+/* Make the rate cards on /book click-feel like buttons. */
+.book-page .rate-card {
+  cursor: pointer;
+}
+.book-page .rate-card:hover .rate-card__name {
+  color: var(--plum);
+}
+.book-page .rate-card[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.book-page .rate-card[aria-disabled="true"]:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--rule);
+}
+
+/* Step-summary lines — small bold sentence above each subsequent step's
+   form, recapping what the user has already chosen. */
+.book__chosen-package,
+.book__chosen-summary {
+  font-family: var(--body-font);
+  font-weight: 700;
+  font-size: clamp(15px, 1.4vw, 18px);
+  letter-spacing: 0.02em;
+  margin: 0 0 clamp(20px, 3vw, 32px) 0;
+  color: var(--plum-deep, #8e2c94);
+}
+
+/* SLOT PICKER ===============================================
+   Two columns on desktop: scrollable column of days, then a column of
+   time slots for the chosen day. Stacks to single column on mobile. */
+.book__slot-picker {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: clamp(20px, 3vw, 36px);
+  margin: 0 0 clamp(28px, 4vw, 40px);
+}
+.book__days,
+.book__times {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.book__day,
+.book__time {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: 14px 16px;
+  font-family: var(--body-font);
+  font-size: 15px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.book__day:hover,
+.book__time:hover {
+  border-color: var(--ink);
+}
+.book__day[aria-selected="true"],
+.book__time[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.book__day .day-date {
+  display: block;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.book__day .day-meta {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.book__day[aria-selected="true"] .day-meta {
+  color: var(--ghost);
+}
+.book__times-empty {
+  font-size: 14px;
+  color: var(--muted);
+  font-style: italic;
+  padding: 12px 0;
+}
+.book__loading {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 24px 0;
+}
+
+/* FORM ======================================================= */
+.book__form {
+  margin: clamp(8px, 2vw, 16px) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2vw, 22px);
+}
+.book__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.book__row label {
+  font-family: var(--body-font);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.book__row label .muted {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 4px;
+}
+.book__row input[type="text"],
+.book__row input[type="email"],
+.book__row input[type="tel"],
+.book__row input[type="number"],
+.book__row textarea {
+  font-family: var(--body-font);
+  font-size: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 0;
+  transition: border-color 0.2s var(--ease);
+  width: 100%;
+}
+.book__row input:focus,
+.book__row textarea:focus {
+  outline: none;
+  border-color: var(--plum);
+}
+.book__row textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+.book__row input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  vertical-align: -2px;
+}
+.book__row label:has(input[type="checkbox"]) {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.book__deposit-note {
+  background: var(--cream, #f1ece2);
+  border-left: 4px solid var(--plum, #b347b9);
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 8px 0 0;
+  color: var(--ink);
+}
+.book__deposit-note strong { font-weight: 700; }
+
+.book__nav {
+  margin: clamp(20px, 3vw, 32px) 0 0;
+}
+
+/* Ghost button variant for back/secondary actions */
+.btn--ghost {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--rule);
+  font-weight: 500;
+}
+.btn--ghost:hover {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.book__error {
+  background: #fff2f2;
+  border-left: 4px solid #c53939;
+  color: #962020;
+  padding: 14px 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+[data-theme="dark"] .book__error {
+  background: #2a1414;
+  color: #f4c5c5;
+}
+
+/* MOBILE ===================================================== */
+@media (max-width: 700px) {
+  .book__slot-picker {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  /* Days become a horizontal scroll on phones to save vertical real estate */
+  .book__days {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .book__days::-webkit-scrollbar { display: none; }
+  .book__day {
+    flex: 0 0 auto;
+    min-width: 130px;
+    scroll-snap-align: start;
+  }
+}

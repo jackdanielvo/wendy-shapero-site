@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book a Session — WendyPix</title>
+  <meta name="description" content="Book a photography session with Wendy Shapero. Headshots, lifestyle, events. Los Angeles &amp; Southern California." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css?v=2026-05-05-fixsourceorder" />
+  <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
+  <link rel="stylesheet" href="book.css?v=2026-05-05-v1" />
+</head>
+<body class="pricing-page book-page">
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
+
+  <main class="pricing">
+
+    <!-- TOP BAR -->
+    <header class="pricing__top">
+      <a class="pricing__back caps" href="index.html" aria-label="Back to WendyPix home">&larr; <span>Back</span></a>
+      <a class="pricing__brand" href="index.html" aria-label="WendyPix home">
+        <span class="brand-wendy">WENDY</span><span class="brand-pix">PIX</span>
+      </a>
+      <p class="pricing__year caps muted">Book a Session</p>
+    </header>
+
+    <!-- HERO -->
+    <section class="pricing__hero">
+      <p class="eyebrow">Reserve your date</p>
+      <h1 class="display headline">BOOK.</h1>
+      <p class="pricing__lede">
+        Pick a package, pick a time, tell me a bit about your shoot.
+        I'll confirm by email within 24 hours and send the deposit
+        instructions to lock the date.
+      </p>
+      <p class="pricing__lede pricing__lede--small">
+        Los Angeles &amp; Southern California &middot; Sessions usually book 1-3 weeks out
+      </p>
+    </section>
+
+    <!-- STEP 1: Pick a package -->
+    <section class="block" id="step-package" data-step="1">
+      <p class="block__num">01.</p>
+      <h2 class="block__title">Pick a package.</h2>
+
+      <div class="callout">
+        <p class="callout__eyebrow">How this works</p>
+        <p class="callout__body">
+          Choose the session that fits — you'll see available dates &amp; times next.
+          Lifestyle, commercial, and event work is quote-based; pick "Inquire"
+          and we'll set up a 15-minute discovery call to scope the project.
+        </p>
+      </div>
+
+      <div class="rate-cards" id="packageCards">
+        <!-- Cards rendered by JS from PACKAGES data. Each .rate-card is a
+             button-like element; click → step 2 with that package selected. -->
+      </div>
+    </section>
+
+    <!-- STEP 2: Pick a date & time -->
+    <section class="block" id="step-slot" data-step="2" hidden>
+      <p class="block__num">02.</p>
+      <h2 class="block__title">Pick a date &amp; time.</h2>
+
+      <p class="book__chosen-package" id="chosenPackage" aria-live="polite">
+        <!-- e.g. "Standard Headshot — $850 — 1.5 hours" -->
+      </p>
+
+      <div class="book__slot-picker" id="slotPicker">
+        <!-- Two-pane picker: calendar of days on the left, time slots on the right.
+             Renders by JS reading from /api/availability. -->
+        <div class="book__loading">Loading available dates…</div>
+      </div>
+
+      <p class="book__nav">
+        <button type="button" class="btn btn--ghost" data-action="back-to-package">&larr; Change package</button>
+      </p>
+    </section>
+
+    <!-- STEP 3: Your details -->
+    <section class="block" id="step-form" data-step="3" hidden>
+      <p class="block__num">03.</p>
+      <h2 class="block__title">Your details.</h2>
+
+      <p class="book__chosen-summary" id="chosenSummary" aria-live="polite">
+        <!-- e.g. "Standard Headshot · Friday May 8, 2026 · 2:00 PM PT" -->
+      </p>
+
+      <form class="book__form" id="bookForm" novalidate>
+        <div class="book__row">
+          <label for="f-name">Full name</label>
+          <input type="text" id="f-name" name="name" required autocomplete="name" />
+        </div>
+        <div class="book__row">
+          <label for="f-email">Email</label>
+          <input type="email" id="f-email" name="email" required autocomplete="email" />
+        </div>
+        <div class="book__row">
+          <label for="f-phone">Phone</label>
+          <input type="tel" id="f-phone" name="phone" autocomplete="tel" />
+        </div>
+        <div class="book__row" id="row-looks">
+          <label for="f-looks">Number of looks <span class="muted">(outfits / backgrounds)</span></label>
+          <input type="number" id="f-looks" name="looks" min="1" max="10" />
+        </div>
+        <div class="book__row">
+          <label for="f-hmua">
+            <input type="checkbox" id="f-hmua" name="hmua" />
+            Add hair &amp; makeup artist on set <span class="muted">(+$200)</span>
+          </label>
+        </div>
+        <div class="book__row">
+          <label for="f-notes">Anything else?</label>
+          <textarea id="f-notes" name="notes" rows="4" placeholder="Tell me about your shoot — what's it for, what mood you're after, any references…"></textarea>
+        </div>
+
+        <p class="book__deposit-note" id="depositNote">
+          <!-- Filled by JS depending on whether Stripe is configured. -->
+        </p>
+
+        <p class="cta__actions">
+          <button type="submit" class="btn btn--primary" id="submitBtn">Submit booking request</button>
+          <button type="button" class="btn btn--ghost" data-action="back-to-slot">&larr; Change date</button>
+        </p>
+      </form>
+    </section>
+
+    <!-- STEP 4: Confirmation -->
+    <section class="block" id="step-done" data-step="4" hidden>
+      <p class="eyebrow">Done.</p>
+      <h2 class="cta__headline">You're on the list.</h2>
+      <p class="pricing__copy" id="doneSummary"></p>
+      <p class="cta__actions">
+        <a class="btn btn--primary" href="index.html">Back to home</a>
+        <a class="btn" href="pricing.html">See all rates</a>
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="pricing__footer">
+    <p class="caps muted">All photographs &copy; <span id="year"></span> Wendy Shapero.</p>
+    <p class="caps muted"><a href="index.html">wendypix.com</a></p>
+  </footer>
+
+  <script src="book.js?v=2026-05-05-v1"></script>
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+    (function () {
+      const root = document.documentElement;
+      const saved = localStorage.getItem("wendypix-theme");
+      if (saved) root.setAttribute("data-theme", saved);
+      const btn = document.getElementById("themeToggle");
+      if (btn) btn.addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "" : "dark";
+        if (next) root.setAttribute("data-theme", next);
+        else root.removeAttribute("data-theme");
+        localStorage.setItem("wendypix-theme", next);
+      });
+    })();
+  </script>
+</body>
+</html>
