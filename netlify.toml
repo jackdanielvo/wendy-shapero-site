@@ -1,7 +1,12 @@
 [build]
   publish = "."
-  command = "node scripts/build-photos.js"
+  command = "npm install && node scripts/build-photos.js"
   functions = "netlify/functions"
+
+# Pin Node version for the build container so functions get a runtime
+# that supports global fetch (Node 18+) and so deps install consistently.
+[build.environment]
+  NODE_VERSION = "20"
 
 # Pretty URLs: /book → /book.html, /pricing → /pricing.html, etc.
 [[redirects]]
