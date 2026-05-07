@@ -21,6 +21,20 @@
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
   <link rel="stylesheet" href="styles.css?v=2026-05-05-fixsourceorder" />
+
+  <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
+       default to landing on the site root with a hash like
+       "#invite_token=...". Our identity widget only loads on /admin, so
+       if any auth-related hash arrives here, bounce it to /admin and
+       preserve the hash so the widget there can complete the flow. -->
+  <script>
+    (function () {
+      var h = window.location.hash || "";
+      if (/^#(invite_token|recovery_token|confirmation_token|email_change_token|access_token)=/.test(h)) {
+        window.location.replace("/admin/" + h);
+      }
+    })();
+  </script>
 </head>
 <body>
 
