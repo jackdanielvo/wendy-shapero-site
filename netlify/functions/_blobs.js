@@ -37,4 +37,21 @@ function getSecretsStore() {
   });
 }
 
-module.exports = { getSecretsStore };
+// Separate store for booking metadata (per-event JSON). Confirm/Decline
+// read this to get the client email since parsing it back out of the
+// Outlook event body is brittle (Outlook reformats bodies into HTML).
+function getBookingsStore() {
+  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_API_TOKEN;
+  if (!siteID || !token) {
+    throw new Error("Bookings store needs SITE_ID and NETLIFY_API_TOKEN env vars");
+  }
+  return getStore({
+    name: "wendypix-bookings",
+    consistency: "strong",
+    siteID,
+    token,
+  });
+}
+
+module.exports = { getSecretsStore, getBookingsStore };

@@ -7,6 +7,7 @@
 
 const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
+const { getBookingsStore } = require("./_blobs");
 
 exports.handler = async (event) => {
   const token = (event.queryStringParameters || {}).t;
@@ -48,13 +49,21 @@ exports.handler = async (event) => {
     return html(500, `<h2>Couldn't decline the event.</h2><p>${escapeHtml(e.message)}</p>`);
   }
 
-  // Best-effort: email the client
+  // Best-effort: email the client. Look up their address from the
+  // bookings blob (written at booking time) — more reliable than
+  // parsing it out of the Outlook event body, which Outlook reformats.
   let emailedClient = false;
-  if (eventData && process.env.RESEND_API_KEY) {
-    const clientEmail = extractClientEmail(eventData.body && eventData.body.content);
-    if (clientEmail) {
+  if (process.env.RESEND_API_KEY) {
+    let meta = null;
+    try {
+      const store = getBookingsStore();
+      meta = await store.get(`booking/${parsed.eventId}`, { type: "json" });
+    } catch (e) {
+      console.warn("[decline] bookings blob read failed:", e.message);
+    }
+    if (meta && meta.email) {
       try {
-        await sendClientDecline(clientEmail);
+        await sendClientDecline(meta.email);
         emailedClient = true;
       } catch (e) {
         console.error("[decline] client email failed:", e.message);
@@ -62,15 +71,17 @@ exports.handler = async (event) => {
     }
   }
 
+  // Clean up the bookings blob — the event is gone, no reason to keep its metadata
+  try {
+    const store = getBookingsStore();
+    await store.delete(`booking/${parsed.eventId}`);
+  } catch (e) {
+    // Non-fatal
+    console.warn("[decline] bookings blob cleanup failed:", e.message);
+  }
+
   return html(200, successHtml(eventData, emailedClient ? "removed-emailed" : "removed-no-email"));
 };
-
-function extractClientEmail(bodyContent) {
-  if (!bodyContent) return null;
-  const text = bodyContent.replace(/<[^>]+>/g, " ");
-  const m = text.match(/Email:\s*([^\s<>]+@[^\s<>]+)/i);
-  return m ? m[1] : null;
-}
 
 async function sendClientDecline(toEmail) {
   const apiKey = process.env.RESEND_API_KEY;

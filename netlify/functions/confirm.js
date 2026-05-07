@@ -8,6 +8,7 @@
 
 const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
+const { getBookingsStore } = require("./_blobs");
 
 exports.handler = async (event) => {
   const token = (event.queryStringParameters || {}).t;
@@ -57,12 +58,23 @@ exports.handler = async (event) => {
     return html(500, `<h2>Couldn't confirm the event.</h2><p>${escapeHtml(e.message)}</p>`);
   }
 
-  // 3. Best-effort: email the client a confirmation
+  // 3. Best-effort: email the client a confirmation. Look up the
+  //    client's email from the bookings store (written when the
+  //    booking was created) rather than scraping the calendar event
+  //    body, which Outlook often reformats into HTML that breaks
+  //    plain-text regex extraction.
   let emailedClient = false;
-  const clientEmail = extractClientEmail(eventData.body && eventData.body.content);
-  if (clientEmail && process.env.RESEND_API_KEY) {
+  let meta = null;
+  try {
+    const store = getBookingsStore();
+    meta = await store.get(`booking/${parsed.eventId}`, { type: "json" });
+  } catch (e) {
+    console.warn("[confirm] bookings blob read failed:", e.message);
+  }
+
+  if (meta && meta.email && process.env.RESEND_API_KEY) {
     try {
-      await sendClientConfirm(clientEmail, eventData);
+      await sendClientConfirm(meta.email, eventData, meta);
       emailedClient = true;
     } catch (e) {
       console.error("[confirm] client email failed:", e.message);
@@ -72,21 +84,15 @@ exports.handler = async (event) => {
   return html(200, successHtml(eventData, emailedClient ? "confirmed-emailed" : "confirmed-no-email"));
 };
 
-// Pull the client email out of the event body (we wrote it there in
-// book.js as "Email:  someone@example.com")
-function extractClientEmail(bodyContent) {
-  if (!bodyContent) return null;
-  // Strip HTML if present (Outlook may convert plain text bodies)
-  const text = bodyContent.replace(/<[^>]+>/g, " ");
-  const m = text.match(/Email:\s*([^\s<>]+@[^\s<>]+)/i);
-  return m ? m[1] : null;
-}
-
-async function sendClientConfirm(toEmail, eventData) {
+async function sendClientConfirm(toEmail, eventData, meta) {
   const apiKey = process.env.RESEND_API_KEY;
-  const start = eventData.start ? new Date(
-    eventData.start.dateTime + (eventData.start.dateTime.endsWith("Z") ? "" : "Z")
+  // Prefer slot start from meta (ISO UTC, exact); fall back to event
+  const startSrc = (meta && meta.slotStart) || (eventData && eventData.start && eventData.start.dateTime);
+  const start = startSrc ? new Date(
+    startSrc.endsWith("Z") || startSrc.includes("+") ? startSrc : startSrc + "Z"
   ) : null;
+  const firstName = meta && meta.name ? meta.name.split(" ")[0] : "there";
+  const packageName = meta && meta.packageName ? meta.packageName : "your session";
   const startStr = start ? start.toLocaleString("en-US", {
     weekday: "long",
     month: "long",

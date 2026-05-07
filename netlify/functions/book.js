@@ -16,6 +16,7 @@
 
 const { graphFetch } = require("./_msgraph");
 const { sign } = require("./_token");
+const { getBookingsStore } = require("./_blobs");
 
 const TIMEZONE_LABEL = "Pacific Standard Time"; // for Outlook event
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -63,7 +64,33 @@ exports.handler = async (event) => {
     );
   }
 
-  // Step 2: send emails (best-effort — booking is still considered
+  // Step 2: store booking metadata keyed by event id. Confirm/Decline
+  // read this to get the client email — much more reliable than
+  // parsing it back out of the Outlook event body (Outlook reformats
+  // bodies into HTML which breaks plain-text regex extraction).
+  try {
+    const store = getBookingsStore();
+    await store.setJSON(`booking/${calEventId}`, {
+      eventId: calEventId,
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone || null,
+      packageName: payload.packageName,
+      packagePrice: payload.packagePrice || null,
+      durationMin,
+      slotStart: start.toISOString(),
+      slotEnd: end.toISOString(),
+      looks: payload.looks || null,
+      hmua: Boolean(payload.hmua),
+      notes: payload.notes || null,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (e) {
+    // Non-fatal — booking still works, just confirm/decline emails will fail
+    console.error("[book] booking metadata blob write failed:", e.message);
+  }
+
+  // Step 3: send emails (best-effort — booking is still considered
   // successful even if email send fails)
   const emailResults = await sendEmails({ payload, start, calEventId });
 
