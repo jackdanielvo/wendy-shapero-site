@@ -9,6 +9,7 @@
 const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
+const tpl = require("./_email");
 
 exports.handler = async (event) => {
   const token = (event.queryStringParameters || {}).t;
@@ -86,23 +87,29 @@ exports.handler = async (event) => {
 
 async function sendClientConfirm(toEmail, eventData, meta) {
   const apiKey = process.env.RESEND_API_KEY;
-  // Prefer slot start from meta (ISO UTC, exact); fall back to event
   const startSrc = (meta && meta.slotStart) || (eventData && eventData.start && eventData.start.dateTime);
   const start = startSrc ? new Date(
     startSrc.endsWith("Z") || startSrc.includes("+") ? startSrc : startSrc + "Z"
   ) : null;
   const firstName = meta && meta.name ? meta.name.split(" ")[0] : "there";
   const packageName = meta && meta.packageName ? meta.packageName : "your session";
-  const startStr = start ? start.toLocaleString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/Los_Angeles",
-    timeZoneName: "short",
-  }) : "your session";
+  const startStr = tpl.formatDate(start);
+
+  const body =
+    tpl.eyebrow("Confirmed") +
+    tpl.headline("You're booked.") +
+    tpl.paragraph(`Hi <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
+    tpl.paragraph("Locked in. See you on:") +
+    tpl.callout(
+      `<strong>${tpl.escapeHtml(packageName)}</strong>` +
+      `<br/>${tpl.escapeHtml(startStr)}`
+    ) +
+    tpl.paragraph(
+      "I'll send the deposit invoice (50% non-refundable retainer) shortly, " +
+      "along with any pre-shoot details — what to bring, where to meet, " +
+      "what to wear. Reply to this email anytime with questions."
+    ) +
+    tpl.paragraph("&mdash; Wendy");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -113,20 +120,11 @@ async function sendClientConfirm(toEmail, eventData, meta) {
     body: JSON.stringify({
       from: "Wendy Shapero <wendy@wendypix.com>",
       to: [toEmail],
-      subject: `Your session is confirmed — ${startStr}`,
-      html: `
-        <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-          <p style="font-size:18px;font-weight:700">Hi —</p>
-          <p>You're booked! See you on:</p>
-          <p style="background:#f1ece2;border-left:4px solid #b347b9;padding:14px 18px;margin:18px 0">
-            <strong>${escapeHtml(startStr)}</strong>
-          </p>
-          <p>I'll be in touch shortly with the deposit invoice (50% non-refundable
-          retainer) and any pre-shoot details. Reply to this email anytime if
-          you have questions.</p>
-          <p style="margin-top:32px">— Wendy<br/>
-          <a href="https://wendypix.com" style="color:#b347b9">wendypix.com</a></p>
-        </div>`,
+      subject: `Your ${packageName} is confirmed — ${startStr}`,
+      html: tpl.wrap({
+        preheader: `Locked in. ${packageName} — ${startStr}`,
+        body,
+      }),
     }),
   });
   if (!res.ok) {

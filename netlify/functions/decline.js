@@ -8,6 +8,7 @@
 const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
+const tpl = require("./_email");
 
 exports.handler = async (event) => {
   const token = (event.queryStringParameters || {}).t;
@@ -63,7 +64,7 @@ exports.handler = async (event) => {
     }
     if (meta && meta.email) {
       try {
-        await sendClientDecline(meta.email);
+        await sendClientDecline(meta.email, meta);
         emailedClient = true;
       } catch (e) {
         console.error("[decline] client email failed:", e.message);
@@ -83,8 +84,27 @@ exports.handler = async (event) => {
   return html(200, successHtml(eventData, emailedClient ? "removed-emailed" : "removed-no-email"));
 };
 
-async function sendClientDecline(toEmail) {
+async function sendClientDecline(toEmail, meta) {
   const apiKey = process.env.RESEND_API_KEY;
+  const firstName = meta && meta.name ? meta.name.split(" ")[0] : "there";
+
+  const body =
+    tpl.eyebrow("Booking update") +
+    tpl.headline("Sorry —") +
+    tpl.paragraph(`Hi <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
+    tpl.paragraph(
+      "Thanks so much for the booking request. Unfortunately I'm not " +
+      "able to take this one — either the timing doesn't work on my end " +
+      "or my schedule's already full that day."
+    ) +
+    tpl.paragraph(
+      'If you\'d like, head back to <a href="https://wendypix.com/book" ' +
+      `style="color:${tpl.COLORS.PLUM};">wendypix.com/book</a> and pick ` +
+      "another date — there are usually openings within a few weeks. " +
+      "Or just reply to this email and we can chat."
+    ) +
+    tpl.paragraph("&mdash; Wendy");
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -95,19 +115,10 @@ async function sendClientDecline(toEmail) {
       from: "Wendy Shapero <wendy@wendypix.com>",
       to: [toEmail],
       subject: "About your booking request",
-      html: `
-        <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px">
-          <p>Hi —</p>
-          <p>Thanks so much for the booking request. Unfortunately I'm
-          not able to take this one — either the timing doesn't work on
-          my end or my schedule's already full that day.</p>
-          <p>If you'd like, head back to
-          <a href="https://wendypix.com/book" style="color:#b347b9">wendypix.com/book</a>
-          and pick another date — there are usually openings within a
-          few weeks. Or just reply to this email and we can chat.</p>
-          <p style="margin-top:32px">— Wendy<br/>
-          <a href="https://wendypix.com" style="color:#b347b9">wendypix.com</a></p>
-        </div>`,
+      html: tpl.wrap({
+        preheader: "About your booking request",
+        body,
+      }),
     }),
   });
   if (!res.ok) {
