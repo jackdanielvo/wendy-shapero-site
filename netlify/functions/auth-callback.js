@@ -6,7 +6,7 @@
 // Wendy hits this URL exactly once per registration. After that the
 // refresh token rotates itself indefinitely.
 
-const { getStore } = require("@netlify/blobs");
+const { getSecretsStore } = require("./_blobs");
 
 exports.handler = async (event) => {
   const tenantId = process.env.MS_TENANT_ID;
@@ -64,7 +64,7 @@ exports.handler = async (event) => {
   // Store the refresh token in Netlify Blobs. Booking functions read
   // this on each invocation and exchange it for a fresh access token.
   try {
-    const store = getStore({ name: "wendypix-secrets", consistency: "strong" });
+    const store = getSecretsStore();
     await store.setJSON("ms-graph-refresh-token", {
       refreshToken: tokens.refresh_token,
       obtainedAt: new Date().toISOString(),

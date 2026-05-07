@@ -7,7 +7,7 @@
 // endpoint each time), and provides a small fetch() wrapper that
 // retries once if the token expired mid-request.
 
-const { getStore } = require("@netlify/blobs");
+const { getSecretsStore } = require("./_blobs");
 
 let cachedAccessToken = null;
 let cachedExpiresAt = 0;
@@ -26,7 +26,7 @@ async function getAccessToken() {
     throw new Error("Missing MS_TENANT_ID / MS_CLIENT_ID / MS_CLIENT_SECRET env vars");
   }
 
-  const store = getStore({ name: "wendypix-secrets", consistency: "strong" });
+  const store = getSecretsStore();
   const stored = await store.get("ms-graph-refresh-token", { type: "json" });
   if (!stored || !stored.refreshToken) {
     throw new Error(
@@ -59,6 +59,7 @@ async function getAccessToken() {
   // Microsoft typically rotates the refresh token. Save the new one.
   if (tokens.refresh_token && tokens.refresh_token !== stored.refreshToken) {
     await store.setJSON("ms-graph-refresh-token", {
+      // (re-using the same store from above)
       refreshToken: tokens.refresh_token,
       obtainedAt: new Date().toISOString(),
       scope: tokens.scope,
