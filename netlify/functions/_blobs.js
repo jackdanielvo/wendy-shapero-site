@@ -54,4 +54,19 @@ function getBookingsStore() {
   });
 }
 
-module.exports = { getSecretsStore, getBookingsStore };
+// Config store — admin-editable settings (packages, working hours, etc.).
+function getConfigStore() {
+  const siteID = process.env.SITE_ID || process.env.NETLIFY_SITE_ID;
+  const token = process.env.NETLIFY_API_TOKEN;
+  if (!siteID || !token) {
+    throw new Error("Config store needs SITE_ID and NETLIFY_API_TOKEN env vars");
+  }
+  return getStore({
+    name: "wendypix-config",
+    consistency: "strong",
+    siteID,
+    token,
+  });
+}
+
+module.exports = { getSecretsStore, getBookingsStore, getConfigStore };

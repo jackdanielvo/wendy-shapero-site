@@ -7,13 +7,12 @@
 
 (function () {
   // ----------------------------------------------------------
-  // PACKAGE CONFIG. Single source of truth for the cards on this
-  // page. Wendy will edit this from the /admin page in Phase 2;
-  // for now Jack edits and pushes. Match the rate sheet on
-  // /pricing exactly so customers see the same numbers in both
-  // places.
+  // PACKAGE CONFIG. The live source of truth lives in Netlify
+  // Blobs and is editable from /admin. We fetch it on page load
+  // via /api/packages (with the array below as a fallback if the
+  // network call fails — keeps the page working even mid-incident).
   // ----------------------------------------------------------
-  const PACKAGES = [
+  const FALLBACK_PACKAGES = [
     {
       id: "headshot-essential",
       name: "Essential Headshot",
@@ -64,6 +63,9 @@
     },
   ];
 
+  // Live packages — set by loadPackages() at boot.
+  let PACKAGES = FALLBACK_PACKAGES;
+
   // ----------------------------------------------------------
   // STATE — what the user has selected so far.
   // ----------------------------------------------------------
@@ -73,6 +75,19 @@
     time: null,            // ISO datetime string (start of slot)
     availability: null,    // {days: [...]} loaded from API
   };
+
+  async function loadPackages() {
+    try {
+      const res = await fetch("/api/packages", { cache: "no-store" });
+      if (!res.ok) throw new Error("packages " + res.status);
+      const data = await res.json();
+      if (Array.isArray(data.packages) && data.packages.length) {
+        PACKAGES = data.packages;
+      }
+    } catch (err) {
+      console.warn("[book] /api/packages fetch failed, using fallback:", err.message);
+    }
+  }
 
   // ----------------------------------------------------------
   // STEP NAVIGATION. Sections in DOM with [data-step="N"] are
@@ -443,7 +458,8 @@
   // ----------------------------------------------------------
   // INIT
   // ----------------------------------------------------------
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
+    await loadPackages();
     renderPackages();
     const form = document.getElementById("bookForm");
     if (form) form.addEventListener("submit", submitBooking);
