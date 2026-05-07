@@ -126,19 +126,37 @@ function paragraph(html) {
 
 /**
  * Two-button row for the Confirm / Decline buttons in Wendy's email.
+ *
+ * Uses the "bulletproof button" pattern — Outlook (especially Outlook
+ * 2007-2019 desktop on Windows) strips padding, background, and border
+ * styles from <a> tags, rendering them as plain hyperlinks. The fix:
+ * put each button inside a <td> with the bgcolor attribute (Outlook
+ * respects HTML attributes even when it ignores CSS), use mso-padding-alt
+ * for Outlook spacing, and keep the <a> tag itself styled for the
+ * other clients that do honor inline CSS.
  */
 function buttonRow(buttons) {
   // buttons: array of { href, label, primary }
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0 8px 0;">
-    <tr>
-      ${buttons.map((b) => `
-        <td style="padding-right:10px;">
-          <a href="${escapeAttr(b.href)}"
-             style="display:inline-block;background:${b.primary ? INK : "transparent"};color:${b.primary ? BG : INK};font-family:${FONT_STACK};font-weight:700;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:14px 24px;border:1px solid ${INK};">
-            ${escapeHtml(b.label)}
-          </a>
-        </td>`).join("")}
-    </tr>
+  const cells = buttons.map((b) => {
+    const bg = b.primary ? INK : BG;
+    const fg = b.primary ? BG : INK;
+    return `
+      <td style="padding-right:12px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td bgcolor="${bg}" style="border:1px solid ${INK};mso-padding-alt:14px 26px 14px 26px;">
+              <a href="${escapeAttr(b.href)}"
+                 style="display:inline-block;padding:14px 26px;background:${bg};color:${fg};font-family:${FONT_STACK};font-weight:700;font-size:13px;line-height:1;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;mso-line-height-rule:exactly;">
+                ${escapeHtml(b.label)}
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>`;
+  }).join("");
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 12px 0;">
+    <tr>${cells}</tr>
   </table>`;
 }
 

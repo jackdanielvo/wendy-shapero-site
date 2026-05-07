@@ -195,7 +195,7 @@ async function sendEmails({ payload, start, calEventId }) {
       tpl.paragraph("Anything I should know in advance? Just reply to this email.") +
       tpl.paragraph("&mdash; Wendy");
 
-    await resendSend(apiKey, {
+    const sendResult = await resendSend(apiKey, {
       from: "Wendy Shapero <wendy@wendypix.com>",
       to: [payload.email],
       subject: `Booking request received — ${payload.packageName}`,
@@ -204,9 +204,10 @@ async function sendEmails({ payload, start, calEventId }) {
         body,
       }),
     });
+    console.log("[book] client email sent:", sendResult && sendResult.id, "to:", payload.email);
     result.client = true;
   } catch (e) {
-    console.error("[book] client email failed:", e.message);
+    console.error("[book] client email failed:", e.message, "to:", payload.email);
   }
 
   // Wendy notification — includes one-click Confirm / Decline buttons
