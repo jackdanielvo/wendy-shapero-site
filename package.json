@@ -1,0 +1,12 @@
+{
+  "name": "wendypix-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "WendyPix — Wendy Shapero Photography portfolio + booking system. Static site on Netlify with serverless functions for booking via Microsoft Graph (Outlook calendar) + Resend (email) + Stripe (deposits, when ready).",
+  "scripts": {
+    "build": "node scripts/build-photos.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^7.5.0"
+  }
+}
