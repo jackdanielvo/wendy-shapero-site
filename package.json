@@ -7,6 +7,6 @@
     "build": "node scripts/build-photos.js"
   },
   "dependencies": {
-    "@netlify/blobs": "^7.5.0"
+    "@netlify/blobs": "latest"
   }
 }
