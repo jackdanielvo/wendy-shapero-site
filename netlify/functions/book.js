@@ -15,9 +15,15 @@
 // are wired up.
 
 const { graphFetch } = require("./_msgraph");
+const { sign } = require("./_token");
 
 const TIMEZONE_LABEL = "Pacific Standard Time"; // for Outlook event
 const WENDY_EMAIL = "wendy@wendypix.com";
+
+// Where the confirm/decline buttons in Wendy's email link back to.
+// Falls back to the Netlify site URL if a custom domain isn't set yet.
+const SITE_URL =
+  process.env.URL || "https://wendypix.netlify.app";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -177,8 +183,49 @@ async function sendEmails({ payload, start, calEventId }) {
     console.error("[book] client email failed:", e.message);
   }
 
-  // Wendy notification
+  // Wendy notification — includes one-click Confirm / Decline buttons
+  // that hit signed token endpoints. The token carries the calendar
+  // event id + action + expiry, signed with CONFIRM_SECRET so a stray
+  // URL guess can't fake a confirmation.
   try {
+    let confirmUrl = "";
+    let declineUrl = "";
+    try {
+      confirmUrl = `${SITE_URL}/api/confirm?t=${sign({ eventId: calEventId, action: "confirm" })}`;
+      declineUrl = `${SITE_URL}/api/decline?t=${sign({ eventId: calEventId, action: "decline" })}`;
+    } catch (e) {
+      // CONFIRM_SECRET not set yet — skip the buttons rather than failing
+      console.warn("[book] confirm token signing failed:", e.message);
+    }
+
+    const buttonsHtml = confirmUrl && declineUrl ? `
+      <table cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
+        <tr>
+          <td style="padding-right:10px">
+            <a href="${confirmUrl}"
+               style="display:inline-block;background:#0c0c0c;color:#fff;font-family:Inter,Arial,sans-serif;font-weight:700;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:14px 24px;border:1px solid #0c0c0c">
+              Confirm booking
+            </a>
+          </td>
+          <td>
+            <a href="${declineUrl}"
+               style="display:inline-block;background:transparent;color:#0c0c0c;font-family:Inter,Arial,sans-serif;font-weight:700;font-size:13px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:14px 24px;border:1px solid #0c0c0c">
+              Decline
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="font-size:12px;color:#888;margin-top:-12px">
+        Confirm flips the calendar event from tentative to busy and emails
+        the client. Decline removes the event and sends a polite "can't take
+        this one" note. Links expire in 7 days.
+      </p>` : `
+      <p style="font-size:13px;color:#666;margin-top:24px">
+        Tentative event added to your calendar — confirm or decline it
+        manually in Outlook for now. (Set <code>CONFIRM_SECRET</code> in
+        Netlify env vars to enable one-click buttons.)
+      </p>`;
+
     await resendSend(apiKey, {
       from: "WendyPix Bookings <wendy@wendypix.com>",
       to: [WENDY_EMAIL],
@@ -202,11 +249,7 @@ async function sendEmails({ payload, start, calEventId }) {
             ${payload.hmua ? `<strong>+ Hair &amp; makeup ($200)</strong><br/>` : ""}
           </p>
           ${payload.notes ? `<p><strong>Notes</strong><br/>${escapeHtml(payload.notes).replace(/\n/g, "<br/>")}</p>` : ""}
-          <p style="margin-top:24px;font-size:13px;color:#666">
-            Tentative event added to your calendar. Confirm or decline manually,
-            then send the client deposit instructions.
-            Calendar event id: <code>${escapeHtml(calEventId)}</code>
-          </p>
+          ${buttonsHtml}
         </div>
       `,
     });
