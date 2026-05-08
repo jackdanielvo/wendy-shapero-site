@@ -249,3 +249,116 @@
   }
   .admin__booking__status { text-align: left; }
 }
+
+/* SETTINGS TAB ================================================ */
+
+.admin__settings {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 3.5vw, 40px);
+  margin-top: 28px;
+}
+
+.admin__settings__section {
+  background: var(--bg-alt);
+  border-left: 4px solid #1d5e62;
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.admin__settings__h3 {
+  font-family: var(--body-font);
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 800;
+  margin: 0 0 6px 0;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.admin__settings__hint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+.admin__settings__hint--inline {
+  margin: 0;
+  flex-basis: 100%;
+}
+
+.admin__settings__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--rule);
+}
+.admin__settings__row:first-of-type { border-top: 0; }
+
+.admin__settings__row > label:first-child {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 200px;
+  color: var(--ink);
+}
+
+.admin__settings__row input[type="number"] {
+  width: 100px;
+  padding: 8px 10px;
+  font-family: var(--body-font);
+  font-size: 14px;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink);
+}
+.admin__settings__row input[type="time"] {
+  padding: 6px 8px;
+  font-family: var(--body-font);
+  font-size: 14px;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink);
+}
+.admin__settings__row input[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Day rows — name | open checkbox | start time | end time */
+.admin__settings__day {
+  align-items: center;
+}
+.admin__settings__day-name {
+  min-width: 110px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+}
+.admin__settings__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.admin__settings__check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+.admin__settings__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .admin__settings__row > label:first-child { min-width: 100%; }
+  .admin__settings__day { gap: 10px; }
+  .admin__settings__day-name { min-width: 90px; }
+}

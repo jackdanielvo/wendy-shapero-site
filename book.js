@@ -327,24 +327,26 @@
       });
     document.getElementById("chosenSummary").textContent = summary;
 
-    // Deposit note depends on whether Stripe is configured. The
-    // server tells us which mode we're in via a small endpoint.
+    // Deposit note depends on whether Stripe is configured AND the
+    // currently-set deposit percentage (admin-editable). Both come
+    // back from /api/config in one call.
     const noteEl = document.getElementById("depositNote");
     fetch("/.netlify/functions/config")
       .then((r) => r.json())
       .then((cfg) => {
+        const pct = Number(cfg.depositPercent) || 25;
+        const fraction = pct / 100;
         if (cfg.stripeEnabled) {
           noteEl.innerHTML =
-            "<strong>Deposit:</strong> a 25% non-refundable retainer (" +
-            "$" +
-            Math.round(state.package.price * 0.25).toLocaleString() +
+            `<strong>Deposit:</strong> a ${pct}% non-refundable retainer ` +
+            "($" + Math.round(state.package.price * fraction).toLocaleString() +
             ") will be charged at submit to hold your date. " +
             "The balance is due 24 hours before the session.";
         } else {
           noteEl.innerHTML =
             "<strong>What happens next:</strong> I'll confirm your booking " +
             "by email within 24 hours and send deposit instructions " +
-            "(25% non-refundable retainer to hold the date). " +
+            `(${pct}% non-refundable retainer to hold the date). ` +
             "Until then, the slot is held for you.";
         }
       })

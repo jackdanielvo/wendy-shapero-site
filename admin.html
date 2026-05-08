@@ -12,7 +12,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-05-fixsourceorder" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-07-v1" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-08-settings" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -55,6 +55,7 @@
     <nav class="admin__tabs" id="tabs" hidden>
       <button type="button" class="admin__tab" data-tab="packages" aria-selected="true">Packages</button>
       <button type="button" class="admin__tab" data-tab="bookings">Bookings</button>
+      <button type="button" class="admin__tab" data-tab="settings">Settings</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -99,6 +100,29 @@
       </p>
     </section>
 
+    <!-- SETTINGS TAB -->
+    <section class="block admin__pane" data-tab="settings" hidden>
+      <p class="block__num">03.</p>
+      <h2 class="block__title">Settings.</h2>
+      <p class="pricing__lede">
+        Working hours, lead time, and deposit. The booking page will reflect
+        changes within about a minute. Anything outside these hours just
+        won't appear as bookable. To block specific hours or dates inside
+        your normal hours, add a busy event to your Outlook calendar — the
+        system reads your calendar live and skips conflicts automatically.
+      </p>
+
+      <div class="admin__settings" id="settingsForm">
+        <p class="admin__status">Loading…</p>
+      </div>
+
+      <p class="cta__actions" style="margin-top:32px">
+        <button type="button" class="btn btn--primary" id="saveSettingsBtn">Save changes</button>
+        <button type="button" class="btn btn--ghost" id="resetSettingsBtn">Reset to defaults</button>
+      </p>
+      <p class="admin__status admin__status--inline" id="settingsStatus" aria-live="polite"></p>
+    </section>
+
   </main>
 
   <footer class="pricing__footer">
@@ -106,6 +130,6 @@
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
   </footer>
 
-  <script src="admin.js?v=2026-05-07-v1"></script>
+  <script src="admin.js?v=2026-05-08-settings"></script>
 </body>
 </html>

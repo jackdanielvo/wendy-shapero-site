@@ -33,6 +33,7 @@
       // Bookings load is lazy — when user clicks the tab — but go
       // ahead and prefetch since it's a small payload.
       loadBookings().catch((e) => console.error("bookings load:", e));
+      loadSettings().catch((e) => settingsStatus("err", e.message));
     }
   }
 
@@ -74,6 +75,7 @@
         el.hidden = el.dataset.tab !== active;
       });
       if (active === "bookings") loadBookings().catch(console.error);
+      if (active === "settings") loadSettings().catch(console.error);
     });
   });
 
@@ -332,6 +334,234 @@
   }
   function escapeAttr(s) {
     return escapeHtml(s).replace(/'/g, "&#039;");
+  }
+
+  // -----------------------------------------------------------
+  // SETTINGS — working hours, lead time, buffer, days lookahead, deposit
+  // -----------------------------------------------------------
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  let settingsState = null;
+
+  async function loadSettings() {
+    settingsStatus("", "Loading…");
+    const res = await authFetch("/api/admin-settings");
+    if (!res.ok) throw new Error(`Load failed (${res.status})`);
+    const { settings } = await res.json();
+    settingsState = normalizeSettings(settings);
+    renderSettings();
+    settingsStatus("", "");
+  }
+
+  // Make sure every weekday is represented and numbers are numbers,
+  // regardless of how the JSON came across the wire.
+  function normalizeSettings(s) {
+    const hours = {};
+    const src = (s && s.hoursByDay) || {};
+    for (let d = 0; d <= 6; d++) {
+      const v = src[d] != null ? src[d] : src[String(d)];
+      if (v && typeof v === "object" && v.start && v.end) {
+        hours[d] = { start: String(v.start), end: String(v.end) };
+      } else {
+        hours[d] = null;
+      }
+    }
+    return {
+      hoursByDay: hours,
+      leadTimeHours: Number(s && s.leadTimeHours) || 0,
+      bufferMin: Number(s && s.bufferMin) || 0,
+      daysToShow: Number(s && s.daysToShow) || 21,
+      maxSlotsPerDay: Number(s && s.maxSlotsPerDay) || 4,
+      depositPercent: Number(s && s.depositPercent) || 25,
+      timezone: (s && s.timezone) || "America/Los_Angeles",
+    };
+  }
+
+  function renderSettings() {
+    const wrap = document.getElementById("settingsForm");
+    if (!settingsState) {
+      wrap.innerHTML = `<p class="admin__status">Loading…</p>`;
+      return;
+    }
+
+    const dayRows = DAY_NAMES.map((label, d) => {
+      const h = settingsState.hoursByDay[d];
+      const open = h !== null;
+      const start = (h && h.start) || "09:00";
+      const end = (h && h.end) || "18:00";
+      return `
+        <div class="admin__settings__row admin__settings__day" data-day="${d}">
+          <label class="admin__settings__day-name">${label}</label>
+          <label class="admin__settings__check">
+            <input type="checkbox" data-day-open="${d}" ${open ? "checked" : ""} />
+            Open
+          </label>
+          <label class="admin__settings__time">
+            <span>Start</span>
+            <input type="time" data-day-start="${d}" value="${start}" ${open ? "" : "disabled"} />
+          </label>
+          <label class="admin__settings__time">
+            <span>End</span>
+            <input type="time" data-day-end="${d}" value="${end}" ${open ? "" : "disabled"} />
+          </label>
+        </div>`;
+    }).join("");
+
+    wrap.innerHTML = `
+      <div class="admin__settings__section">
+        <h3 class="admin__settings__h3">Working hours</h3>
+        <p class="admin__settings__hint">
+          Pacific time. Uncheck Open to mark a day as closed. Times outside
+          these windows won't appear in the booking picker.
+        </p>
+        ${dayRows}
+      </div>
+
+      <div class="admin__settings__section">
+        <h3 class="admin__settings__h3">Booking rules</h3>
+
+        <div class="admin__settings__row">
+          <label>Lead time (hours)</label>
+          <input type="number" data-field="leadTimeHours" min="0" max="720" step="1"
+                 value="${settingsState.leadTimeHours}" />
+          <span class="admin__settings__hint admin__settings__hint--inline">
+            Minimum hours between booking and session.
+          </span>
+        </div>
+
+        <div class="admin__settings__row">
+          <label>Buffer (minutes)</label>
+          <input type="number" data-field="bufferMin" min="0" max="240" step="5"
+                 value="${settingsState.bufferMin}" />
+          <span class="admin__settings__hint admin__settings__hint--inline">
+            Gap reserved between back-to-back sessions.
+          </span>
+        </div>
+
+        <div class="admin__settings__row">
+          <label>Days lookahead</label>
+          <input type="number" data-field="daysToShow" min="1" max="180" step="1"
+                 value="${settingsState.daysToShow}" />
+          <span class="admin__settings__hint admin__settings__hint--inline">
+            How far in the future the picker shows.
+          </span>
+        </div>
+
+        <div class="admin__settings__row">
+          <label>Max slots per day</label>
+          <input type="number" data-field="maxSlotsPerDay" min="1" max="24" step="1"
+                 value="${settingsState.maxSlotsPerDay}" />
+          <span class="admin__settings__hint admin__settings__hint--inline">
+            Visual cap so the picker never overwhelms.
+          </span>
+        </div>
+      </div>
+
+      <div class="admin__settings__section">
+        <h3 class="admin__settings__h3">Deposit</h3>
+
+        <div class="admin__settings__row">
+          <label>Deposit percentage</label>
+          <input type="number" data-field="depositPercent" min="0" max="100" step="1"
+                 value="${settingsState.depositPercent}" />
+          <span class="admin__settings__hint admin__settings__hint--inline">
+            Non-refundable retainer charged at booking. Affects Stripe
+            checkout amount, the rate-card copy, and email language.
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  // Sync form changes back into settingsState as the user types.
+  document.getElementById("settingsForm").addEventListener("input", (e) => {
+    if (!settingsState) return;
+    const el = e.target;
+
+    // Day open/closed toggle
+    const openDay = el.dataset.dayOpen;
+    if (openDay != null) {
+      const d = Number(openDay);
+      if (el.checked) {
+        // Reopen using the time inputs that are already in the DOM
+        const startEl = document.querySelector(`[data-day-start="${d}"]`);
+        const endEl = document.querySelector(`[data-day-end="${d}"]`);
+        settingsState.hoursByDay[d] = {
+          start: (startEl && startEl.value) || "09:00",
+          end: (endEl && endEl.value) || "18:00",
+        };
+      } else {
+        settingsState.hoursByDay[d] = null;
+      }
+      renderSettings();
+      return;
+    }
+
+    // Day start time
+    const startDay = el.dataset.dayStart;
+    if (startDay != null) {
+      const d = Number(startDay);
+      if (settingsState.hoursByDay[d]) {
+        settingsState.hoursByDay[d].start = el.value;
+      }
+      return;
+    }
+
+    // Day end time
+    const endDay = el.dataset.dayEnd;
+    if (endDay != null) {
+      const d = Number(endDay);
+      if (settingsState.hoursByDay[d]) {
+        settingsState.hoursByDay[d].end = el.value;
+      }
+      return;
+    }
+
+    // Numeric fields
+    if (el.dataset.field) {
+      const n = Number(el.value);
+      settingsState[el.dataset.field] = Number.isFinite(n) ? n : 0;
+    }
+  });
+
+  document.getElementById("saveSettingsBtn").addEventListener("click", async () => {
+    if (!settingsState) return;
+    settingsStatus("", "Saving…");
+    try {
+      const res = await authFetch("/api/admin-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: settingsState }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Save failed (${res.status})`);
+      settingsState = normalizeSettings(data.settings);
+      renderSettings();
+      settingsStatus("ok", "Saved. Booking page will reflect changes within ~1 minute.");
+    } catch (e) {
+      settingsStatus("err", "Save failed: " + e.message);
+    }
+  });
+
+  document.getElementById("resetSettingsBtn").addEventListener("click", async () => {
+    if (!confirm("Reset settings to defaults? This wipes any edits.")) return;
+    settingsStatus("", "Resetting…");
+    try {
+      const res = await authFetch("/api/admin-settings", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Reset failed (${res.status})`);
+      settingsState = normalizeSettings(data.settings);
+      renderSettings();
+      settingsStatus("ok", "Reset to defaults.");
+    } catch (e) {
+      settingsStatus("err", "Reset failed: " + e.message);
+    }
+  });
+
+  function settingsStatus(kind, msg) {
+    const el = document.getElementById("settingsStatus");
+    if (!el) return;
+    el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
   }
 
   // Boot — if Identity hasn't fired init yet, run an initial pass anyway

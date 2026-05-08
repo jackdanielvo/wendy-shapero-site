@@ -9,19 +9,19 @@
 //   4. (If STRIPE_SECRET_KEY is set) start a Stripe Checkout session
 //      for the deposit (DEPOSIT_PERCENT below) and return the redirect URL
 
-// Deposit percentage of package price collected at booking time.
-// Single source of truth — change here to update Stripe + email copy
-// in one place.
-const DEPOSIT_PERCENT = 25;
-//
 // Each integration is gated on its env var. Bookings still succeed
 // without Resend/Stripe — they just produce fewer side effects (e.g.
 // no auto-email) which Wendy can handle manually until those services
 // are wired up.
+//
+// Deposit percentage is now stored in admin settings (editable from
+// /admin → Settings) and fetched per-request via getSettings(). Falls
+// back to the default (25%) if the blob has never been written.
 
 const { graphFetch } = require("./_msgraph");
 const { sign } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
+const { getSettings } = require("./_settings");
 const tpl = require("./_email");
 const { createCheckoutSession } = require("./_stripe");
 
@@ -108,16 +108,18 @@ exports.handler = async (event) => {
   //
   // NON-STRIPE PATH (current default): send emails immediately so
   //   Wendy can manually confirm/decline + invoice deposit out-of-band.
+  const settings = await getSettings();
+  const depositPercent = settings.depositPercent;
   const stripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
   if (stripeEnabled && payload.packagePrice && !payload.inquiry) {
     try {
       // Convert package_price (USD) → deposit cents at the configured percent.
       // e.g. $850 × 25 = 21250 cents = $212.50.
-      const depositCents = Math.round(payload.packagePrice * DEPOSIT_PERCENT);
+      const depositCents = Math.round(payload.packagePrice * depositPercent);
       const session = await createCheckoutSession({
         packageName: payload.packageName,
         amountCents: depositCents,
-        depositLabel: `${DEPOSIT_PERCENT}% deposit`,
+        depositLabel: `${depositPercent}% deposit`,
         customerEmail: payload.email,
         metadata: {
           eventId: calEventId,
@@ -144,7 +146,7 @@ exports.handler = async (event) => {
   }
 
   // Non-Stripe path: send emails immediately
-  const emailResults = await sendEmails({ payload, start, calEventId });
+  const emailResults = await sendEmails({ payload, start, calEventId, depositPercent });
 
   return {
     statusCode: 200,
@@ -215,7 +217,7 @@ async function createCalendarEvent({ payload, start, end }) {
 // Both gated on RESEND_API_KEY. Best-effort — booking is still
 // considered successful even if these fail.
 // ----------------------------------------------------------
-async function sendEmails({ payload, start, calEventId }) {
+async function sendEmails({ payload, start, calEventId, depositPercent }) {
   const result = { client: false, wendy: false };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return result;
@@ -237,7 +239,7 @@ async function sendEmails({ payload, start, calEventId }) {
       ) +
       tpl.paragraph(
         `I'll confirm within 24 hours and send deposit instructions ` +
-        `(${DEPOSIT_PERCENT}% non-refundable retainer to lock the date). Your slot is ` +
+        `(${depositPercent}% non-refundable retainer to lock the date). Your slot is ` +
         `held for you in the meantime.`
       ) +
       tpl.paragraph("Anything I should know in advance? Just hit reply.") +

@@ -8,33 +8,20 @@
 // in dev / preview deploys before OAuth is run.
 
 const { graphFetch } = require("./_msgraph");
-
-const SETTINGS = {
-  // Working hours by weekday number (0=Sun..6=Sat), 24-hour clock,
-  // Pacific Time. 0 (Sun) and any missing day = closed.
-  hoursByDay: {
-    1: { start: "09:00", end: "18:00" },
-    2: { start: "09:00", end: "18:00" },
-    3: { start: "09:00", end: "18:00" },
-    4: { start: "09:00", end: "18:00" },
-    5: { start: "09:00", end: "18:00" },
-    6: { start: "10:00", end: "14:00" },
-  },
-  leadTimeHours: 48,        // earliest a client can book
-  bufferMin: 30,            // minimum gap between sessions
-  daysToShow: 21,           // how far ahead to look
-  maxSlotsPerDay: 4,        // visual cap per day
-  timezone: "America/Los_Angeles",
-};
+const { getSettings } = require("./_settings");
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const duration = Math.max(30, Math.min(240, Number(params.duration) || 60));
 
+  // Pull working hours, lead time, etc. from the admin-editable blob.
+  // Falls back to defaults so this still works on a fresh install.
+  const settings = await getSettings();
+
   const now = new Date();
-  const earliest = new Date(now.getTime() + SETTINGS.leadTimeHours * 3600 * 1000);
+  const earliest = new Date(now.getTime() + settings.leadTimeHours * 3600 * 1000);
   const horizon = new Date(now);
-  horizon.setDate(horizon.getDate() + SETTINGS.daysToShow);
+  horizon.setDate(horizon.getDate() + settings.daysToShow);
 
   // Try to read busy times from Microsoft Graph. If the token store is
   // empty (OAuth not run yet) or the call fails, fall back to mock so
@@ -53,6 +40,7 @@ exports.handler = async (event) => {
     earliest,
     horizon,
     busy,
+    settings,
   });
 
   return {
@@ -63,7 +51,7 @@ exports.handler = async (event) => {
     },
     body: JSON.stringify({
       duration,
-      timezone: SETTINGS.timezone,
+      timezone: settings.timezone,
       days,
       mock,
     }),
@@ -73,20 +61,20 @@ exports.handler = async (event) => {
 // Walk every day in the horizon, generate candidate slots based on
 // working hours, drop those that conflict with busy ranges or sit
 // before the lead-time cutoff.
-function buildDays({ duration, earliest, horizon, busy }) {
+function buildDays({ duration, earliest, horizon, busy, settings }) {
   const days = [];
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
 
   while (cursor <= horizon) {
     const dow = cursor.getDay();
-    const hours = SETTINGS.hoursByDay[dow];
+    const hours = settings.hoursByDay[dow];
     if (hours) {
-      const slots = generateSlots(cursor, hours, duration, earliest, busy);
+      const slots = generateSlots(cursor, hours, duration, earliest, busy, settings);
       if (slots.length) {
         days.push({
           date: cursor.toISOString().slice(0, 10),
-          slots: slots.slice(0, SETTINGS.maxSlotsPerDay),
+          slots: slots.slice(0, settings.maxSlotsPerDay),
         });
       }
     }
@@ -95,11 +83,11 @@ function buildDays({ duration, earliest, horizon, busy }) {
   return days;
 }
 
-function generateSlots(day, hours, durationMin, earliest, busy) {
+function generateSlots(day, hours, durationMin, earliest, busy, settings) {
   const slots = [];
   const [sH, sM] = hours.start.split(":").map(Number);
   const [eH, eM] = hours.end.split(":").map(Number);
-  const stepMin = durationMin + SETTINGS.bufferMin;
+  const stepMin = durationMin + settings.bufferMin;
   let mark = sH * 60 + sM;
   const dayEnd = eH * 60 + eM;
 
