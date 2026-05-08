@@ -79,15 +79,25 @@
   text-align: left;
   transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
 }
-/* Time slots — warm cream-ish tint that echoes the contact-area /
-   email callout palette. Makes the chips read as clearly clickable
-   buttons against the page background instead of fading in. */
+/* Time slots — bold teal chips matching the site's BOOK link. White
+   bold text on a saturated teal background so each available time
+   reads as a confident, primary call-to-action — distinct from the
+   subtler day cards on the left. Selected state inverts to ink/white
+   below so the chosen slot still reads as "locked in." */
 .book__time {
-  background: var(--bg-alt);
+  background: #1d5e62;
+  border-color: #1d5e62;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.01em;
 }
-.book__day:hover,
-.book__time:hover {
+.book__day:hover {
   border-color: var(--ink);
+}
+.book__time:hover {
+  background: #144649;     /* deeper teal on hover for a subtle press feel */
+  border-color: #144649;
 }
 .book__day[aria-selected="true"],
 .book__time[aria-selected="true"] {
