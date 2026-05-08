@@ -63,19 +63,24 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
           <!-- HERO: pure-HTML WENDYPIX wordmark + tagline.
-               Big enough to fill the email column width — at 100px the
-               7-char wordmark spans roughly 400px which is most of the
-               560px content width. Single-line via white-space:nowrap
-               so it never breaks across lines on narrow viewports
-               (the image scales gracefully via media query below). -->
+               Outlook's <h1> font-size handling is unreliable, so we
+               put the wordmark text on a <td> directly — that's the
+               selector Outlook respects most consistently. Inner
+               <span> repeats the size as a backup. -->
           <tr>
-            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:64px 24px 48px 24px;text-align:center;">
-              <h1 style="margin:0 0 22px 0;padding:0;font-family:${FONT_STACK};font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;white-space:nowrap;">
-                <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="#ffffff"><strong>WENDY<font color="${CREAM}">PIX</font></strong></font>
-              </h1>
-              <p style="margin:0;padding:0;font-family:${FONT_STACK};font-size:14px;line-height:18px;letter-spacing:5px;text-transform:uppercase;color:${CREAM};font-weight:700;mso-line-height-rule:exactly;">
-                <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${CREAM}"><strong>Wendy Shapero &middot; Los Angeles</strong></font>
-              </p>
+            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:64px 24px 48px 24px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                <tr>
+                  <td align="center" style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;padding:0;">
+                    <span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:#ffffff;">WENDY</span><span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:${CREAM};">PIX</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-weight:700;font-size:14px;line-height:18px;letter-spacing:5px;text-transform:uppercase;color:${CREAM};padding:22px 0 0 0;mso-line-height-rule:exactly;">
+                    <span style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-weight:700;font-size:14px;letter-spacing:5px;color:${CREAM};">Wendy Shapero &middot; Los Angeles</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
