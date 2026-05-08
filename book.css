@@ -36,12 +36,19 @@
 
 /* SLOT PICKER ===============================================
    Two columns on desktop: scrollable column of days, then a column of
-   time slots for the chosen day. Stacks to single column on mobile. */
+   time slots for the chosen day. The times column is sticky — as the
+   user scrolls the page to find a date farther in the future, the
+   times for the selected day stay pinned to the top of the viewport
+   so they're still visible to click. Stacks to single column on mobile. */
 .book__slot-picker {
   display: grid;
   grid-template-columns: minmax(220px, 280px) 1fr;
   gap: clamp(20px, 3vw, 36px);
   margin: 0 0 clamp(28px, 4vw, 40px);
+  /* align-items:start so each grid item uses its content height instead
+     of stretching, which is required for position:sticky on the times
+     column to work — sticky has no effect on a stretched grid child. */
+  align-items: start;
 }
 .book__days,
 .book__times {
@@ -51,6 +58,15 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.book__times-wrap {
+  position: sticky;
+  /* Distance from viewport top when stuck. Keep some breathing room. */
+  top: clamp(16px, 3vw, 32px);
+  /* Cap at viewport height minus the sticky offset, so a very long times
+     list scrolls within itself rather than disappearing off screen. */
+  max-height: calc(100vh - clamp(48px, 6vw, 80px));
+  overflow-y: auto;
 }
 .book__day,
 .book__time {
@@ -230,5 +246,12 @@
     flex: 0 0 auto;
     min-width: 130px;
     scroll-snap-align: start;
+  }
+  /* Single-column layout on mobile — sticky times don't make sense
+     since days and times are stacked vertically. Reset to normal flow. */
+  .book__times-wrap {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
