@@ -62,20 +62,20 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
       <td align="center" style="padding:24px 8px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
-          <!-- HERO: hosted PNG of the WENDYPIX wordmark + tagline.
-               Native PNG is 1200x280 (2x for retina); we display at
-               600x140. Use HTML width/height attributes (Outlook +
-               Apple Mail respect those over CSS), and the inline
-               style as a backup. The <a> wrapper is removed because
-               some clients render display:block <a> at the natural
-               width of the image, ignoring max-width — clicking the
-               WENDYPIX wordmark to go home isn't worth that bug. -->
+          <!-- HERO: pure-HTML WENDYPIX wordmark + tagline. Image-based
+               approach kept failing (Apple Mail ignored width caps and
+               rendered the PNG at native size, cropping the wordmark
+               in the email column). HTML is more reliable: <h1> with
+               inline CSS for modern clients, <font> fallback for
+               Outlook 2007-2019 which still respects HTML 4 font tags. -->
           <tr>
-            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:0;text-align:center;line-height:0;font-size:0;">
-              <img src="${SITE_URL}/email-logo-v2.png"
-                   width="600" height="140"
-                   alt="WENDYPIX — Wendy Shapero, Los Angeles"
-                   style="display:block;width:600px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};margin:0 auto;-ms-interpolation-mode:bicubic;" />
+            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:60px 24px 40px 24px;text-align:center;">
+              <h1 style="margin:0 0 18px 0;padding:0;font-family:${FONT_STACK};font-weight:900;font-size:60px;line-height:60px;letter-spacing:-2.5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;">
+                <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="#ffffff" size="7"><strong>WENDY<font color="${CREAM}">PIX</font></strong></font>
+              </h1>
+              <p style="margin:0;padding:0;font-family:${FONT_STACK};font-size:12px;line-height:16px;letter-spacing:4px;text-transform:uppercase;color:${CREAM};font-weight:600;mso-line-height-rule:exactly;">
+                <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${CREAM}" size="2"><strong>Wendy Shapero &middot; Los Angeles</strong></font>
+              </p>
             </td>
           </tr>
 
