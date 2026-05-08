@@ -122,24 +122,24 @@ async function sendClientConfirmation(md, session) {
 
   const body =
     tpl.eyebrow("Confirmed & paid") +
-    tpl.headline("You're booked.") +
-    tpl.paragraph(`Hi <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
+    tpl.headline("You're in.") +
+    tpl.paragraph(`Hey <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
     tpl.paragraph("Deposit received and your session is locked in:") +
     tpl.callout(
-      `<strong>${tpl.escapeHtml(md.packageName || "Session")}</strong>` +
-      `<br/>${tpl.escapeHtml(startStr)}` +
-      `<br/><span style="color:${tpl.COLORS.MUTED};font-size:13px;">Deposit paid: $${depositDollars}</span>`
+      `${tpl.escapeHtml(md.packageName || "Session")}<br/>` +
+      `<span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span><br/>` +
+      `<span style="font-size:14px;font-weight:500;opacity:0.8;letter-spacing:0.04em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>`
     ) +
     tpl.paragraph(
-      "Wendy will reach out shortly with pre-shoot details — what to bring, " +
+      "I'll reach out shortly with pre-shoot details — what to bring, " +
       "where to meet, what to wear. The remaining balance is due 24 hours " +
       "before the session."
     ) +
     tpl.paragraph(
-      "Reply to this email anytime if you have questions or need to reschedule " +
+      "Reply anytime if you have questions or need to reschedule " +
       "(14 days&rsquo; notice required, see the rate card)."
     ) +
-    tpl.paragraph("&mdash; Wendy");
+    tpl.signoff("&mdash; Wendy");
 
   await fetch("https://api.resend.com/emails", {
     method: "POST",

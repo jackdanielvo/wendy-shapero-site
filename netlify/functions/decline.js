@@ -99,11 +99,11 @@ async function sendClientDecline(toEmail, meta) {
     ) +
     tpl.paragraph(
       'If you\'d like, head back to <a href="https://wendypix.com/book" ' +
-      `style="color:${tpl.COLORS.PLUM};">wendypix.com/book</a> and pick ` +
+      `style="color:${tpl.COLORS.PLUM};font-weight:700;">wendypix.com/book</a> and pick ` +
       "another date — there are usually openings within a few weeks. " +
-      "Or just reply to this email and we can chat."
+      "Or just reply to this email and we'll figure it out."
     ) +
-    tpl.paragraph("&mdash; Wendy");
+    tpl.signoff("&mdash; Wendy");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

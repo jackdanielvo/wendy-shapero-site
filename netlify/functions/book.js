@@ -220,20 +220,20 @@ async function sendEmails({ payload, start, calEventId }) {
     const body =
       tpl.eyebrow("Booking request received") +
       tpl.headline("On hold.") +
-      tpl.paragraph(`Hi <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
-      tpl.paragraph("Got your booking request — here's what I have:") +
+      tpl.paragraph(`Hey <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
+      tpl.paragraph("Got your request — here's what I have:") +
       tpl.callout(
-        `<strong>${tpl.escapeHtml(payload.packageName)}</strong>` +
-        (payload.packagePrice ? ` &middot; $${payload.packagePrice}` : "") +
-        `<br/>${tpl.escapeHtml(startStr)}`
+        `${tpl.escapeHtml(payload.packageName)}` +
+        (payload.packagePrice ? `<br/><span style="opacity:0.85;font-size:17px;">$${payload.packagePrice}</span>` : "") +
+        `<br/><span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
       ) +
       tpl.paragraph(
-        "I'll confirm within 24 hours and send the deposit instructions " +
-        "(50% non-refundable retainer to hold the date). The slot is " +
-        "held tentatively for you in the meantime."
+        "I'll confirm within 24 hours and send deposit instructions " +
+        "(50% non-refundable retainer to lock the date). Your slot is " +
+        "held for you in the meantime."
       ) +
-      tpl.paragraph("Anything I should know in advance? Just reply to this email.") +
-      tpl.paragraph("&mdash; Wendy");
+      tpl.paragraph("Anything I should know in advance? Just hit reply.") +
+      tpl.signoff("&mdash; Wendy");
 
     const sendResult = await resendSend(apiKey, {
       from: "Wendy Shapero <wendy@wendypix.com>",

@@ -8,16 +8,16 @@
 //   - inline CSS only
 //   - system font stack as fallback (Helvetica/Arial)
 //   - hex colors with no calc()/min()/var()
-//   - PNG-safe imagery if any
 //
-// The visual language matches wendypix.com:
-//   WENDYPIX wordmark (Helvetica Bold-ish via system stack +
-//   font-weight 900 to approximate Inter Black, WENDY in ink, PIX
-//   in plum #b347b9), cream #f1ece2 callout panels with plum left
-//   border, heavy sans-serif headlines, plum link color.
+// Visual language: WENDYPIX wordmark in a full-width plum hero block
+// at the top, oversized Inter Black headlines, plum-filled callout
+// panels with white text, large readable body type. Goal is to make
+// the email feel like an extension of the wendypix.com experience —
+// confident, bold, fun.
 
 const PLUM = "#b347b9";
 const PLUM_DEEP = "#8e2c94";
+const PLUM_DARK = "#5a1a5e";
 const INK = "#0c0c0c";
 const CREAM = "#f1ece2";
 const MUTED = "#6b6b6b";
@@ -41,43 +41,49 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Prevent email clients (especially Apple Mail iOS) from auto-
+       applying dark mode color inversion, which would mute our
+       bright plum + cream brand palette. -->
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light only" />
+  <style>:root { color-scheme: light only; supported-color-schemes: light only; }</style>
 </head>
-<body style="margin:0;padding:0;background:${BG};font-family:${FONT_STACK};color:${INK};">
-  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${BG};opacity:0;">${escapeHtml(preheader)}</div>` : ""}
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${BG};">
+<body style="margin:0;padding:0;background:${CREAM};font-family:${FONT_STACK};color:${INK};">
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${CREAM};opacity:0;">${escapeHtml(preheader)}</div>` : ""}
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:${CREAM};">
     <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;background:${BG};">
-          <!-- HEADER: WENDYPIX wordmark -->
+      <td align="center" style="padding:24px 8px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
+
+          <!-- HERO: full-width plum block with the wordmark -->
           <tr>
-            <td style="padding:0 8px 32px 8px;text-align:left;">
-              <span style="font-family:${FONT_STACK};font-weight:900;font-size:28px;letter-spacing:-0.045em;line-height:1;text-transform:uppercase;">
-                <span style="color:${INK};">WENDY</span><span style="color:${PLUM};">PIX</span>
-              </span>
+            <td bgcolor="${PLUM}" style="background:${PLUM};padding:44px 32px;text-align:center;">
+              <div style="font-family:${FONT_STACK};font-weight:900;font-size:64px;line-height:1;letter-spacing:-0.05em;text-transform:uppercase;color:#ffffff;">
+                <span style="color:#ffffff;">WENDY</span><span style="color:${CREAM};">PIX</span>
+              </div>
+              <div style="font-family:${FONT_STACK};font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:${CREAM};margin-top:14px;font-weight:600;">
+                Wendy Shapero &middot; Los Angeles
+              </div>
             </td>
           </tr>
 
           <!-- BODY -->
           <tr>
-            <td style="padding:0 8px;">
+            <td style="padding:48px 40px 40px 40px;">
               ${body}
             </td>
           </tr>
 
-          <!-- FOOTER -->
+          <!-- FOOTER: thin band at the bottom -->
           <tr>
-            <td style="padding:48px 8px 0 8px;border-top:1px solid #ececec;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-                <tr>
-                  <td style="padding-top:16px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${MUTED};font-family:${FONT_STACK};">
-                    Wendy Shapero Photography &middot; Los Angeles
-                  </td>
-                  ${showHomeLink ? `
-                  <td align="right" style="padding-top:16px;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;font-family:${FONT_STACK};">
-                    <a href="https://wendypix.com" style="color:${MUTED};text-decoration:none;">wendypix.com</a>
-                  </td>` : ""}
-                </tr>
-              </table>
+            <td bgcolor="${INK}" style="background:${INK};padding:24px 32px;text-align:center;">
+              <div style="font-family:${FONT_STACK};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${CREAM};font-weight:600;">
+                Photographs &copy; ${new Date().getFullYear()} Wendy Shapero
+              </div>
+              ${showHomeLink ? `
+              <div style="margin-top:8px;font-family:${FONT_STACK};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
+                <a href="https://wendypix.com" style="color:#ffffff;text-decoration:none;border-bottom:1px solid ${PLUM};padding-bottom:2px;">wendypix.com</a>
+              </div>` : ""}
             </td>
           </tr>
         </table>
@@ -89,28 +95,28 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
 }
 
 /**
- * Big bold display headline matching the site's section titles.
- * Use sparingly — once per email at most.
+ * BIG bold display headline. The hero of every email — make it count.
  */
 function headline(text) {
-  return `<h1 style="font-family:${FONT_STACK};font-weight:900;font-size:48px;letter-spacing:-0.04em;line-height:0.92;color:${INK};margin:0 0 24px 0;text-transform:uppercase;">${escapeHtml(text)}</h1>`;
+  return `<h1 style="font-family:${FONT_STACK};font-weight:900;font-size:84px;letter-spacing:-0.045em;line-height:0.88;color:${INK};margin:0 0 32px 0;text-transform:uppercase;">${escapeHtml(text)}</h1>`;
 }
 
 /**
- * Eyebrow line above a headline — small caps plum.
+ * Eyebrow line above the headline — small caps in plum, generous
+ * letter-spacing so it reads as a confident pre-title.
  */
 function eyebrow(text) {
-  return `<p style="font-family:${FONT_STACK};font-weight:700;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:${PLUM};margin:0 0 14px 0;">${escapeHtml(text)}</p>`;
+  return `<p style="font-family:${FONT_STACK};font-weight:800;font-size:13px;letter-spacing:0.28em;text-transform:uppercase;color:${PLUM};margin:0 0 18px 0;">${escapeHtml(text)}</p>`;
 }
 
 /**
- * Cream callout panel with plum left stripe — for highlighting key info
- * (booking summary, deposit notice, etc.).
+ * Plum-filled callout panel for highlighting the key info — the
+ * date, the package, the deposit. White text on plum, big and proud.
  */
 function callout(html) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:32px 0;">
     <tr>
-      <td style="padding:18px 22px;background:${CREAM};border-left:4px solid ${PLUM};font-family:${FONT_STACK};font-size:16px;line-height:1.5;color:${INK};">
+      <td bgcolor="${PLUM}" style="background:${PLUM};padding:28px 32px;font-family:${FONT_STACK};font-size:20px;line-height:1.45;color:#ffffff;font-weight:600;">
         ${html}
       </td>
     </tr>
@@ -118,35 +124,52 @@ function callout(html) {
 }
 
 /**
- * Body paragraph — standard reading text.
+ * Subtler cream callout — for secondary info that shouldn't compete
+ * with the main plum callout.
  */
-function paragraph(html) {
-  return `<p style="font-family:${FONT_STACK};font-size:16px;line-height:1.6;color:${INK};margin:0 0 16px 0;">${html}</p>`;
+function softCallout(html) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;">
+    <tr>
+      <td bgcolor="${CREAM}" style="background:${CREAM};padding:22px 26px;border-left:4px solid ${PLUM};font-family:${FONT_STACK};font-size:17px;line-height:1.5;color:${INK};">
+        ${html}
+      </td>
+    </tr>
+  </table>`;
 }
 
 /**
- * Two-button row for the Confirm / Decline buttons in Wendy's email.
- *
- * Uses the "bulletproof button" pattern — Outlook (especially Outlook
- * 2007-2019 desktop on Windows) strips padding, background, and border
- * styles from <a> tags, rendering them as plain hyperlinks. The fix:
- * put each button inside a <td> with the bgcolor attribute (Outlook
- * respects HTML attributes even when it ignores CSS), use mso-padding-alt
- * for Outlook spacing, and keep the <a> tag itself styled for the
- * other clients that do honor inline CSS.
+ * Body paragraph — large reading type so emails actually feel like
+ * a letter, not a confirmation receipt.
+ */
+function paragraph(html) {
+  return `<p style="font-family:${FONT_STACK};font-size:19px;line-height:1.65;color:${INK};margin:0 0 22px 0;">${html}</p>`;
+}
+
+/**
+ * Sign-off paragraph — slightly larger, so "— Wendy" reads as a
+ * personal closing, not a footer afterthought.
+ */
+function signoff(html) {
+  return `<p style="font-family:${FONT_STACK};font-size:22px;line-height:1.4;color:${INK};margin:36px 0 0 0;font-weight:600;">${html}</p>`;
+}
+
+/**
+ * Bulletproof button — survives Outlook 2007-2019 mangling. Use the
+ * `primary` flag for the heavy plum-filled variant; the default is
+ * outlined.
  */
 function buttonRow(buttons) {
-  // buttons: array of { href, label, primary }
   const cells = buttons.map((b) => {
-    const bg = b.primary ? INK : BG;
-    const fg = b.primary ? BG : INK;
+    const bg = b.primary ? PLUM : BG;
+    const fg = b.primary ? "#ffffff" : INK;
+    const border = b.primary ? PLUM : INK;
     return `
-      <td style="padding-right:12px;">
+      <td style="padding-right:14px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td bgcolor="${bg}" style="border:1px solid ${INK};mso-padding-alt:14px 26px 14px 26px;">
+            <td bgcolor="${bg}" style="border:2px solid ${border};mso-padding-alt:18px 32px 18px 32px;">
               <a href="${escapeAttr(b.href)}"
-                 style="display:inline-block;padding:14px 26px;background:${bg};color:${fg};font-family:${FONT_STACK};font-weight:700;font-size:13px;line-height:1;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;mso-line-height-rule:exactly;">
+                 style="display:inline-block;padding:18px 32px;background:${bg};color:${fg};font-family:${FONT_STACK};font-weight:800;font-size:14px;line-height:1;letter-spacing:0.20em;text-transform:uppercase;text-decoration:none;mso-line-height-rule:exactly;">
                 ${escapeHtml(b.label)}
               </a>
             </td>
@@ -155,16 +178,26 @@ function buttonRow(buttons) {
       </td>`;
   }).join("");
 
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 12px 0;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:36px 0 16px 0;">
     <tr>${cells}</tr>
   </table>`;
 }
 
 /**
- * Small fine-print line under buttons, etc.
+ * Smaller fine-print line, for explanatory text under buttons or
+ * disclaimers at the bottom of an email.
  */
 function fineprint(html) {
-  return `<p style="font-family:${FONT_STACK};font-size:12px;line-height:1.5;color:${MUTED};margin:0 0 4px 0;">${html}</p>`;
+  return `<p style="font-family:${FONT_STACK};font-size:13px;line-height:1.55;color:${MUTED};margin:0 0 8px 0;">${html}</p>`;
+}
+
+/**
+ * Plum divider — a thin horizontal rule between sections of the body.
+ */
+function divider() {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:32px 0;">
+    <tr><td style="border-top:2px solid ${PLUM};font-size:0;line-height:0;height:0;">&nbsp;</td></tr>
+  </table>`;
 }
 
 /**
@@ -195,7 +228,6 @@ function escapeHtml(s) {
     .replace(/'/g, "&#039;");
 }
 function escapeAttr(s) {
-  // Conservative attribute escape (URLs, etc.)
   return String(s).replace(/"/g, "&quot;").replace(/&(?!amp;|lt;|gt;|quot;|#)/g, "&amp;");
 }
 
@@ -204,11 +236,13 @@ module.exports = {
   headline,
   eyebrow,
   callout,
+  softCallout,
   paragraph,
+  signoff,
   buttonRow,
   fineprint,
+  divider,
   formatDate,
   escapeHtml,
-  // Color constants — exposed so call sites can reuse them
-  COLORS: { PLUM, PLUM_DEEP, INK, CREAM, MUTED, BG },
+  COLORS: { PLUM, PLUM_DEEP, PLUM_DARK, INK, CREAM, MUTED, BG },
 };

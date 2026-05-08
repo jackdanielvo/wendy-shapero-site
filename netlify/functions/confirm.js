@@ -98,18 +98,18 @@ async function sendClientConfirm(toEmail, eventData, meta) {
   const body =
     tpl.eyebrow("Confirmed") +
     tpl.headline("You're booked.") +
-    tpl.paragraph(`Hi <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
+    tpl.paragraph(`Hey <strong>${tpl.escapeHtml(firstName)}</strong>,`) +
     tpl.paragraph("Locked in. See you on:") +
     tpl.callout(
-      `<strong>${tpl.escapeHtml(packageName)}</strong>` +
-      `<br/>${tpl.escapeHtml(startStr)}`
+      `${tpl.escapeHtml(packageName)}<br/>` +
+      `<span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
     ) +
     tpl.paragraph(
       "I'll send the deposit invoice (50% non-refundable retainer) shortly, " +
-      "along with any pre-shoot details — what to bring, where to meet, " +
-      "what to wear. Reply to this email anytime with questions."
+      "along with the pre-shoot details — what to bring, where to meet, " +
+      "what to wear. Reply anytime with questions."
     ) +
-    tpl.paragraph("&mdash; Wendy");
+    tpl.signoff("&mdash; Wendy");
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
