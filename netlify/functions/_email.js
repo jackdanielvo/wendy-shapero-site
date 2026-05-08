@@ -72,7 +72,7 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
                WENDYPIX wordmark to go home isn't worth that bug. -->
           <tr>
             <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:0;text-align:center;line-height:0;font-size:0;">
-              <img src="${SITE_URL}/email-logo.png"
+              <img src="${SITE_URL}/email-logo-v2.png"
                    width="600" height="140"
                    alt="WENDYPIX — Wendy Shapero, Los Angeles"
                    style="display:block;width:600px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};margin:0 auto;-ms-interpolation-mode:bicubic;" />
