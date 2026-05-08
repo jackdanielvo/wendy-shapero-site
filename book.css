@@ -79,14 +79,15 @@
   text-align: left;
   transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
 }
-/* Time slots — bold teal chips matching the site's BOOK link. White
-   bold text on a saturated teal background so each available time
-   reads as a confident, primary call-to-action — distinct from the
-   subtler day cards on the left. Selected state inverts to ink/white
-   below so the chosen slot still reads as "locked in." */
+/* Time slots — light teal chips that brighten further into the
+   site's signature deep teal on hover. White bold text throughout
+   so each available time reads as a confident primary action,
+   distinct from the subtler day cards on the left. Selected state
+   inverts to ink/white below so the chosen slot still reads as
+   "locked in." */
 .book__time {
-  background: #1d5e62;
-  border-color: #1d5e62;
+  background: #3a8e93;     /* lighter teal — airier resting state */
+  border-color: #3a8e93;
   color: #ffffff;
   font-weight: 700;
   font-size: 16px;
@@ -96,8 +97,8 @@
   border-color: var(--ink);
 }
 .book__time:hover {
-  background: #144649;     /* deeper teal on hover for a subtle press feel */
-  border-color: #144649;
+  background: #1d5e62;     /* deep teal on hover — the BOOK-link color */
+  border-color: #1d5e62;
 }
 .book__day[aria-selected="true"],
 .book__time[aria-selected="true"] {
