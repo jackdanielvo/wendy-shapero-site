@@ -6,8 +6,13 @@
 //      with the client's intake details in the description
 //   3. (If RESEND_API_KEY is set) email the client a "request received"
 //      confirmation, and email Wendy a notification with all details
-//   4. (If STRIPE_SECRET_KEY is set — future) start a Stripe Checkout
-//      session for the 50% deposit and return the redirect URL
+//   4. (If STRIPE_SECRET_KEY is set) start a Stripe Checkout session
+//      for the deposit (DEPOSIT_PERCENT below) and return the redirect URL
+
+// Deposit percentage of package price collected at booking time.
+// Single source of truth — change here to update Stripe + email copy
+// in one place.
+const DEPOSIT_PERCENT = 25;
 //
 // Each integration is gated on its env var. Bookings still succeed
 // without Resend/Stripe — they just produce fewer side effects (e.g.
@@ -94,7 +99,7 @@ exports.handler = async (event) => {
 
   // Step 3: branch on whether Stripe is configured.
   //
-  // STRIPE PATH: create a Checkout session for the 50% deposit and
+  // STRIPE PATH: create a Checkout session for the deposit and
   //   return its URL — frontend redirects there. We DON'T send the
   //   "request received" / "new booking" emails here; the webhook
   //   sends "you're booked + paid" + Wendy notification on payment
@@ -106,10 +111,13 @@ exports.handler = async (event) => {
   const stripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
   if (stripeEnabled && payload.packagePrice && !payload.inquiry) {
     try {
-      const depositCents = Math.round(payload.packagePrice * 50); // 50% in cents
+      // Convert package_price (USD) → deposit cents at the configured percent.
+      // e.g. $850 × 25 = 21250 cents = $212.50.
+      const depositCents = Math.round(payload.packagePrice * DEPOSIT_PERCENT);
       const session = await createCheckoutSession({
         packageName: payload.packageName,
         amountCents: depositCents,
+        depositLabel: `${DEPOSIT_PERCENT}% deposit`,
         customerEmail: payload.email,
         metadata: {
           eventId: calEventId,
@@ -228,9 +236,9 @@ async function sendEmails({ payload, start, calEventId }) {
         `<br/><span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
       ) +
       tpl.paragraph(
-        "I'll confirm within 24 hours and send deposit instructions " +
-        "(50% non-refundable retainer to lock the date). Your slot is " +
-        "held for you in the meantime."
+        `I'll confirm within 24 hours and send deposit instructions ` +
+        `(${DEPOSIT_PERCENT}% non-refundable retainer to lock the date). Your slot is ` +
+        `held for you in the meantime.`
       ) +
       tpl.paragraph("Anything I should know in advance? Just hit reply.") +
       tpl.signoff("&mdash; Wendy");

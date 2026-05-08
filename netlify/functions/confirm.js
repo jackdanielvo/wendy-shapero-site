@@ -105,7 +105,7 @@ async function sendClientConfirm(toEmail, eventData, meta) {
       `<span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
     ) +
     tpl.paragraph(
-      "I'll send the deposit invoice (50% non-refundable retainer) shortly, " +
+      "I'll send the deposit invoice (25% non-refundable retainer) shortly, " +
       "along with the pre-shoot details — what to bring, where to meet, " +
       "what to wear. Reply anytime with questions."
     ) +

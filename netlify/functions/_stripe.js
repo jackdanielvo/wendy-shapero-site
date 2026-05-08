@@ -58,7 +58,8 @@ async function stripePost(path, body) {
 // Returns { id, url } — frontend redirects to `url`.
 async function createCheckoutSession({
   packageName,
-  amountCents,           // 50% of package.price * 100
+  amountCents,           // deposit cents (DEPOSIT_PERCENT % of price)
+  depositLabel,          // e.g. "25% deposit" — shown on Stripe Checkout
   customerEmail,
   metadata,              // { eventId, packageId, name, ... } — we read this back in the webhook
   successUrl,
@@ -80,7 +81,7 @@ async function createCheckoutSession({
       price_data: {
         currency: "usd",
         product_data: {
-          name: `${packageName} — 50% deposit`,
+          name: `${packageName} — ${depositLabel || "deposit"}`,
           description: "Non-refundable retainer to hold your session date.",
         },
         unit_amount: amountCents,

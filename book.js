@@ -335,16 +335,16 @@
       .then((cfg) => {
         if (cfg.stripeEnabled) {
           noteEl.innerHTML =
-            "<strong>Deposit:</strong> a 50% non-refundable retainer (" +
+            "<strong>Deposit:</strong> a 25% non-refundable retainer (" +
             "$" +
-            (state.package.price / 2).toLocaleString() +
+            Math.round(state.package.price * 0.25).toLocaleString() +
             ") will be charged at submit to hold your date. " +
             "The balance is due 24 hours before the session.";
         } else {
           noteEl.innerHTML =
             "<strong>What happens next:</strong> I'll confirm your booking " +
             "by email within 24 hours and send deposit instructions " +
-            "(50% non-refundable retainer to hold the date). " +
+            "(25% non-refundable retainer to hold the date). " +
             "Until then, the slot is held for you.";
         }
       })
