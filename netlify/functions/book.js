@@ -18,6 +18,7 @@ const { graphFetch } = require("./_msgraph");
 const { sign } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
 const tpl = require("./_email");
+const { createCheckoutSession } = require("./_stripe");
 
 const TIMEZONE_LABEL = "Pacific Standard Time"; // for Outlook event
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -91,22 +92,61 @@ exports.handler = async (event) => {
     console.error("[book] booking metadata blob write failed:", e.message);
   }
 
-  // Step 3: send emails (best-effort — booking is still considered
-  // successful even if email send fails)
+  // Step 3: branch on whether Stripe is configured.
+  //
+  // STRIPE PATH: create a Checkout session for the 50% deposit and
+  //   return its URL — frontend redirects there. We DON'T send the
+  //   "request received" / "new booking" emails here; the webhook
+  //   sends "you're booked + paid" + Wendy notification on payment
+  //   success. If client abandons checkout, the tentative calendar
+  //   event sits there until the cleanup function deletes it.
+  //
+  // NON-STRIPE PATH (current default): send emails immediately so
+  //   Wendy can manually confirm/decline + invoice deposit out-of-band.
+  const stripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
+  if (stripeEnabled && payload.packagePrice && !payload.inquiry) {
+    try {
+      const depositCents = Math.round(payload.packagePrice * 50); // 50% in cents
+      const session = await createCheckoutSession({
+        packageName: payload.packageName,
+        amountCents: depositCents,
+        customerEmail: payload.email,
+        metadata: {
+          eventId: calEventId,
+          packageId: payload.packageId,
+          packageName: payload.packageName,
+          packagePrice: String(payload.packagePrice),
+          slotStart: start.toISOString(),
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone || "",
+        },
+        successUrl: `${SITE_URL}/book-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${SITE_URL}/book?canceled=1`,
+      });
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        body: JSON.stringify({ ok: true, bookingId: calEventId, checkoutUrl: session.url }),
+      };
+    } catch (err) {
+      console.error("[book] Stripe checkout creation failed:", err);
+      return jsonError(502, "Couldn't start the deposit checkout. Email wendy@wendypix.com and we'll set this up manually.");
+    }
+  }
+
+  // Non-Stripe path: send emails immediately
   const emailResults = await sendEmails({ payload, start, calEventId });
 
   return {
     statusCode: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
     body: JSON.stringify({
       ok: true,
       bookingId: calEventId,
       emailedClient: emailResults.client,
       emailedWendy: emailResults.wendy,
-      stripeEnabled: Boolean(process.env.STRIPE_SECRET_KEY),
+      stripeEnabled: false,
     }),
   };
 };

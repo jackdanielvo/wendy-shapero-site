@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booked — WendyPix</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css?v=2026-05-05-fixsourceorder" />
+  <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
+  <link rel="stylesheet" href="book.css?v=2026-05-05-v1" />
+</head>
+<body class="pricing-page book-page">
+
+  <main class="pricing">
+
+    <header class="pricing__top">
+      <a class="pricing__back caps" href="index.html">&larr; <span>Back to site</span></a>
+      <a class="pricing__brand" href="index.html">
+        <span class="brand-wendy">WENDY</span><span class="brand-pix">PIX</span>
+      </a>
+      <p class="pricing__year caps muted">Booked</p>
+    </header>
+
+    <section class="pricing__hero">
+      <p class="eyebrow">Confirmed &amp; paid</p>
+      <h1 class="display headline">YOU'RE IN.</h1>
+      <p class="pricing__lede">
+        Deposit received and your session is locked in. A confirmation
+        email is on its way with the details — Wendy will follow up
+        before the shoot with what to bring and where to meet.
+      </p>
+    </section>
+
+    <section class="block">
+      <p class="pricing__copy">
+        <strong>What happens next:</strong>
+      </p>
+      <ul class="rate-card__list" style="margin-top:16px;font-size:16px">
+        <li>You'll get an email confirmation within a minute or two — check spam if it doesn't arrive</li>
+        <li>The session is on Wendy's calendar and your slot is locked</li>
+        <li>Wendy will reach out a few days before the shoot with prep details</li>
+        <li>The remaining 50% balance is due 24 hours before the session</li>
+      </ul>
+
+      <p class="cta__actions" style="margin-top:48px">
+        <a class="btn btn--primary" href="index.html">Back to home</a>
+        <a class="btn" href="pricing.html">See the rate card</a>
+      </p>
+
+      <p class="pricing__fine" style="margin-top:48px">
+        Need to reschedule? Just reply to your confirmation email.
+        Sessions can be moved once with 14 days&rsquo; notice; see the
+        rate card for the full policy.
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="pricing__footer">
+    <p class="caps muted">All photographs &copy; <span id="year"></span> Wendy Shapero.</p>
+    <p class="caps muted"><a href="index.html">wendypix.com</a></p>
+  </footer>
+
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+</body>
+</html>
