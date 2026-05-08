@@ -269,6 +269,11 @@
     }
     wrap.innerHTML = `<ul class="book__times" id="timeList"></ul>`;
     const timeList = document.getElementById("timeList");
+    // Always show times in the studio's timezone (LA) regardless of the
+    // viewer's location — these are physical, in-person shoots, so the
+    // posted time IS the local-LA time. Otherwise a NYC viewer would
+    // see "12:00 PM EDT" for what was set as 9am PT, which is confusing.
+    const tz = (state.availability && state.availability.timezone) || "America/Los_Angeles";
     day.slots.forEach((slot) => {
       const li = document.createElement("li");
       li.className = "book__time";
@@ -278,6 +283,7 @@
       const label = start.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
+        timeZone: tz,
         timeZoneName: "short",
       });
       li.textContent = label;
@@ -310,6 +316,11 @@
   // ----------------------------------------------------------
   function goToForm() {
     const start = new Date(state.time);
+    // Display in the studio's timezone (LA) so the summary matches what
+    // the slot picker showed and what Wendy set in admin. Otherwise an
+    // out-of-state viewer would see their own zone here, mismatching
+    // the time they just clicked.
+    const tz = (state.availability && state.availability.timezone) || "America/Los_Angeles";
     const summary =
       state.package.name +
       " · " +
@@ -318,11 +329,13 @@
         month: "long",
         day: "numeric",
         year: "numeric",
+        timeZone: tz,
       }) +
       " · " +
       start.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
+        timeZone: tz,
         timeZoneName: "short",
       });
     document.getElementById("chosenSummary").textContent = summary;
@@ -450,17 +463,20 @@
 
   function showDone(data, result) {
     const start = new Date(data.slotStart);
+    const tz = (state.availability && state.availability.timezone) || "America/Los_Angeles";
     document.getElementById("doneSummary").innerHTML =
       `Your <strong>${escapeHtml(data.packageName)}</strong> session is on hold for ` +
       start.toLocaleDateString("en-US", {
         weekday: "long",
         month: "long",
         day: "numeric",
+        timeZone: tz,
       }) +
       " at " +
       start.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
+        timeZone: tz,
         timeZoneName: "short",
       }) +
       ". A confirmation will land in your inbox within 24 hours. " +
