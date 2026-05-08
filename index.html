@@ -41,7 +41,7 @@
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
-  <link rel="stylesheet" href="styles.css?v=2026-05-05-fixsourceorder" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-08-topnav" />
 
   <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
        default to landing on the site root with a hash like
@@ -58,6 +58,16 @@
   </script>
 </head>
 <body>
+
+  <!-- Top nav — fixed quick-access links to /pricing and /book so
+       visitors don't need to scroll all the way down to find them.
+       Colors mirror the contact-area links at the bottom of the page
+       (plum for RATES, teal for BOOK). -->
+  <nav class="topnav" aria-label="Primary">
+    <a class="topnav__link topnav__rates" href="/pricing">Rates</a>
+    <span class="topnav__sep" aria-hidden="true">/</span>
+    <a class="topnav__link topnav__book" href="/book">Book</a>
+  </nav>
 
   <!-- Theme toggle -->
   <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">

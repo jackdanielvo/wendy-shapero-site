@@ -112,6 +112,53 @@ button { cursor: pointer; font-family: inherit; }
 }
 .theme-toggle:hover { transform: rotate(20deg); color: var(--accent); border-color: var(--accent); }
 
+/* -------- Top nav (home page only) --------
+   Fixed Rates / Book links in the top-left corner — mirrors the
+   theme-toggle position on the right. Colors match the
+   .contact-link--rates / --book treatment in the page footer so
+   the brand cues are consistent top and bottom. */
+.topnav {
+  position: fixed;
+  top: 22px;
+  left: 22px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--body-font);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+}
+.topnav__link {
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 2px;
+  line-height: 1;
+  transition: border-color 0.2s var(--ease), opacity 0.2s var(--ease);
+}
+.topnav__rates { color: #b347b9; }   /* brand plum — matches RATES in footer */
+.topnav__book  { color: #1d5e62; }   /* brand teal — matches BOOK in footer */
+[data-theme="dark"] .topnav__book { color: #5fb1b6; } /* lighter teal for dark mode */
+.topnav__link:hover { border-bottom-color: currentColor; }
+.topnav__sep {
+  color: var(--muted);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* On narrow screens, tighten so the nav doesn't crowd the wordmark */
+@media (max-width: 600px) {
+  .topnav {
+    top: 18px;
+    left: 18px;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+  }
+}
+
 /* -------- Typography -------- */
 .caps {
   font-size: 11px;
