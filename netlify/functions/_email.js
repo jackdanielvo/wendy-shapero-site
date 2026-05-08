@@ -63,19 +63,19 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
           <!-- HERO: hosted PNG of the WENDYPIX wordmark + tagline.
-               Image dimensions are guaranteed by HTML width/height
-               attributes — Outlook strips inline <div> font-sizes
-               but it respects <img> sizing. The PNG is the same plum
-               background as the surrounding cell, so a missing image
-               (image-blocking client) still leaves a clean plum
-               block with the alt text. -->
+               Native PNG is 1200x280 (2x for retina); we display at
+               600x140. Use HTML width/height attributes (Outlook +
+               Apple Mail respect those over CSS), and the inline
+               style as a backup. The <a> wrapper is removed because
+               some clients render display:block <a> at the natural
+               width of the image, ignoring max-width — clicking the
+               WENDYPIX wordmark to go home isn't worth that bug. -->
           <tr>
-            <td bgcolor="${PLUM}" style="background:${PLUM};padding:0;text-align:center;line-height:0;">
-              <a href="${SITE_URL}" style="text-decoration:none;display:block;">
-                <img src="${SITE_URL}/email-logo.png"
-                     width="640" height="152" alt="WENDYPIX — Wendy Shapero, Los Angeles"
-                     style="display:block;width:100%;max-width:640px;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};" />
-              </a>
+            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:0;text-align:center;line-height:0;font-size:0;">
+              <img src="${SITE_URL}/email-logo.png"
+                   width="600" height="140"
+                   alt="WENDYPIX — Wendy Shapero, Los Angeles"
+                   style="display:block;width:600px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};margin:0 auto;-ms-interpolation-mode:bicubic;" />
             </td>
           </tr>
 
