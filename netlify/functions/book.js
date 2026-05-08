@@ -291,7 +291,7 @@ async function sendEmails({ payload, start, calEventId }) {
 
     const detailsLines = [
       `<strong>${tpl.escapeHtml(payload.name)}</strong>`,
-      `<a href="mailto:${encodeURIComponent(payload.email)}" style="color:${tpl.COLORS.PLUM};">${tpl.escapeHtml(payload.email)}</a>`,
+      `<a href="mailto:${encodeURIComponent(payload.email)}" style="color:${tpl.COLORS.TEAL};">${tpl.escapeHtml(payload.email)}</a>`,
       payload.phone ? tpl.escapeHtml(payload.phone) : null,
     ].filter(Boolean).join("<br/>");
 

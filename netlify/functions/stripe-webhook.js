@@ -185,7 +185,7 @@ async function sendWendyNotification(md, session) {
     ) +
     tpl.paragraph(
       `<strong>${tpl.escapeHtml(md.name || "")}</strong><br/>` +
-      `<a href="mailto:${encodeURIComponent(md.email || "")}" style="color:${tpl.COLORS.PLUM};">${tpl.escapeHtml(md.email || "")}</a>` +
+      `<a href="mailto:${encodeURIComponent(md.email || "")}" style="color:${tpl.COLORS.TEAL};">${tpl.escapeHtml(md.email || "")}</a>` +
       (md.phone ? `<br/>${tpl.escapeHtml(md.phone)}` : "")
     ) +
     tpl.paragraph(

@@ -100,16 +100,19 @@ function buildPrepBodyHtml({ firstName, packageName }) {
       `give them a skim now, and a closer read a day or two before we shoot.`
     ) +
 
-    // Big plum CTA card — the primary action is "open the full guide"
+    // Teal callout card — describes what's behind the button below
     tpl.callout(
       `The full guide.<br/>` +
       `<span style="font-size:17px;font-weight:600;opacity:0.95;line-height:24px;display:inline-block;margin-top:8px;">` +
-      `Wardrobe, hair, and makeup, broken out by session type ` +
+      `Wardrobe, hair, and makeup — broken out by session type ` +
       `(business, actor, lifestyle, kids).</span>`
     ) +
-    tpl.buttonRow([
-      { label: "Open the prep guide", href: PREP_PDF_URL, primary: true },
-    ]) +
+
+    // Hero CTA — full-width plum button, oversized type, can't be missed
+    tpl.bigButton({
+      label: "Open the prep guide",
+      href: PREP_PDF_URL,
+    }) +
 
     tpl.divider() +
 
@@ -126,8 +129,10 @@ function buildPrepBodyHtml({ firstName, packageName }) {
       `in bags so we can swap looks fast.`
     ) +
 
-    // Hair & makeup quick-hits
-    tpl.eyebrow("Hair &amp; makeup") +
+    // Hair & makeup quick-hits — eyebrow text is escaped, so use a
+    // literal ampersand here, not the &amp; entity (which would
+    // double-escape and render as the text "&amp;").
+    tpl.eyebrow("Hair & makeup") +
     tpl.paragraph(
       `Wear your hair the way you wear it 90% of the time. If hair and makeup ` +
       `are <em>included</em> with your package, come fresh-faced — our artist ` +
@@ -145,7 +150,7 @@ function buildPrepBodyHtml({ firstName, packageName }) {
 
     tpl.paragraph(
       `Questions before shoot day? Text <strong>818.383.0102</strong> or email ` +
-      `<a href="mailto:wendy@wendypix.com" style="color:${tpl.COLORS.PLUM};text-decoration:underline;">` +
+      `<a href="mailto:wendy@wendypix.com" style="color:${tpl.COLORS.TEAL};text-decoration:underline;">` +
       `wendy@wendypix.com</a>. I'm always happy to talk things through.`
     ) +
 
@@ -153,7 +158,7 @@ function buildPrepBodyHtml({ firstName, packageName }) {
 
     tpl.fineprint(
       `Can't open the link above? Paste this into your browser: ` +
-      `<a href="${tpl.escapeHtml(PREP_PDF_URL)}" style="color:${tpl.COLORS.PLUM};">${tpl.escapeHtml(PREP_PDF_URL)}</a>`
+      `<a href="${tpl.escapeHtml(PREP_PDF_URL)}" style="color:${tpl.COLORS.TEAL};">${tpl.escapeHtml(PREP_PDF_URL)}</a>`
     )
   );
 }

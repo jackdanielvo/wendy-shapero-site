@@ -15,7 +15,13 @@
 // the email feel like an extension of the wendypix.com experience —
 // confident, bold, fun.
 
-const PLUM = "#b347b9";
+// Brand palette — TEAL is the primary "hero" color (matches the BOOK
+// link on the site contact area). PLUM is the secondary accent, used
+// for the WENDYPIX wordmark's "PIX" portion (matching the site
+// header) and for high-emphasis CTA buttons (the prep-guide download).
+const TEAL = "#1d5e62";       // primary
+const TEAL_DEEP = "#144649";  // shadow tone
+const PLUM = "#b347b9";       // CTAs + the PIX wordmark
 const PLUM_DEEP = "#8e2c94";
 const PLUM_DARK = "#5a1a5e";
 const INK = "#0c0c0c";
@@ -62,17 +68,18 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
       <td align="center" style="padding:24px 8px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
-          <!-- HERO: pure-HTML WENDYPIX wordmark + tagline.
-               Outlook's <h1> font-size handling is unreliable, so we
-               put the wordmark text on a <td> directly — that's the
-               selector Outlook respects most consistently. Inner
-               <span> repeats the size as a backup. -->
+          <!-- HERO: pure-HTML WENDYPIX wordmark + tagline. Teal band
+               with WENDY in white and PIX in plum — matches the site
+               header exactly. Outlook's <h1> font-size handling is
+               unreliable, so we put the wordmark text on a <td>
+               directly — that's the selector Outlook respects most
+               consistently. Inner <span> repeats the size as a backup. -->
           <tr>
-            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:64px 24px 48px 24px;">
+            <td bgcolor="${TEAL}" align="center" style="background:${TEAL};padding:64px 24px 48px 24px;">
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
                 <tr>
                   <td align="center" style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;padding:0;">
-                    <span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:#ffffff;">WENDY</span><span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:${CREAM};">PIX</span>
+                    <span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:#ffffff;">WENDY</span><span style="font-family:Helvetica Neue,Helvetica,Arial Black,Arial,sans-serif;font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;color:${PLUM};">PIX</span>
                   </td>
                 </tr>
                 <tr>
@@ -99,7 +106,7 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
               </div>
               ${showHomeLink ? `
               <div style="margin-top:8px;font-family:${FONT_STACK};font-size:11px;letter-spacing:0.18em;text-transform:uppercase;font-weight:700;">
-                <a href="https://wendypix.com" style="color:#ffffff;text-decoration:none;border-bottom:1px solid ${PLUM};padding-bottom:2px;">wendypix.com</a>
+                <a href="https://wendypix.com" style="color:#ffffff;text-decoration:none;border-bottom:1px solid ${TEAL};padding-bottom:2px;">wendypix.com</a>
               </div>` : ""}
             </td>
           </tr>
@@ -130,7 +137,7 @@ function headline(text) {
 }
 
 /**
- * Eyebrow line above the headline — small caps in plum, generous
+ * Eyebrow line above the headline — small caps in teal, generous
  * letter-spacing so it reads as a confident pre-title. Wrapped in a
  * table for Outlook spacing reliability.
  */
@@ -138,8 +145,8 @@ function eyebrow(text) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px 0;">
     <tr>
       <td style="padding:0;">
-        <p style="margin:0;padding:0;font-family:${FONT_STACK};font-weight:800;font-size:14px;letter-spacing:0.28em;line-height:1.3;text-transform:uppercase;color:${PLUM};">
-          <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${PLUM}"><strong>${escapeHtml(text)}</strong></font>
+        <p style="margin:0;padding:0;font-family:${FONT_STACK};font-weight:800;font-size:14px;letter-spacing:0.28em;line-height:1.3;text-transform:uppercase;color:${TEAL};">
+          <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${TEAL}"><strong>${escapeHtml(text)}</strong></font>
         </p>
       </td>
     </tr>
@@ -147,8 +154,8 @@ function eyebrow(text) {
 }
 
 /**
- * Plum-filled callout panel for highlighting the key info — the
- * date, the package, the deposit. White text on plum, big and proud.
+ * Teal-filled callout panel for highlighting the key info — the
+ * date, the package, the deposit. White text on teal, big and proud.
  * Uses <font> tags as the inner wrapper so Outlook respects color
  * and size on the contained text (Outlook ignores `color` set on
  * the <td> for inline content children).
@@ -156,7 +163,7 @@ function eyebrow(text) {
 function callout(html) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:36px 0;">
     <tr>
-      <td bgcolor="${PLUM}" style="background:${PLUM};padding:36px 40px;">
+      <td bgcolor="${TEAL}" style="background:${TEAL};padding:36px 40px;">
         <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="#ffffff" size="5">
           <div style="font-family:${FONT_STACK};font-size:30px;line-height:42px;color:#ffffff;font-weight:800;mso-line-height-rule:exactly;">
             ${html}
@@ -169,12 +176,12 @@ function callout(html) {
 
 /**
  * Subtler cream callout — for secondary info that shouldn't compete
- * with the main plum callout.
+ * with the main teal callout.
  */
 function softCallout(html) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;">
     <tr>
-      <td bgcolor="${CREAM}" style="background:${CREAM};padding:22px 26px;border-left:4px solid ${PLUM};font-family:${FONT_STACK};font-size:17px;line-height:1.5;color:${INK};">
+      <td bgcolor="${CREAM}" style="background:${CREAM};padding:22px 26px;border-left:4px solid ${TEAL};font-family:${FONT_STACK};font-size:17px;line-height:1.5;color:${INK};">
         ${html}
       </td>
     </tr>
@@ -232,6 +239,30 @@ function buttonRow(buttons) {
 }
 
 /**
+ * Hero-scale CTA button — much larger than buttonRow's compact
+ * variant. Use this when the action is the whole point of the email
+ * (e.g. "Open the prep guide"). Full-width, plum-filled, oversized
+ * type, generous vertical padding so it's impossible to miss in a
+ * mobile scroll.
+ *
+ * @param {object} opts
+ * @param {string} opts.label  — uppercase button text
+ * @param {string} opts.href   — destination URL
+ */
+function bigButton({ label, href }) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:36px 0 16px 0;">
+    <tr>
+      <td bgcolor="${PLUM}" align="center" style="background:${PLUM};border:3px solid ${PLUM};mso-padding-alt:30px 24px 30px 24px;">
+        <a href="${escapeAttr(href)}"
+           style="display:block;padding:30px 24px;background:${PLUM};color:#ffffff;font-family:${FONT_STACK};font-weight:900;font-size:24px;line-height:28px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;mso-line-height-rule:exactly;">
+          <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="#ffffff" size="6"><strong>${escapeHtml(label)} &nbsp;&rarr;</strong></font>
+        </a>
+      </td>
+    </tr>
+  </table>`;
+}
+
+/**
  * Smaller fine-print line, for explanatory text under buttons or
  * disclaimers at the bottom of an email.
  */
@@ -240,11 +271,11 @@ function fineprint(html) {
 }
 
 /**
- * Plum divider — a thin horizontal rule between sections of the body.
+ * Teal divider — a thin horizontal rule between sections of the body.
  */
 function divider() {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:32px 0;">
-    <tr><td style="border-top:2px solid ${PLUM};font-size:0;line-height:0;height:0;">&nbsp;</td></tr>
+    <tr><td style="border-top:2px solid ${TEAL};font-size:0;line-height:0;height:0;">&nbsp;</td></tr>
   </table>`;
 }
 
@@ -288,9 +319,10 @@ module.exports = {
   paragraph,
   signoff,
   buttonRow,
+  bigButton,
   fineprint,
   divider,
   formatDate,
   escapeHtml,
-  COLORS: { PLUM, PLUM_DEEP, PLUM_DARK, INK, CREAM, MUTED, BG },
+  COLORS: { TEAL, TEAL_DEEP, PLUM, PLUM_DEEP, PLUM_DARK, INK, CREAM, MUTED, BG },
 };
