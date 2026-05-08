@@ -360,13 +360,22 @@
 
   // ----------------------------------------------------------
   // SUBMIT BOOKING
+  //
+  // Read fields by element ID rather than `form.name` / `form.email`
+  // / etc. Form-named-property access (e.g. `form.name`) is a legacy
+  // browser feature that has subtle precedence rules — `form.name`
+  // can resolve to the form element's own `name` attribute string
+  // instead of the child input under some circumstances. Using the
+  // element ID is unambiguous and survives any DOM tweaks.
   // ----------------------------------------------------------
+  function val(id) {
+    const el = document.getElementById(id);
+    return el ? String(el.value || "").trim() : "";
+  }
+
   async function submitBooking(e) {
     e.preventDefault();
-    const form = e.target;
     const submitBtn = document.getElementById("submitBtn");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Submitting…";
 
     const data = {
       packageId: state.package.id,
@@ -374,13 +383,38 @@
       packagePrice: state.package.price,
       packageDurationMin: state.package.duration,
       slotStart: state.time,
-      name: form.name.value.trim(),
-      email: form.email.value.trim(),
-      phone: form.phone.value.trim(),
-      looks: Number(form.looks.value) || null,
-      hmua: form.hmua.checked,
-      notes: form.notes.value.trim(),
+      name: val("f-name"),
+      email: val("f-email"),
+      phone: val("f-phone"),
+      looks: Number(val("f-looks")) || null,
+      hmua: !!(document.getElementById("f-hmua") || {}).checked,
+      notes: val("f-notes"),
     };
+
+    // Pre-flight validation. The form is novalidate (we handle UX here),
+    // so we have to catch missing required fields before the server does.
+    const missing = [];
+    if (!data.name) missing.push("Full name");
+    if (!data.email) missing.push("Email");
+    if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      alert("That email address doesn't look right — could you double-check it?");
+      document.getElementById("f-email").focus();
+      return;
+    }
+    if (missing.length) {
+      alert(
+        `Please fill in: ${missing.join(", ")}. ` +
+        `These help me confirm your booking.`
+      );
+      // Focus the first missing field so the user lands on it directly
+      const firstId = !data.name ? "f-name" : "f-email";
+      const el = document.getElementById(firstId);
+      if (el) el.focus();
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
 
     try {
       const res = await fetch("/.netlify/functions/book", {
