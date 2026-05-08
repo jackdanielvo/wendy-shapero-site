@@ -29,3 +29,10 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Scheduled functions — run on a cron schedule even with no HTTP request.
+# cleanup runs hourly and removes any tentative booking older than 24h
+# whose client never confirmed (manual flow) or never paid (Stripe flow),
+# freeing up the slot for other bookers.
+[functions."cleanup"]
+  schedule = "@hourly"
