@@ -26,6 +26,13 @@ const BG = "#ffffff";
 const FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Helvetica", "Arial Black", Arial, sans-serif';
 
+// Public site URL — used to build absolute URLs for logo images and
+// click-through links. Netlify auto-injects URL = the deploy's live URL
+// (e.g. https://wendypix.netlify.app), or the custom domain once
+// wendypix.com is wired up. Falls back to the netlify subdomain so
+// emails still render before the custom domain is set up.
+const SITE_URL = (process.env.URL || "https://wendypix.netlify.app").replace(/\/$/, "");
+
 /**
  * Wrap an email body in the WendyPix branded shell.
  *
@@ -64,8 +71,8 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
                block with the alt text. -->
           <tr>
             <td bgcolor="${PLUM}" style="background:${PLUM};padding:0;text-align:center;line-height:0;">
-              <a href="https://wendypix.com" style="text-decoration:none;display:block;">
-                <img src="https://wendypix.com/email-logo.png"
+              <a href="${SITE_URL}" style="text-decoration:none;display:block;">
+                <img src="${SITE_URL}/email-logo.png"
                      width="640" height="152" alt="WENDYPIX — Wendy Shapero, Los Angeles"
                      style="display:block;width:100%;max-width:640px;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};" />
               </a>
