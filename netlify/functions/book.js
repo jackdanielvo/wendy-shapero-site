@@ -59,7 +59,28 @@ exports.handler = async (event) => {
   const durationMin = Number(payload.packageDurationMin) || 60;
   const end = new Date(start.getTime() + durationMin * 60 * 1000);
 
-  // Step 1: create the calendar event
+  // Step 1a: conflict check. Prevents double-booking when two users
+  // race for the same slot — e.g. user A submits and goes to Stripe,
+  // user B (already on the booking page) clicks submit a second
+  // later. Without this check, two overlapping tentative events would
+  // both be created. The check is a narrow Graph query for any
+  // busy/tentative/oof event overlapping [start, end). If the call
+  // fails (Graph flaky), we fail soft — let the booking proceed
+  // rather than block legitimate clients.
+  try {
+    const conflicts = await findConflicts(start, end);
+    if (conflicts.length) {
+      console.log("[book] slot conflict for", payload.email, "at", start.toISOString());
+      return jsonError(
+        409,
+        "That slot was just taken. Please refresh and pick another time — sorry!"
+      );
+    }
+  } catch (err) {
+    console.warn("[book] conflict check failed (proceeding):", err.message);
+  }
+
+  // Step 1b: create the calendar event
   let calEventId = null;
   try {
     calEventId = await createCalendarEvent({ payload, start, end });
@@ -134,6 +155,24 @@ exports.handler = async (event) => {
         successUrl: `${SITE_URL}/book-success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${SITE_URL}/book?canceled=1`,
       });
+
+      // Mark the blob as in-checkout so the cleanup function can
+      // release the slot quickly (~15 min) if the user abandons
+      // Stripe — vs. waiting the full 24h that "manual confirm"
+      // tentative bookings get. A short-lived hold keeps high-
+      // demand slots from being dead-locked by abandoned checkouts.
+      try {
+        const store = getBookingsStore();
+        const existing = (await store.get(`booking/${calEventId}`, { type: "json" })) || {};
+        await store.setJSON(`booking/${calEventId}`, {
+          ...existing,
+          checkoutStartedAt: new Date().toISOString(),
+          stripeSessionId: session.id,
+        });
+      } catch (e) {
+        console.warn("[book] couldn't mark checkoutStartedAt:", e.message);
+      }
+
       return {
         statusCode: 200,
         headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
@@ -160,6 +199,44 @@ exports.handler = async (event) => {
     }),
   };
 };
+
+// ----------------------------------------------------------
+// Microsoft Graph: query for any busy/tentative/oof events that
+// overlap [start, end). Returns the array (may be empty). Used by
+// the book handler to detect a slot conflict before creating a new
+// tentative event — protects against simultaneous submits.
+// ----------------------------------------------------------
+async function findConflicts(start, end) {
+  // Pad the window by 1 second so identical-timestamp edge cases get
+  // caught without false positives on adjacent (but non-overlapping)
+  // back-to-back sessions.
+  const params = new URLSearchParams({
+    startDateTime: new Date(start.getTime() - 1000).toISOString(),
+    endDateTime: new Date(end.getTime() + 1000).toISOString(),
+    $select: "id,start,end,showAs,subject",
+    $top: "20",
+  });
+  const res = await graphFetch("/me/calendarView?" + params.toString(), {
+    method: "GET",
+    headers: { Prefer: 'outlook.timezone="UTC"' },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`calendarView ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  const blocking = ["busy", "tentative", "oof"];
+  return (data.value || [])
+    .filter((ev) => blocking.includes((ev.showAs || "").toLowerCase()))
+    .filter((ev) => {
+      // Strict overlap: an event blocks our slot only if its window
+      // intersects the requested [start, end). Adjacent events
+      // (start = our end, or end = our start) are NOT a conflict.
+      const evStart = new Date(ev.start.dateTime + (ev.start.dateTime.endsWith("Z") ? "" : "Z"));
+      const evEnd = new Date(ev.end.dateTime + (ev.end.dateTime.endsWith("Z") ? "" : "Z"));
+      return evStart < end && evEnd > start;
+    });
+}
 
 // ----------------------------------------------------------
 // Microsoft Graph: create a tentative event in Wendy's calendar.

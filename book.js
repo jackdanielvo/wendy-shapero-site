@@ -438,6 +438,28 @@
         body: JSON.stringify(data),
       });
       const result = await res.json();
+
+      // Conflict (409) — somebody booked this slot in the seconds
+      // between when this user picked it and when they hit submit.
+      // Friendly message + refresh availability + bounce them back
+      // to step 2 to pick again.
+      if (res.status === 409) {
+        alert(
+          (result.error || "That slot was just taken.") +
+          "\n\nThe times list is being refreshed — please pick another."
+        );
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit booking request";
+        // Reset slot selection and reload availability for the same package
+        state.time = null;
+        state.day = null;
+        if (state.package) {
+          loadAvailability().catch(console.error);
+        }
+        gotoStep(2);
+        return;
+      }
+
       if (!res.ok) throw new Error(result.error || "book failed");
 
       if (result.checkoutUrl) {

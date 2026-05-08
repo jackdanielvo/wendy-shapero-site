@@ -21,11 +21,20 @@
 const { graphFetch } = require("./_msgraph");
 const { getBookingsStore } = require("./_blobs");
 
+// "Stale" age cutoffs for releasing tentative slots:
+//   * Manual-confirm path: Wendy might take a day to click Confirm,
+//     so we wait 24h before reclaiming the slot.
+//   * Stripe checkout path (checkoutStartedAt set): a real user
+//     deciding on a card decides in <5 min. If they're 15+ min in
+//     and haven't paid, treat it as abandoned and release the slot
+//     so other clients can book it. Stripe sessions auto-expire
+//     after 24h on Stripe's side, so the upper bound is enforced
+//     either way — this just makes it faster.
 const STALE_AGE_MS = 24 * 3600 * 1000;
+const CHECKOUT_STALE_MS = 15 * 60 * 1000;
 
 exports.handler = async () => {
   const startedAt = Date.now();
-  const cutoff = startedAt - STALE_AGE_MS;
   let deleted = 0;
   let orphansCleaned = 0;
   let stillFresh = 0;
@@ -66,9 +75,25 @@ exports.handler = async () => {
       continue;
     }
 
-    // Skip if blob is younger than 24h
+    // Decide which staleness threshold applies.
+    //   * If the booking is in active checkout (checkoutStartedAt set
+    //     AND not paid), use the SHORT 15-min threshold — abandoned
+    //     Stripe checkouts shouldn't dead-lock a slot for 24 hours.
+    //   * Otherwise use the regular 24h threshold for manual-confirm
+    //     bookings Wendy hasn't gotten to yet.
     const createdAt = data.createdAt ? new Date(data.createdAt).getTime() : 0;
-    if (!createdAt || createdAt > cutoff) {
+    const checkoutStartedAt = data.checkoutStartedAt
+      ? new Date(data.checkoutStartedAt).getTime()
+      : 0;
+    let stale;
+    if (checkoutStartedAt) {
+      stale = startedAt - checkoutStartedAt > CHECKOUT_STALE_MS;
+    } else if (createdAt) {
+      stale = startedAt - createdAt > STALE_AGE_MS;
+    } else {
+      stale = false; // missing both timestamps — leave alone
+    }
+    if (!stale) {
       stillFresh++;
       continue;
     }
