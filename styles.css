@@ -112,50 +112,50 @@ button { cursor: pointer; font-family: inherit; }
 }
 .theme-toggle:hover { transform: rotate(20deg); color: var(--accent); border-color: var(--accent); }
 
-/* -------- Top nav (home page only) --------
-   Fixed Rates / Book links in the top-left corner — mirrors the
-   theme-toggle position on the right. Colors match the
-   .contact-link--rates / --book treatment in the page footer so
-   the brand cues are consistent top and bottom. */
-.topnav {
-  position: fixed;
-  top: 22px;
-  left: 22px;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  gap: 14px;
+/* -------- Hero nav (home page only) --------
+   "RATES.CALL.BOOK." row sitting just under the WENDYPIX wordmark.
+   Visually a smaller-scale echo of the .contact-links treatment at
+   the very bottom of the page — same Inter Black 900 weight, same
+   tight letter-spacing and period punctuation, same plum / ink / teal
+   color split. No scroll-driven scaleY here (that's reserved for the
+   billboard footer); this row stays a constant size so it reads as
+   navigation rather than a closing flourish. */
+.hero-nav {
   font-family: var(--body-font);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.20em;
-  text-transform: uppercase;
-}
-.topnav__link {
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  padding: 6px 2px;
-  line-height: 1;
-  transition: border-color 0.2s var(--ease), opacity 0.2s var(--ease);
-}
-.topnav__rates { color: #b347b9; }   /* brand plum — matches RATES in footer */
-.topnav__book  { color: #1d5e62; }   /* brand teal — matches BOOK in footer */
-[data-theme="dark"] .topnav__book { color: #5fb1b6; } /* lighter teal for dark mode */
-.topnav__link:hover { border-bottom-color: currentColor; }
-.topnav__sep {
-  color: var(--muted);
-  font-weight: 600;
+  font-weight: 900;
+  /* Sized to read as a clear secondary headline below WENDYPIX —
+     ~1/3 the wordmark size at every viewport width. Capped so it
+     can never crowd or overflow on huge displays. */
+  font-size: clamp(28px, 5vw, 80px);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+  text-align: center;
+  margin: clamp(8px, 2vh, 24px) 0 clamp(20px, 4vh, 48px);
   user-select: none;
 }
+.hero-nav__link {
+  display: inline-block;
+  text-decoration: none;
+  border: none;
+  transition: opacity 0.2s var(--ease);
+}
+.hero-nav__link:hover { opacity: 0.65; }
+/* Same color treatment as the footer's contact-link triplet —
+   plum / ink / teal — so the brand cues are consistent top and bottom. */
+.hero-nav__link--rates { color: #b347b9; }
+.hero-nav__link--call  { color: var(--ink); }
+.hero-nav__link--book  { color: #1d5e62; }
+[data-theme="dark"] .hero-nav__link--call { color: var(--ink); }
+[data-theme="dark"] .hero-nav__link--book { color: #5fb1b6; }
 
-/* On narrow screens, tighten so the nav doesn't crowd the wordmark */
+/* On phones, drop a touch in size and tighten breathing room so the
+   row sits cleanly between the wordmark and the hero photo cards. */
 @media (max-width: 600px) {
-  .topnav {
-    top: 18px;
-    left: 18px;
-    gap: 10px;
-    font-size: 11px;
-    letter-spacing: 0.16em;
+  .hero-nav {
+    font-size: clamp(28px, 9vw, 56px);
+    letter-spacing: -0.05em;
+    margin: clamp(4px, 1.5vh, 16px) 0 clamp(16px, 3vh, 32px);
   }
 }
 
