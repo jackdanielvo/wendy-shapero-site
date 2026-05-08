@@ -55,15 +55,20 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
       <td align="center" style="padding:24px 8px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
-          <!-- HERO: full-width plum block with the wordmark -->
+          <!-- HERO: hosted PNG of the WENDYPIX wordmark + tagline.
+               Image dimensions are guaranteed by HTML width/height
+               attributes — Outlook strips inline <div> font-sizes
+               but it respects <img> sizing. The PNG is the same plum
+               background as the surrounding cell, so a missing image
+               (image-blocking client) still leaves a clean plum
+               block with the alt text. -->
           <tr>
-            <td bgcolor="${PLUM}" style="background:${PLUM};padding:44px 32px;text-align:center;">
-              <div style="font-family:${FONT_STACK};font-weight:900;font-size:64px;line-height:1;letter-spacing:-0.05em;text-transform:uppercase;color:#ffffff;">
-                <span style="color:#ffffff;">WENDY</span><span style="color:${CREAM};">PIX</span>
-              </div>
-              <div style="font-family:${FONT_STACK};font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:${CREAM};margin-top:14px;font-weight:600;">
-                Wendy Shapero &middot; Los Angeles
-              </div>
+            <td bgcolor="${PLUM}" style="background:${PLUM};padding:0;text-align:center;line-height:0;">
+              <a href="https://wendypix.com" style="text-decoration:none;display:block;">
+                <img src="https://wendypix.com/email-logo.png"
+                     width="640" height="152" alt="WENDYPIX — Wendy Shapero, Los Angeles"
+                     style="display:block;width:100%;max-width:640px;height:auto;border:0;outline:none;text-decoration:none;background:${PLUM};" />
+              </a>
             </td>
           </tr>
 
@@ -96,28 +101,55 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
 
 /**
  * BIG bold display headline. The hero of every email — make it count.
+ * Uses <h1> rather than <div>/<p> because Outlook respects heading
+ * tag styling more reliably. The mso-line-height-rule plus explicit
+ * px line-height keep Outlook from collapsing the height.
  */
 function headline(text) {
-  return `<h1 style="font-family:${FONT_STACK};font-weight:900;font-size:84px;letter-spacing:-0.045em;line-height:0.88;color:${INK};margin:0 0 32px 0;text-transform:uppercase;">${escapeHtml(text)}</h1>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 32px 0;">
+    <tr>
+      <td style="padding:0;">
+        <h1 style="margin:0;padding:0;font-family:${FONT_STACK};font-weight:900;font-size:78px;letter-spacing:-0.045em;line-height:78px;mso-line-height-rule:exactly;color:${INK};text-transform:uppercase;">
+          <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="${INK}" size="7"><strong>${escapeHtml(text)}</strong></font>
+        </h1>
+      </td>
+    </tr>
+  </table>`;
 }
 
 /**
  * Eyebrow line above the headline — small caps in plum, generous
- * letter-spacing so it reads as a confident pre-title.
+ * letter-spacing so it reads as a confident pre-title. Wrapped in a
+ * table for Outlook spacing reliability.
  */
 function eyebrow(text) {
-  return `<p style="font-family:${FONT_STACK};font-weight:800;font-size:13px;letter-spacing:0.28em;text-transform:uppercase;color:${PLUM};margin:0 0 18px 0;">${escapeHtml(text)}</p>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 18px 0;">
+    <tr>
+      <td style="padding:0;">
+        <p style="margin:0;padding:0;font-family:${FONT_STACK};font-weight:800;font-size:14px;letter-spacing:0.28em;line-height:1.3;text-transform:uppercase;color:${PLUM};">
+          <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${PLUM}"><strong>${escapeHtml(text)}</strong></font>
+        </p>
+      </td>
+    </tr>
+  </table>`;
 }
 
 /**
  * Plum-filled callout panel for highlighting the key info — the
  * date, the package, the deposit. White text on plum, big and proud.
+ * Uses <font> tags as the inner wrapper so Outlook respects color
+ * and size on the contained text (Outlook ignores `color` set on
+ * the <td> for inline content children).
  */
 function callout(html) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:32px 0;">
     <tr>
-      <td bgcolor="${PLUM}" style="background:${PLUM};padding:28px 32px;font-family:${FONT_STACK};font-size:20px;line-height:1.45;color:#ffffff;font-weight:600;">
-        ${html}
+      <td bgcolor="${PLUM}" style="background:${PLUM};padding:32px 36px;">
+        <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="#ffffff">
+          <div style="font-family:${FONT_STACK};font-size:24px;line-height:1.4;color:#ffffff;font-weight:700;">
+            ${html}
+          </div>
+        </font>
       </td>
     </tr>
   </table>`;
@@ -142,7 +174,9 @@ function softCallout(html) {
  * a letter, not a confirmation receipt.
  */
 function paragraph(html) {
-  return `<p style="font-family:${FONT_STACK};font-size:19px;line-height:1.65;color:${INK};margin:0 0 22px 0;">${html}</p>`;
+  return `<p style="font-family:${FONT_STACK};font-size:19px;line-height:1.65;color:${INK};margin:0 0 22px 0;">
+    <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${INK}" size="4">${html}</font>
+  </p>`;
 }
 
 /**
@@ -150,7 +184,9 @@ function paragraph(html) {
  * personal closing, not a footer afterthought.
  */
 function signoff(html) {
-  return `<p style="font-family:${FONT_STACK};font-size:22px;line-height:1.4;color:${INK};margin:36px 0 0 0;font-weight:600;">${html}</p>`;
+  return `<p style="font-family:${FONT_STACK};font-size:22px;line-height:1.4;color:${INK};margin:36px 0 0 0;font-weight:700;">
+    <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${INK}" size="5"><strong>${html}</strong></font>
+  </p>`;
 }
 
 /**
