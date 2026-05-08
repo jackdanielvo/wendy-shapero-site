@@ -102,7 +102,7 @@ async function sendClientConfirm(toEmail, eventData, meta) {
     tpl.paragraph("Locked in. See you on:") +
     tpl.callout(
       `${tpl.escapeHtml(packageName)}<br/>` +
-      `<span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
+      `<span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
     ) +
     tpl.paragraph(
       "I'll send the deposit invoice (50% non-refundable retainer) shortly, " +

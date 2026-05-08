@@ -127,8 +127,8 @@ async function sendClientConfirmation(md, session) {
     tpl.paragraph("Deposit received and your session is locked in:") +
     tpl.callout(
       `${tpl.escapeHtml(md.packageName || "Session")}<br/>` +
-      `<span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span><br/>` +
-      `<span style="font-size:14px;font-weight:500;opacity:0.8;letter-spacing:0.04em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>`
+      `<span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span><br/>` +
+      `<span style="font-size:15px;font-weight:600;opacity:0.85;letter-spacing:0.06em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>`
     ) +
     tpl.paragraph(
       "I'll reach out shortly with pre-shoot details — what to bring, " +

@@ -62,19 +62,19 @@ function wrap({ preheader = "", body, showHomeLink = true }) {
       <td align="center" style="padding:24px 8px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="max-width:640px;width:100%;background:${BG};box-shadow:0 12px 48px -16px rgba(90,26,94,0.18);">
 
-          <!-- HERO: pure-HTML WENDYPIX wordmark + tagline. Image-based
-               approach kept failing (Apple Mail ignored width caps and
-               rendered the PNG at native size, cropping the wordmark
-               in the email column). HTML is more reliable: <h1> with
-               inline CSS for modern clients, <font> fallback for
-               Outlook 2007-2019 which still respects HTML 4 font tags. -->
+          <!-- HERO: pure-HTML WENDYPIX wordmark + tagline.
+               Big enough to fill the email column width — at 100px the
+               7-char wordmark spans roughly 400px which is most of the
+               560px content width. Single-line via white-space:nowrap
+               so it never breaks across lines on narrow viewports
+               (the image scales gracefully via media query below). -->
           <tr>
-            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:60px 24px 40px 24px;text-align:center;">
-              <h1 style="margin:0 0 18px 0;padding:0;font-family:${FONT_STACK};font-weight:900;font-size:60px;line-height:60px;letter-spacing:-2.5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;">
-                <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="#ffffff" size="7"><strong>WENDY<font color="${CREAM}">PIX</font></strong></font>
+            <td bgcolor="${PLUM}" align="center" style="background:${PLUM};padding:64px 24px 48px 24px;text-align:center;">
+              <h1 style="margin:0 0 22px 0;padding:0;font-family:${FONT_STACK};font-weight:900;font-size:100px;line-height:100px;letter-spacing:-5px;text-transform:uppercase;color:#ffffff;mso-line-height-rule:exactly;white-space:nowrap;">
+                <font face="Helvetica Neue, Helvetica, Arial Black, Arial, sans-serif" color="#ffffff"><strong>WENDY<font color="${CREAM}">PIX</font></strong></font>
               </h1>
-              <p style="margin:0;padding:0;font-family:${FONT_STACK};font-size:12px;line-height:16px;letter-spacing:4px;text-transform:uppercase;color:${CREAM};font-weight:600;mso-line-height-rule:exactly;">
-                <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${CREAM}" size="2"><strong>Wendy Shapero &middot; Los Angeles</strong></font>
+              <p style="margin:0;padding:0;font-family:${FONT_STACK};font-size:14px;line-height:18px;letter-spacing:5px;text-transform:uppercase;color:${CREAM};font-weight:700;mso-line-height-rule:exactly;">
+                <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="${CREAM}"><strong>Wendy Shapero &middot; Los Angeles</strong></font>
               </p>
             </td>
           </tr>
@@ -149,11 +149,11 @@ function eyebrow(text) {
  * the <td> for inline content children).
  */
 function callout(html) {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:32px 0;">
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:36px 0;">
     <tr>
-      <td bgcolor="${PLUM}" style="background:${PLUM};padding:32px 36px;">
-        <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="#ffffff">
-          <div style="font-family:${FONT_STACK};font-size:24px;line-height:1.4;color:#ffffff;font-weight:700;">
+      <td bgcolor="${PLUM}" style="background:${PLUM};padding:36px 40px;">
+        <font face="Helvetica Neue, Helvetica, Arial, sans-serif" color="#ffffff" size="5">
+          <div style="font-family:${FONT_STACK};font-size:30px;line-height:42px;color:#ffffff;font-weight:800;mso-line-height-rule:exactly;">
             ${html}
           </div>
         </font>

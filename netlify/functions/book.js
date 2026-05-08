@@ -224,8 +224,8 @@ async function sendEmails({ payload, start, calEventId }) {
       tpl.paragraph("Got your request — here's what I have:") +
       tpl.callout(
         `${tpl.escapeHtml(payload.packageName)}` +
-        (payload.packagePrice ? `<br/><span style="opacity:0.85;font-size:17px;">$${payload.packagePrice}</span>` : "") +
-        `<br/><span style="font-size:18px;font-weight:500;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
+        (payload.packagePrice ? ` <span style="opacity:0.85;">&middot; $${payload.packagePrice}</span>` : "") +
+        `<br/><span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
       ) +
       tpl.paragraph(
         "I'll confirm within 24 hours and send deposit instructions " +
