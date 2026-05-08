@@ -1,0 +1,20 @@
+# WendyPix robots.txt
+# Allow indexing of public pages, block the admin and any operational
+# routes that don't belong in search results.
+
+User-agent: *
+Allow: /
+
+# Internal / operational pages
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /refresh
+Disallow: /refresh.html
+Disallow: /book-success
+Disallow: /book-success.html
+
+# Functions endpoints — no SEO value, can leak request shape
+Disallow: /api/
+Disallow: /.netlify/
+
+Sitemap: https://wendypix.com/sitemap.xml
