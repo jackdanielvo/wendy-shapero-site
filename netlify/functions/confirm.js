@@ -9,6 +9,7 @@
 const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
+const { sendPrepEmail } = require("./_prep");
 const tpl = require("./_email");
 
 exports.handler = async (event) => {
@@ -79,6 +80,19 @@ exports.handler = async (event) => {
       emailedClient = true;
     } catch (e) {
       console.error("[confirm] client email failed:", e.message);
+    }
+    // Schedule the prep guide for ~10 min after the confirmation so
+    // the client gets a clean confirmation first, then a separate
+    // letter with wardrobe / hair / makeup notes. Best-effort —
+    // failure here doesn't block the confirmation flow.
+    try {
+      await sendPrepEmail({
+        to: meta.email,
+        name: meta.name,
+        packageName: meta.packageName,
+      });
+    } catch (e) {
+      console.error("[confirm] prep email failed:", e.message);
     }
   }
 

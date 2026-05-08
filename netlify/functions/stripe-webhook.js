@@ -15,6 +15,7 @@
 const { graphFetch } = require("./_msgraph");
 const { verifyWebhookSignature } = require("./_stripe");
 const { getBookingsStore } = require("./_blobs");
+const { sendPrepEmail } = require("./_prep");
 const tpl = require("./_email");
 
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -98,7 +99,10 @@ exports.handler = async (event) => {
     console.error("[stripe-webhook] blob update failed:", e.message);
   }
 
-  // Emails — confirmation to client, notification to Wendy
+  // Emails — confirmation to client, notification to Wendy, plus a
+  // delayed prep-guide email to the client (Resend `scheduled_at`
+  // handles the ~10-minute delay so the prep email lands AFTER the
+  // confirmation, not stapled to it).
   await Promise.all([
     sendClientConfirmation(md, session).catch((e) =>
       console.error("[stripe-webhook] client email failed:", e.message)
@@ -106,6 +110,15 @@ exports.handler = async (event) => {
     sendWendyNotification(md, session).catch((e) =>
       console.error("[stripe-webhook] Wendy email failed:", e.message)
     ),
+    md.email
+      ? sendPrepEmail({
+          to: md.email,
+          name: md.name,
+          packageName: md.packageName,
+        }).catch((e) =>
+          console.error("[stripe-webhook] prep email failed:", e.message)
+        )
+      : Promise.resolve(),
   ]);
 
   return { statusCode: 200, body: "ok" };
