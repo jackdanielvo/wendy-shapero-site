@@ -36,3 +36,10 @@
 # freeing up the slot for other bookers.
 [functions."cleanup"]
   schedule = "@hourly"
+
+# reminders runs hourly and sends a 24-hour-before-the-session reminder
+# email to each confirmed client. Uses a 22-26h trigger window so a
+# missed cron tick still catches the booking. State is tracked in the
+# bookings blob so the same booking is never reminded twice.
+[functions."reminders"]
+  schedule = "@hourly"
