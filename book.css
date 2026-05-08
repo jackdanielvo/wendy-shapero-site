@@ -79,6 +79,12 @@
   text-align: left;
   transition: border-color 0.2s var(--ease), background 0.2s var(--ease), color 0.2s var(--ease);
 }
+/* Time slots — warm cream-ish tint that echoes the contact-area /
+   email callout palette. Makes the chips read as clearly clickable
+   buttons against the page background instead of fading in. */
+.book__time {
+  background: var(--bg-alt);
+}
 .book__day:hover,
 .book__time:hover {
   border-color: var(--ink);
