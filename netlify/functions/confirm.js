@@ -10,6 +10,7 @@ const { graphFetch } = require("./_msgraph");
 const { verify } = require("./_token");
 const { getBookingsStore } = require("./_blobs");
 const { sendPrepEmail } = require("./_prep");
+const { buildIcs, toBase64 } = require("./_ics");
 const tpl = require("./_email");
 
 exports.handler = async (event) => {
@@ -119,11 +120,23 @@ async function sendClientConfirm(toEmail, eventData, meta) {
       `<span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
     ) +
     tpl.paragraph(
-      "I'll send the deposit invoice (25% non-refundable retainer) shortly, " +
-      "along with the pre-shoot details — what to bring, where to meet, " +
-      "what to wear. Reply anytime with questions."
+      "I've attached a calendar invite (.ics) — open it to drop the " +
+      "session into your calendar. I'll send the deposit invoice (25% " +
+      "non-refundable retainer) shortly, along with pre-shoot details. " +
+      "Reply anytime with questions."
     ) +
     tpl.signoff("&mdash; Wendy");
+
+  // .ics calendar attachment so the client can save the booking in
+  // one click. Built from the same metadata blob the email uses.
+  const icsAttachment = buildBookingIcs({
+    eventId: meta && meta.eventId,
+    packageName,
+    name: meta && meta.name,
+    email: toEmail,
+    slotStart: meta && meta.slotStart ? meta.slotStart : (eventData && eventData.start && eventData.start.dateTime),
+    durationMin: (meta && Number(meta.durationMin)) || 60,
+  });
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -139,12 +152,49 @@ async function sendClientConfirm(toEmail, eventData, meta) {
         preheader: `Locked in. ${packageName} — ${startStr}`,
         body,
       }),
+      attachments: icsAttachment ? [icsAttachment] : undefined,
     }),
   });
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`resend ${res.status}: ${txt.slice(0, 200)}`);
   }
+}
+
+// Build the .ics attachment for the confirmation email — same shape
+// as stripe-webhook's variant but pulls from the manual-confirm
+// metadata blob. Returns null if we don't have enough info.
+function buildBookingIcs({ eventId, packageName, name, email, slotStart, durationMin }) {
+  if (!slotStart || !eventId) return null;
+  const start = new Date(
+    String(slotStart).endsWith("Z") || String(slotStart).includes("+")
+      ? slotStart
+      : slotStart + "Z"
+  );
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime() + (durationMin || 60) * 60 * 1000);
+
+  const ics = buildIcs({
+    uid: `wendypix-${eventId}@wendypix.com`,
+    title: `WendyPix — ${packageName || "Session"}`,
+    description:
+      `Photography session with Wendy Shapero.\n\n` +
+      `Pre-shoot prep guide: https://wendypix.netlify.app/shoot-prep.pdf\n` +
+      `Questions: wendy@wendypix.com or 818.383.0102`,
+    location: "Wendy Shapero Photography, Los Angeles",
+    start,
+    end,
+    organizerName: "Wendy Shapero",
+    organizerEmail: "wendy@wendypix.com",
+    attendeeName: name,
+    attendeeEmail: email,
+  });
+
+  return {
+    filename: "session.ics",
+    content: toBase64(ics),
+    content_type: "text/calendar; method=PUBLISH; charset=utf-8",
+  };
 }
 
 function successHtml(ev, mode) {

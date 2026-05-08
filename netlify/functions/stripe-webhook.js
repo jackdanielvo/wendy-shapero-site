@@ -16,6 +16,7 @@ const { graphFetch } = require("./_msgraph");
 const { verifyWebhookSignature } = require("./_stripe");
 const { getBookingsStore } = require("./_blobs");
 const { sendPrepEmail } = require("./_prep");
+const { buildIcs, toBase64 } = require("./_ics");
 const tpl = require("./_email");
 
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -144,15 +145,26 @@ async function sendClientConfirmation(md, session) {
       `<span style="font-size:15px;font-weight:600;opacity:0.85;letter-spacing:0.06em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>`
     ) +
     tpl.paragraph(
-      "I'll reach out shortly with pre-shoot details — what to bring, " +
-      "where to meet, what to wear. The remaining balance is due 24 hours " +
-      "before the session."
+      "I've attached a calendar invite (.ics) — open it to add the " +
+      "session to your calendar. I'll reach out shortly with pre-shoot " +
+      "details. The remaining balance is due 24 hours before the session."
     ) +
     tpl.paragraph(
       "Reply anytime if you have questions or need to reschedule " +
       "(14 days&rsquo; notice required, see the rate card)."
     ) +
     tpl.signoff("&mdash; Wendy");
+
+  // Build the .ics attachment so the client can save the booking to
+  // their calendar in one click.
+  const icsAttachment = buildBookingIcs({
+    eventId: md.eventId,
+    packageName: md.packageName,
+    name: md.name,
+    email: md.email,
+    slotStart: md.slotStart,
+    durationMin: Number(md.durationMin) || 60,
+  });
 
   await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -162,8 +174,42 @@ async function sendClientConfirmation(md, session) {
       to: [md.email],
       subject: `Your ${md.packageName} is confirmed — ${startStr}`,
       html: tpl.wrap({ preheader: `Locked in. Deposit received.`, body }),
+      attachments: icsAttachment ? [icsAttachment] : undefined,
     }),
   }).then((r) => { if (!r.ok) throw new Error("Resend client " + r.status); });
+}
+
+// Build a Resend attachment object for the .ics calendar invite.
+// Returns null if we don't have enough metadata to make a useful ics.
+function buildBookingIcs({ eventId, packageName, name, email, slotStart, durationMin }) {
+  if (!slotStart || !eventId) return null;
+  const start = new Date(slotStart);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = new Date(start.getTime() + (durationMin || 60) * 60 * 1000);
+
+  const ics = buildIcs({
+    uid: `wendypix-${eventId}@wendypix.com`,
+    title: `WendyPix — ${packageName || "Session"}`,
+    description:
+      `Photography session with Wendy Shapero.\n\n` +
+      `Pre-shoot prep guide: https://wendypix.netlify.app/shoot-prep.pdf\n` +
+      `Questions: wendy@wendypix.com or 818.383.0102`,
+    location: "Wendy Shapero Photography, Los Angeles",
+    start,
+    end,
+    organizerName: "Wendy Shapero",
+    organizerEmail: "wendy@wendypix.com",
+    attendeeName: name,
+    attendeeEmail: email,
+  });
+
+  return {
+    filename: "session.ics",
+    content: toBase64(ics),
+    // Resend infers MIME type from filename, but explicit is safer
+    // for clients that branch on content-type for "open with calendar"
+    content_type: "text/calendar; method=PUBLISH; charset=utf-8",
+  };
 }
 
 async function sendWendyNotification(md, session) {
