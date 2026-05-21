@@ -49,13 +49,15 @@ const LEGACY_PHOTOS = {
 };
 
 const CAT_LABEL = {
-  women:    "Women",
-  men:      "Men",
-  kids:     "Kids & Families",
-  animals:  "Animals",
-  products: "Products",
-  events:   "Events",
-  headshots:"Headshots"
+  women:           "Women",
+  men:             "Men",
+  kids:            "Kids & Families",
+  "kids-and-teens":"Kids & Teens",
+  lifestyle:       "Lifestyle",
+  animals:         "Animals",
+  products:        "Products",
+  events:          "Events",
+  headshots:       "Headshots"
 };
 
 // ============================================================

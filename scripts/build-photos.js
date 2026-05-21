@@ -2,55 +2,82 @@
 /**
  * build-photos.js
  * --------------------------------------------------------------
- * Walks the local `photos/` directory tree and writes data/photos.js,
- * which the runtime loads at page load.
+ * Walks the web-optimized `photos-web/` directory tree and writes
+ * data/photos.js, which the runtime loads at page load.
  *
- * Folder convention (per Wendy's editorial-mode portfolio):
- *   photos/
- *     <category-slug>/                ← e.g. "headshots-men"
- *       <NN-person-slug>/             ← e.g. "01-craig-shoemaker" (NN = order)
- *         <NN-name>.jpg               ← alphabetical order within the folder
- *         …
- *       <NN-person-slug>/
- *         _title.txt                  ← (optional) overrides the auto-titled name
+ * Wendy's editorial naming convention:
+ *
+ *   photos-web/
+ *     <N-CategoryName>/                  ← e.g. "1-Women", "3-Kids & Teens"
+ *       <NN-SubjectName>/                ← e.g. "01-Valentina", "03-Audrey & Evelyn"
+ *         <NN-name>.jpg                  ← position-numbered photos
  *         …
  *
- * Within each person folder, the FIRST file alphabetically is treated as
- * the lead/cover (shown in the category carousel). The remaining files
- * appear in the fullscreen shoot view when a viewer clicks the lead.
+ * Ordering:
+ *   - The leading "N-" prefix on category folders controls the order
+ *     categories appear in the nav (numeric, not alphabetic — so "10-X"
+ *     comes after "9-X").
+ *   - The "NN-" prefix on subject folders controls the order subjects
+ *     appear inside each category carousel.
+ *   - Within a subject folder, the FIRST image alphabetically (which
+ *     is "01-Name.jpg") is the lead/cover shown in the grid. The rest
+ *     appear in the shoot-view fullscreen when clicked.
  *
- * Category labels come from scripts/pixieset.config.json's `categories`
- * field if present; otherwise they're auto-derived from the folder slug.
+ * Slug normalization:
+ *   "1-Women"           → cat slug "women"
+ *   "3-Kids & Teens"    → cat slug "kids-and-teens"
+ *   "01-Valentina"      → subject slug "valentina"
+ *   "02-Adam & Michelle"→ subject slug "adam-and-michelle"
+ *
+ * Category labels and subtitles come from scripts/pixieset.config.json
+ * (looked up by the normalized slug). If a folder doesn't have a
+ * config entry the script falls back to the cleaned-up folder name.
  *
  * Run locally:   node scripts/build-photos.js
- * In CI:         see .github/workflows/sync.yml
  */
 
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const PHOTOS_DIR = path.join(ROOT, "photos");
+const PHOTOS_DIR = path.join(ROOT, "photos-web"); // ← scans optimized tree
 const CONFIG_PATH = path.join(ROOT, "scripts", "pixieset.config.json");
 const OUT_JSON_PATH = path.join(ROOT, "data", "photos.json");
 const OUT_JS_PATH = path.join(ROOT, "data", "photos.js");
 
 const IMAGE_RE = /\.(jpe?g|png|webp)$/i;
 
-/** Pretty-up a folder slug for display. e.g. "alec-and-zoe-walker" → "Alec & Zoe Walker" */
-function titleFromSlug(slug) {
-  // Hyphens become spaces; words capitalize. "and" lowercases unless first word.
-  const words = slug.split("-").map((w, i) => {
-    if (!w) return w;
-    if (i > 0 && w === "and") return "&";  // friendlier than "And"
-    return w.charAt(0).toUpperCase() + w.slice(1);
-  });
-  return words.join(" ");
+/** Strip a leading "NN-" / "N-" prefix used for ordering. */
+function stripOrderPrefix(name) {
+  return name.replace(/^\d+-\s*/, "");
 }
 
-/** Strip a leading "NN-" prefix used for ordering. "01-craig-shoemaker" → "craig-shoemaker" */
-function stripOrderPrefix(name) {
-  return name.replace(/^\d+-/, "");
+/**
+ * Convert a folder name to a URL-friendly slug.
+ * "Kids & Teens"      → "kids-and-teens"
+ * "Adam & Michelle"   → "adam-and-michelle"
+ * "Robert P"          → "robert-p"
+ * "Valentina"         → "valentina"
+ */
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** Pretty display name from the stripped folder name. */
+function titleFromName(name) {
+  // The name is already in human form (e.g. "Adam & Michelle"), so
+  // just normalize whitespace.
+  return name.replace(/\s+/g, " ").trim();
+}
+
+/** Numeric/natural sort — so "01", "02", ..., "10" comes out in order. */
+function naturalSort(a, b) {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 }
 
 /** Read a sibling text file as a single trimmed line, or return null. */
@@ -76,41 +103,48 @@ function listDirs(dir) {
   return fs.readdirSync(dir, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith("."))
     .map((d) => d.name)
-    .sort();
+    .sort(naturalSort);
 }
 
 function listImages(dir) {
   return fs.readdirSync(dir)
     .filter((f) => IMAGE_RE.test(f) && !f.startsWith("."))
-    .sort();
+    .sort(naturalSort);
+}
+
+/** Build the runtime URL for a photo, URL-encoding each path segment. */
+function buildPhotoUrl(catFolder, subjectFolder, fileName) {
+  return [
+    "photos-web",
+    encodeURIComponent(catFolder),
+    encodeURIComponent(subjectFolder),
+    encodeURIComponent(fileName),
+  ].join("/");
 }
 
 function main() {
   console.log(`Building photos data from ${path.relative(ROOT, PHOTOS_DIR)}/`);
   const cfg = loadConfig();
   const cfgCategories = Array.isArray(cfg.categories) ? cfg.categories : [];
-  const cfgByslug = Object.fromEntries(
+  const cfgBySlug = Object.fromEntries(
     cfgCategories.filter((c) => c && c.slug).map((c) => [c.slug, c])
   );
 
-  // Walk category folders. Sort alphabetically; the order in pixieset.config.json
-  // wins if specified (so editors can reorder categories without renaming folders).
-  const folderCats = listDirs(PHOTOS_DIR);
-  const orderedCats = cfgCategories.length
-    ? cfgCategories.map((c) => c.slug).filter((slug) => folderCats.includes(slug))
-    : folderCats;
-  // Add any folder categories that weren't in the config, at the end.
-  for (const slug of folderCats) {
-    if (!orderedCats.includes(slug)) orderedCats.push(slug);
-  }
+  // Walk category folders. The leading "N-" prefix gives natural
+  // ordering — "1-Women" before "2-Men" — which the naturalSort in
+  // listDirs already handles.
+  const catFolders = listDirs(PHOTOS_DIR);
 
   const categories = [];
   const subjects = [];
 
-  for (const catSlug of orderedCats) {
-    const catDir = path.join(PHOTOS_DIR, catSlug);
-    const cfgEntry = cfgByslug[catSlug] || {};
-    const catLabel = cfgEntry.label || titleFromSlug(catSlug);
+  for (const catFolder of catFolders) {
+    const catDir = path.join(PHOTOS_DIR, catFolder);
+    const cleanCatName = stripOrderPrefix(catFolder);
+    const catSlug = slugify(cleanCatName);
+
+    const cfgEntry = cfgBySlug[catSlug] || {};
+    const catLabel = cfgEntry.label || titleFromName(cleanCatName);
     const catSubtitle = cfgEntry.subtitle || "";
 
     // For each person folder inside this category
@@ -118,20 +152,23 @@ function main() {
     let personCount = 0;
     for (const personFolder of personDirs) {
       const personPath = path.join(catDir, personFolder);
-      const personSlug = stripOrderPrefix(personFolder);
-      // Title: explicit _title.txt > auto from slug
+      const cleanPersonName = stripOrderPrefix(personFolder);
+      const personSlug = slugify(cleanPersonName);
+
+      // Title: explicit _title.txt > auto from folder name
       const titleOverride = readMetaFile(path.join(personPath, "_title.txt"));
-      const title = titleOverride || titleFromSlug(personSlug);
+      const title = titleOverride || titleFromName(cleanPersonName);
 
       const images = listImages(personPath);
       if (!images.length) {
-        console.warn(`  ${catSlug}/${personFolder}: no images, skipping`);
+        console.warn(`  ${catFolder}/${personFolder}: no images, skipping`);
         continue;
       }
 
-      // Relative URLs (the deployed site serves the photos/ tree as static assets)
-      const photos = images.map(
-        (name) => `photos/${catSlug}/${personFolder}/${encodeURIComponent(name)}`
+      // Each image gets a runtime URL. Folder/file names may contain
+      // spaces or & — URL-encoding each segment handles that.
+      const photos = images.map((name) =>
+        buildPhotoUrl(catFolder, personFolder, name)
       );
 
       subjects.push({
@@ -141,17 +178,17 @@ function main() {
         title,
         date: null,
         url: null,
-        cover: photos[0],
+        cover: photos[0], // first image alphabetically = lead
         photos,
       });
       personCount++;
-      console.log(`  ${catSlug}/${personFolder}: "${title}" — ${images.length} photos`);
+      console.log(`  ${catFolder}/${personFolder}: "${title}" — ${images.length} photos`);
     }
 
     if (personCount) {
       categories.push({ slug: catSlug, label: catLabel, subtitle: catSubtitle });
     } else {
-      console.warn(`  ${catSlug}: no people with photos, skipping category`);
+      console.warn(`  ${catFolder}: no people with photos, skipping category`);
     }
   }
 
@@ -163,11 +200,11 @@ function main() {
   const out = {
     generatedAt: new Date().toISOString(),
     source: "local",
-    featured: [],
+    featured: Array.isArray(cfg.featured) ? cfg.featured : [],
     heroPhotos: cfg.heroPhotos || [],
-    gridShoots: [],
-    excludeShoots: [],
-    leadPhotos: {},
+    gridShoots: Array.isArray(cfg.gridShoots) ? cfg.gridShoots : [],
+    excludeShoots: Array.isArray(cfg.excludeShoots) ? cfg.excludeShoots : [],
+    leadPhotos: cfg.leadPhotos || {},
     categories,
     subjects,
   };

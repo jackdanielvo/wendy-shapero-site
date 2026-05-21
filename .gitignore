@@ -23,3 +23,9 @@ meta_*.webp
 wendy-portait.jpg
 .scratch-thumbs/
 *~
+
+# Source photos (camera originals — 2.6 GB and growing). The site
+# deploys photos-web/ instead, which scripts/optimize-photos.js
+# generates from this tree. Wendy keeps the masters locally for
+# any print work / future re-export needs.
+photos/
