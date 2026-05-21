@@ -1257,35 +1257,51 @@ body.shoot-open .contact { display: none; }
   width: 100%;
 }
 .shoot__body {
-  /* Photo container — fills the stage. CRITICAL: we let the default
-     align-items:stretch apply so the figure inside actually grows to
-     the body's full height. (Setting align-items:center here meant the
-     figure was content-sized, so the img's max-height:100% had no
-     definite parent to resolve against — and the img fell back to its
-     natural pixels and overflowed.) The figure itself centers the img. */
+  /* Photo container — fills the stage. Default align-items:stretch
+     lets the .shoot__page inside grow to full height, giving the
+     photos inside a definite parent to size against. */
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
-  /* (no align-items / justify-content — stretch is the default and
-     is exactly what we want) */
   padding: clamp(16px, 3vh, 36px) clamp(14px, 3vw, 50px);
-  cursor: pointer;
 }
-.shoot__photo {
-  /* Fills the body (flex: 1 + default stretch on cross-axis). NOW has
-     a definite width AND height, so the img's percentage maxes resolve. */
-  margin: 0;
+/* The "page" is the row of (up to) 3 photos shown together. The flex
+   children share width via flex:1 1 0; cross-axis defaults to stretch
+   so each .shoot__photo fills the page's height. */
+.shoot__page {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: clamp(10px, 1.4vw, 22px);
+  width: 100%;
+}
+.shoot__photo {
+  /* Each photo gets an equal share of the row, capped at 1 / --photo-cap.
+     --photo-cap is set by JS to min(perPage, totalPhotos), so:
+       - 3+ photos on desktop  → cap=3 → each photo max 1/3 width
+       - 2-photo shoot         → cap=2 → each photo max 1/2 width
+       - 1-photo shoot         → cap=1 → photo can fill row
+       - phones (perPage=1)    → cap=1 → single photo fills row
+     The gap math subtracts (cap-1) gaps' worth of width before dividing. */
+  margin: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  max-width: calc(
+    (100% - clamp(10px, 1.4vw, 22px) * (var(--photo-cap, 3) - 1))
+    / var(--photo-cap, 3)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Crossfade entrance each time we render a new photo */
+  /* Staggered fade-in (delays applied inline in JS per child) */
   opacity: 0;
-  transform: scale(0.985);
-  animation: shoot-photo-in 0.35s var(--ease) forwards;
+  transform: translateY(12px);
+  animation: shoot-photo-in 0.5s var(--ease) forwards;
 }
 .shoot__photo img {
   display: block;
@@ -1307,7 +1323,7 @@ body.shoot-open .contact { display: none; }
   -webkit-user-drag: none;
 }
 @keyframes shoot-photo-in {
-  to { opacity: 1; transform: scale(1); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ------------------------------------------------------------

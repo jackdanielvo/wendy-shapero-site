@@ -951,57 +951,95 @@ function unlockBodyScroll() {
   window.scrollTo(0, _savedScrollY);
 }
 
-// Render a single photo into the shoot body. Replaces any existing one.
-function renderShootPhoto(subj, idx) {
-  const body = document.getElementById("shootBody");
-  const total = subj.photoUrls.length;
-  const url = subj.photoUrls[idx];
-
-  body.innerHTML = "";
-  const fig = document.createElement("figure");
-  fig.className = "shoot__photo";
-  // Key on idx+url so the entrance animation re-runs each step
-  fig.dataset.idx = String(idx);
-  fig.innerHTML =
-    `<img src="${url}" alt="${catLabel(subj.cat)} portrait by Wendy Shapero" />`;
-  // Click the image to advance to the next photo (nice mouse shortcut).
-  // The cursor styling makes it discoverable.
-  fig.addEventListener("click", () => navPhoto(1));
-  body.appendChild(fig);
-
-  // Counter "3 of 8" — only shown when there's more than one photo.
-  const counter = shootEl().querySelector('[data-role="counter"]');
-  if (counter) {
-    counter.textContent = total > 1 ? `${idx + 1} of ${total}` : "";
-    counter.style.display = total > 1 ? "" : "none";
-  }
-  // Hide the prev/next buttons if there's only one photo in the
-  // entire site (degenerate case) — otherwise they still work even
-  // for one-photo shoots by jumping to the previous/next shoot.
-  shootEl().dataset.photoIndex = String(idx);
-
-  // Preload neighbors so flipping forward feels instant.
-  preloadAdjacent(subj, idx);
+// Photos-per-page is responsive: 3 across on desktop, 1 on phones.
+// Kept in sync with the CSS breakpoint below (.shoot__photo width).
+function getPhotosPerPage() {
+  return window.matchMedia("(min-width: 760px)").matches ? 3 : 1;
 }
 
-function preloadAdjacent(subj, idx) {
+// Render a PAGE of photos into the shoot body. `photoStart` is the
+// index of the first photo on this page. We render up to perPage
+// photos in a row; the last page may have fewer (e.g. 2 photos when
+// a shoot has 8 photos and perPage=3 → pages of [0..2][3..5][6..7]).
+function renderShootPage(subj, photoStart) {
+  const body = document.getElementById("shootBody");
+  const total = subj.photoUrls.length;
+  const perPage = getPhotosPerPage();
+  const start = Math.max(0, Math.min(photoStart, total - 1));
+  // Snap to page boundary so the displayed page is consistent
+  const pageStart = Math.floor(start / perPage) * perPage;
+  const pageEnd = Math.min(pageStart + perPage, total);
+
+  body.innerHTML = "";
+  const page = document.createElement("div");
+  page.className = "shoot__page";
+  // Photo-width cap: each photo takes 1/N of the row. For subjects with
+  // fewer photos than perPage, each photo gets more room (e.g. a 1-photo
+  // shoot fills the row; a 2-photo shoot puts two side-by-side at 50%).
+  const cap = Math.max(1, Math.min(perPage, total));
+  page.style.setProperty("--photo-cap", String(cap));
+
+  for (let i = pageStart; i < pageEnd; i++) {
+    const url = subj.photoUrls[i];
+    const fig = document.createElement("figure");
+    fig.className = "shoot__photo";
+    fig.style.animationDelay = ((i - pageStart) * 80) + "ms";
+    fig.innerHTML =
+      `<img src="${url}" alt="${catLabel(subj.cat)} portrait by Wendy Shapero" />`;
+    page.appendChild(fig);
+  }
+  body.appendChild(page);
+
+  // Counter "1–3 of 8" — hidden if everything fits on one page.
+  const counter = shootEl().querySelector('[data-role="counter"]');
+  if (counter) {
+    if (total <= perPage) {
+      counter.textContent = "";
+      counter.style.display = "none";
+    } else {
+      // Display the inclusive range using a real en-dash
+      counter.textContent = (pageStart + 1) + "–" + pageEnd + " of " + total;
+      counter.style.display = "";
+    }
+  }
+
+  shootEl().dataset.photoStart = String(pageStart);
+
+  // Preload the photos of the next + previous page so paging feels instant.
+  preloadAdjacentPages(subj, pageStart, perPage);
+}
+
+function preloadAdjacentPages(subj, pageStart, perPage) {
   const tryLoad = (url) => {
     if (!url) return;
     const im = new Image();
     im.src = url;
   };
-  // Next photo in this shoot, or first photo of next shoot
-  const nextInShoot = subj.photoUrls[idx + 1];
-  if (nextInShoot) {
-    tryLoad(nextInShoot);
+  // Next page in current shoot
+  const nextStart = pageStart + perPage;
+  if (nextStart < subj.photoUrls.length) {
+    for (let i = nextStart; i < Math.min(nextStart + perPage, subj.photoUrls.length); i++) {
+      tryLoad(subj.photoUrls[i]);
+    }
   } else {
+    // First page of next shoot
     const sIdx = SUBJECTS.findIndex(s => s.id === subj.id);
-    const ns = SUBJECTS[(sIdx + 1) % SUBJECTS.length];
-    if (ns) tryLoad(ns.photoUrls[0]);
+    if (sIdx >= 0) {
+      const ns = SUBJECTS[(sIdx + 1) % SUBJECTS.length];
+      if (ns) {
+        for (let i = 0; i < Math.min(perPage, ns.photoUrls.length); i++) {
+          tryLoad(ns.photoUrls[i]);
+        }
+      }
+    }
   }
-  // Previous photo
-  const prevInShoot = subj.photoUrls[idx - 1];
-  if (prevInShoot) tryLoad(prevInShoot);
+  // Previous page in current shoot
+  if (pageStart > 0) {
+    const prevStart = Math.max(0, pageStart - perPage);
+    for (let i = prevStart; i < pageStart; i++) {
+      tryLoad(subj.photoUrls[i]);
+    }
+  }
 }
 
 function openShoot(subjectId, opts = {}) {
@@ -1020,9 +1058,11 @@ function openShoot(subjectId, opts = {}) {
     if (dateEl) dateEl.textContent = subj.date;
   }
 
-  const idx = Math.max(0, Math.min(opts.photoIndex || 0, subj.photoUrls.length - 1));
+  // photoStart: index of the first photo on the page to render
+  const startReq = (typeof opts.photoStart === "number") ? opts.photoStart : 0;
+  const start = Math.max(0, Math.min(startReq, subj.photoUrls.length - 1));
   sh.dataset.subjectId = subj.id;
-  renderShootPhoto(subj, idx);
+  renderShootPage(subj, start);
 
   if (!wasOpen) {
     lockBodyScroll();
@@ -1046,13 +1086,13 @@ function closeShoot() {
     history.pushState(null, "", location.pathname + location.search);
   }
   delete sh.dataset.subjectId;
-  delete sh.dataset.photoIndex;
+  delete sh.dataset.photoStart;
 }
 
-// Navigate by ONE PHOTO within the current shoot. When the user goes
-// past the end (or before the start) we hop to the adjacent shoot,
-// landing on the first/last photo of that shoot — so a held-down
-// arrow key just keeps surfacing new photos.
+// Navigate by ONE PAGE within the current shoot (3 photos on desktop,
+// 1 on phones). When the user goes past the end (or before the start)
+// we hop to the adjacent shoot, landing on the first/last page of
+// that shoot — so a held-down arrow key just keeps surfacing photos.
 function navPhoto(dir) {
   const sh = shootEl();
   const id = sh.dataset.subjectId;
@@ -1060,13 +1100,14 @@ function navPhoto(dir) {
   const subj = SUBJECT_BY_ID[id];
   if (!subj) return;
 
-  const cur = parseInt(sh.dataset.photoIndex || "0", 10);
+  const perPage = getPhotosPerPage();
+  const cur = parseInt(sh.dataset.photoStart || "0", 10);
   const total = subj.photoUrls.length;
-  const next = cur + dir;
+  const nextStart = cur + dir * perPage;
 
-  if (next >= 0 && next < total) {
-    // Stay within the current shoot — just swap the photo.
-    renderShootPhoto(subj, next);
+  if (nextStart >= 0 && nextStart < total) {
+    // Stay within the current shoot — render the next/prev page.
+    renderShootPage(subj, nextStart);
     return;
   }
 
@@ -1074,12 +1115,31 @@ function navPhoto(dir) {
   const subjIdx = SUBJECTS.findIndex(s => s.id === id);
   if (subjIdx < 0) return;
   const newSubj = SUBJECTS[(subjIdx + dir + SUBJECTS.length) % SUBJECTS.length];
-  // When moving forward into a new shoot, land on its first photo.
-  // When moving backward, land on its last photo (more intuitive
-  // than jumping to the front of a previous shoot).
-  const newIdx = dir > 0 ? 0 : newSubj.photoUrls.length - 1;
-  openShoot(newSubj.id, { photoIndex: newIdx });
+  // Forward → land on first page. Backward → land on its last page.
+  const newStart = dir > 0
+    ? 0
+    : Math.floor((newSubj.photoUrls.length - 1) / perPage) * perPage;
+  openShoot(newSubj.id, { photoStart: newStart });
 }
+
+// Re-render the current page when the viewport crosses the 760px
+// breakpoint so the photos-per-page count adjusts cleanly. The page
+// stays anchored to the photo at the current photoStart, snapped to
+// the nearest page boundary for the new perPage.
+let _shootResizeTimer = 0;
+window.addEventListener("resize", () => {
+  if (_shootResizeTimer) clearTimeout(_shootResizeTimer);
+  _shootResizeTimer = setTimeout(() => {
+    const sh = shootEl();
+    if (!sh || !sh.classList.contains("open")) return;
+    const id = sh.dataset.subjectId;
+    if (!id) return;
+    const subj = SUBJECT_BY_ID[id];
+    if (!subj) return;
+    const cur = parseInt(sh.dataset.photoStart || "0", 10);
+    renderShootPage(subj, cur);
+  }, 180);
+});
 
 function bindShoot() {
   const sh = shootEl();
