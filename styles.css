@@ -45,7 +45,23 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Mobile-page-motion lockdown.
+     On iOS, overflow-x:hidden on body alone is NOT enough — the html
+     element keeps its own scrollable axis and will still slide
+     sideways when a finger pushes the frame. Setting overflow-x on
+     html too actually traps stray horizontal motion. We use `clip`
+     where supported (no extra scroll container, no breaking sticky
+     positioning) and fall back to `hidden` via a duplicate value.
+     overscroll-behavior-x:none stops the elastic horizontal bounce
+     entirely. We deliberately leave Y alone so pull-to-refresh and
+     normal vertical scrolling still feel right. */
+  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  width: 100%;
+}
 
 body {
   margin: 0;
@@ -60,6 +76,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  width: 100%;
+  /* position:relative gives layout calculations a stable origin and
+     fixes a Safari quirk where overflow-x:hidden on the html/body
+     pair can leak when there are absolutely-positioned children
+     (we do have them — the theme toggle, shoot view, etc.) */
+  position: relative;
   transition: background 0.5s var(--ease), color 0.5s var(--ease);
 }
 
