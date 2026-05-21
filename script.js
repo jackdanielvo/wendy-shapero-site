@@ -1009,6 +1009,13 @@ function renderShootPage(subj, photoStart) {
   preloadAdjacentPages(subj, pageStart, perPage);
 }
 
+// Subjects in the same category as the given subject, in their natural
+// (data-file) order. The shoot nav uses this list — never the global
+// SUBJECTS — so opening a kid never spills into Lifestyle or Events.
+function subjectsInCategory(subj) {
+  return SUBJECTS.filter(s => s.cat === subj.cat);
+}
+
 function preloadAdjacentPages(subj, pageStart, perPage) {
   const tryLoad = (url) => {
     if (!url) return;
@@ -1022,10 +1029,11 @@ function preloadAdjacentPages(subj, pageStart, perPage) {
       tryLoad(subj.photoUrls[i]);
     }
   } else {
-    // First page of next shoot
-    const sIdx = SUBJECTS.findIndex(s => s.id === subj.id);
-    if (sIdx >= 0) {
-      const ns = SUBJECTS[(sIdx + 1) % SUBJECTS.length];
+    // First page of next shoot IN THE SAME CATEGORY (wraps)
+    const sameCat = subjectsInCategory(subj);
+    const sIdx = sameCat.findIndex(s => s.id === subj.id);
+    if (sIdx >= 0 && sameCat.length > 1) {
+      const ns = sameCat[(sIdx + 1) % sameCat.length];
       if (ns) {
         for (let i = 0; i < Math.min(perPage, ns.photoUrls.length); i++) {
           tryLoad(ns.photoUrls[i]);
@@ -1091,8 +1099,10 @@ function closeShoot() {
 
 // Navigate by ONE PAGE within the current shoot (3 photos on desktop,
 // 1 on phones). When the user goes past the end (or before the start)
-// we hop to the adjacent shoot, landing on the first/last page of
-// that shoot — so a held-down arrow key just keeps surfacing photos.
+// we hop to the adjacent shoot IN THE SAME CATEGORY, landing on the
+// first/last page of that shoot. The category wraps — so a held-down
+// arrow key cycles forever through everyone in (say) Kids & Teens,
+// never spilling into Lifestyle or Events.
 function navPhoto(dir) {
   const sh = shootEl();
   const id = sh.dataset.subjectId;
@@ -1111,10 +1121,20 @@ function navPhoto(dir) {
     return;
   }
 
-  // Crossed a shoot boundary. Hop to the prev/next subject.
-  const subjIdx = SUBJECTS.findIndex(s => s.id === id);
+  // Crossed a shoot boundary. Hop to the prev/next subject WITHIN
+  // the same category, wrapping at the category boundary.
+  const sameCat = subjectsInCategory(subj);
+  if (!sameCat.length) return;
+  // If this is the only subject in the category, just bounce back
+  // to the first / last page of the same shoot.
+  if (sameCat.length === 1) {
+    const lastStart = Math.floor((total - 1) / perPage) * perPage;
+    renderShootPage(subj, dir > 0 ? 0 : lastStart);
+    return;
+  }
+  const subjIdx = sameCat.findIndex(s => s.id === id);
   if (subjIdx < 0) return;
-  const newSubj = SUBJECTS[(subjIdx + dir + SUBJECTS.length) % SUBJECTS.length];
+  const newSubj = sameCat[(subjIdx + dir + sameCat.length) % sameCat.length];
   // Forward → land on first page. Backward → land on its last page.
   const newStart = dir > 0
     ? 0
