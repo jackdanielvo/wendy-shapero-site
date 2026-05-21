@@ -41,7 +41,7 @@
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
-  <link rel="stylesheet" href="styles.css?v=2026-05-21-carouselarrows" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-21-shootarrows2" />
 
   <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
        default to landing on the site root with a hash like
@@ -184,21 +184,27 @@
   </section>
 
   <!-- Shoot view: a full-screen subject takeover.
-       Photo-by-photo navigation: one big photo fills the viewport. Prev/Next
-       arrows (and arrow keys) flip through photos in the current shoot.
-       When the user reaches the last photo, Next advances to the first
-       photo of the next shoot (and vice versa). -->
+       Photo-by-photo navigation: one big photo fills the viewport. Big
+       circular Prev/Next arrows float over the left and right edges of
+       the photo area, plus arrow keys, touch swipe, and click-the-photo
+       all advance. When the user reaches the last photo, Next advances
+       to the first photo of the next shoot (and vice versa). -->
   <div class="shoot" id="shoot" aria-hidden="true" role="dialog">
     <header class="shoot__bar">
       <button class="shoot__close" aria-label="Close shoot">&times;</button>
       <p class="shoot__crumb caps"><span data-role="cat">&nbsp;</span> &nbsp;&middot;&nbsp; <span data-role="num">&nbsp;</span> <span class="shoot__counter" data-role="counter" aria-live="polite"></span></p>
-      <div class="shoot__nav">
-        <button class="shoot__prev" aria-label="Previous photo">&#8592; <span class="caps">Prev</span></button>
-        <button class="shoot__next" aria-label="Next photo"><span class="caps">Next</span> &#8594;</button>
-      </div>
+      <div class="shoot__bar-spacer" aria-hidden="true"></div>
     </header>
-    <div class="shoot__body" id="shootBody">
-      <!-- A single active photo is rendered here. Touch swipe + click to advance. -->
+    <div class="shoot__stage">
+      <button class="shoot__prev shoot__side-arrow shoot__side-arrow--prev" aria-label="Previous photo">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="shoot__body" id="shootBody">
+        <!-- A single active photo is rendered here. Touch swipe + click also advance. -->
+      </div>
+      <button class="shoot__next shoot__side-arrow shoot__side-arrow--next" aria-label="Next photo">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
     <footer class="shoot__foot">
       <p class="caps muted">Like this shoot? <a href="mailto:wendy@wendypix.com?subject=Booking%20a%20shoot">Book a session with Wendy</a></p>
@@ -208,6 +214,6 @@
   <!-- Auto-synced data from Pixieset (optional). If missing, the site
        falls back to its built-in dataset, so it never breaks. -->
   <script src="data/photos.js" onerror="window.WENDY_PHOTOS_MISSING=true"></script>
-  <script src="script.js?v=2026-05-21-carouselarrows"></script>
+  <script src="script.js?v=2026-05-21-shootarrows2"></script>
 </body>
 </html>
