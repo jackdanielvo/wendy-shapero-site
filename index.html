@@ -41,7 +41,7 @@
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
-  <link rel="stylesheet" href="styles.css?v=2026-05-08-heronav" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-21-shootnav" />
 
   <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
        default to landing on the site root with a hash like
@@ -183,18 +183,22 @@
     </div>
   </section>
 
-  <!-- Shoot view: a full-screen subject takeover, not a lightbox -->
+  <!-- Shoot view: a full-screen subject takeover.
+       Photo-by-photo navigation: one big photo fills the viewport. Prev/Next
+       arrows (and arrow keys) flip through photos in the current shoot.
+       When the user reaches the last photo, Next advances to the first
+       photo of the next shoot (and vice versa). -->
   <div class="shoot" id="shoot" aria-hidden="true" role="dialog">
     <header class="shoot__bar">
       <button class="shoot__close" aria-label="Close shoot">&times;</button>
-      <p class="shoot__crumb caps"><span data-role="cat">&nbsp;</span> &nbsp;&middot;&nbsp; <span data-role="num">&nbsp;</span></p>
+      <p class="shoot__crumb caps"><span data-role="cat">&nbsp;</span> &nbsp;&middot;&nbsp; <span data-role="num">&nbsp;</span> <span class="shoot__counter" data-role="counter" aria-live="polite"></span></p>
       <div class="shoot__nav">
-        <button class="shoot__prev" aria-label="Previous shoot">&#8592; <span class="caps">Prev shoot</span></button>
-        <button class="shoot__next" aria-label="Next shoot"><span class="caps">Next shoot</span> &#8594;</button>
+        <button class="shoot__prev" aria-label="Previous photo">&#8592; <span class="caps">Prev</span></button>
+        <button class="shoot__next" aria-label="Next photo"><span class="caps">Next</span> &#8594;</button>
       </div>
     </header>
     <div class="shoot__body" id="shootBody">
-      <!-- One or more photos rendered by JS for the active subject -->
+      <!-- A single active photo is rendered here. Touch swipe + click to advance. -->
     </div>
     <footer class="shoot__foot">
       <p class="caps muted">Like this shoot? <a href="mailto:wendy@wendypix.com?subject=Booking%20a%20shoot">Book a session with Wendy</a></p>
@@ -204,6 +208,6 @@
   <!-- Auto-synced data from Pixieset (optional). If missing, the site
        falls back to its built-in dataset, so it never breaks. -->
   <script src="data/photos.js" onerror="window.WENDY_PHOTOS_MISSING=true"></script>
-  <script src="script.js?v=2026-05-21-newphotos"></script>
+  <script src="script.js?v=2026-05-21-shootnav"></script>
 </body>
 </html>

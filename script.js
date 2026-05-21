@@ -932,76 +932,198 @@ function buildFilters(subjects) {
 // ============================================================
 const shootEl = () => document.getElementById("shoot");
 
+// Scroll lock — when the shoot opens we freeze the body at the current
+// scroll Y using position:fixed (works on iOS, prevents the page behind
+// from scrolling when the wheel/swipe hits the shoot's edges). On close
+// we restore the position exactly.
+let _savedScrollY = 0;
+function lockBodyScroll() {
+  _savedScrollY = window.scrollY || window.pageYOffset || 0;
+  const b = document.body;
+  b.style.position = "fixed";
+  b.style.top = `-${_savedScrollY}px`;
+  b.style.left = "0";
+  b.style.right = "0";
+  b.style.width = "100%";
+}
+function unlockBodyScroll() {
+  const b = document.body;
+  b.style.position = "";
+  b.style.top = "";
+  b.style.left = "";
+  b.style.right = "";
+  b.style.width = "";
+  // Restore the user's place in the document
+  window.scrollTo(0, _savedScrollY);
+}
+
+// Render a single photo into the shoot body. Replaces any existing one.
+function renderShootPhoto(subj, idx) {
+  const body = document.getElementById("shootBody");
+  const total = subj.photoUrls.length;
+  const url = subj.photoUrls[idx];
+
+  body.innerHTML = "";
+  const fig = document.createElement("figure");
+  fig.className = "shoot__photo";
+  // Key on idx+url so the entrance animation re-runs each step
+  fig.dataset.idx = String(idx);
+  fig.innerHTML =
+    `<img src="${url}" alt="${catLabel(subj.cat)} portrait by Wendy Shapero" />`;
+  // Click the image to advance to the next photo (nice mouse shortcut).
+  // The cursor styling makes it discoverable.
+  fig.addEventListener("click", () => navPhoto(1));
+  body.appendChild(fig);
+
+  // Counter "3 of 8" — only shown when there's more than one photo.
+  const counter = shootEl().querySelector('[data-role="counter"]');
+  if (counter) {
+    counter.textContent = total > 1 ? `${idx + 1} of ${total}` : "";
+    counter.style.display = total > 1 ? "" : "none";
+  }
+  // Hide the prev/next buttons if there's only one photo in the
+  // entire site (degenerate case) — otherwise they still work even
+  // for one-photo shoots by jumping to the previous/next shoot.
+  shootEl().dataset.photoIndex = String(idx);
+
+  // Preload neighbors so flipping forward feels instant.
+  preloadAdjacent(subj, idx);
+}
+
+function preloadAdjacent(subj, idx) {
+  const tryLoad = (url) => {
+    if (!url) return;
+    const im = new Image();
+    im.src = url;
+  };
+  // Next photo in this shoot, or first photo of next shoot
+  const nextInShoot = subj.photoUrls[idx + 1];
+  if (nextInShoot) {
+    tryLoad(nextInShoot);
+  } else {
+    const sIdx = SUBJECTS.findIndex(s => s.id === subj.id);
+    const ns = SUBJECTS[(sIdx + 1) % SUBJECTS.length];
+    if (ns) tryLoad(ns.photoUrls[0]);
+  }
+  // Previous photo
+  const prevInShoot = subj.photoUrls[idx - 1];
+  if (prevInShoot) tryLoad(prevInShoot);
+}
+
 function openShoot(subjectId, opts = {}) {
   const subj = SUBJECT_BY_ID[subjectId];
   if (!subj) return;
   const sh = shootEl();
+  const wasOpen = sh.classList.contains("open");
+
   sh.querySelector('[data-role="cat"]').textContent = catLabel(subj.cat);
   sh.querySelector('[data-role="num"]').textContent =
     subj.label
       ? subj.label
       : `Shoot No. ${String(subj.num).padStart(2, "0")}`;
-  const body = document.getElementById("shootBody");
-  body.innerHTML = "";
-  subj.photoUrls.forEach((url) => {
-    const fig = document.createElement("figure");
-    fig.className = "shoot__photo";
-    fig.innerHTML = `<img src="${url}" alt="${catLabel(subj.cat)} portrait by Wendy Shapero" />`;
-    body.appendChild(fig);
-  });
-  // Optional: a date line under the breadcrumb
   if (subj.date) {
     const dateEl = sh.querySelector('[data-role="date"]');
     if (dateEl) dateEl.textContent = subj.date;
   }
-  sh.classList.add("open");
-  document.body.classList.add("shoot-open");
-  sh.setAttribute("aria-hidden", "false");
-  body.scrollTop = 0;
-  sh.scrollTop = 0;
+
+  const idx = Math.max(0, Math.min(opts.photoIndex || 0, subj.photoUrls.length - 1));
+  sh.dataset.subjectId = subj.id;
+  renderShootPhoto(subj, idx);
+
+  if (!wasOpen) {
+    lockBodyScroll();
+    sh.classList.add("open");
+    document.body.classList.add("shoot-open");
+    sh.setAttribute("aria-hidden", "false");
+  }
   if (!opts.fromHash) {
     history.pushState({ subjectId }, "", `#/shoot/${subjectId}`);
   }
-  shootEl().dataset.subjectId = subj.id;
 }
+
 function closeShoot() {
   const sh = shootEl();
+  if (!sh.classList.contains("open")) return;
   sh.classList.remove("open");
   document.body.classList.remove("shoot-open");
   sh.setAttribute("aria-hidden", "true");
+  unlockBodyScroll();
   if (location.hash.startsWith("#/shoot/")) {
     history.pushState(null, "", location.pathname + location.search);
   }
   delete sh.dataset.subjectId;
+  delete sh.dataset.photoIndex;
 }
-function navShoot(dir) {
+
+// Navigate by ONE PHOTO within the current shoot. When the user goes
+// past the end (or before the start) we hop to the adjacent shoot,
+// landing on the first/last photo of that shoot — so a held-down
+// arrow key just keeps surfacing new photos.
+function navPhoto(dir) {
   const sh = shootEl();
   const id = sh.dataset.subjectId;
   if (!id) return;
-  const idxInList = SUBJECTS.findIndex(s => s.id === id);
-  if (idxInList < 0) return;
-  const next = (idxInList + dir + SUBJECTS.length) % SUBJECTS.length;
-  openShoot(SUBJECTS[next].id);
-  shootEl().scrollTo({ top: 0, behavior: "smooth" });
+  const subj = SUBJECT_BY_ID[id];
+  if (!subj) return;
+
+  const cur = parseInt(sh.dataset.photoIndex || "0", 10);
+  const total = subj.photoUrls.length;
+  const next = cur + dir;
+
+  if (next >= 0 && next < total) {
+    // Stay within the current shoot — just swap the photo.
+    renderShootPhoto(subj, next);
+    return;
+  }
+
+  // Crossed a shoot boundary. Hop to the prev/next subject.
+  const subjIdx = SUBJECTS.findIndex(s => s.id === id);
+  if (subjIdx < 0) return;
+  const newSubj = SUBJECTS[(subjIdx + dir + SUBJECTS.length) % SUBJECTS.length];
+  // When moving forward into a new shoot, land on its first photo.
+  // When moving backward, land on its last photo (more intuitive
+  // than jumping to the front of a previous shoot).
+  const newIdx = dir > 0 ? 0 : newSubj.photoUrls.length - 1;
+  openShoot(newSubj.id, { photoIndex: newIdx });
 }
+
 function bindShoot() {
   const sh = shootEl();
   sh.querySelector(".shoot__close").addEventListener("click", closeShoot);
-  sh.querySelector(".shoot__prev").addEventListener("click", () => navShoot(-1));
-  sh.querySelector(".shoot__next").addEventListener("click", () => navShoot(1));
+  sh.querySelector(".shoot__prev").addEventListener("click", () => navPhoto(-1));
+  sh.querySelector(".shoot__next").addEventListener("click", () => navPhoto(1));
+
   document.addEventListener("keydown", (e) => {
     if (!sh.classList.contains("open")) return;
     if (e.key === "Escape") closeShoot();
-    if (e.key === "ArrowLeft") navShoot(-1);
-    if (e.key === "ArrowRight") navShoot(1);
+    if (e.key === "ArrowLeft")  { e.preventDefault(); navPhoto(-1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); navPhoto(1); }
   });
+
+  // Touch swipe (mobile). Threshold large enough to ignore taps and
+  // accidental drag-while-scrolling. Single-photo view doesn't need
+  // vertical scroll, so any sustained horizontal gesture is nav.
+  let tx = 0, ty = 0, tt = 0;
+  sh.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    tx = e.touches[0].clientX; ty = e.touches[0].clientY; tt = Date.now();
+  }, { passive: true });
+  sh.addEventListener("touchend", (e) => {
+    if (e.changedTouches.length !== 1) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    const dt = Date.now() - tt;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3 && dt < 600) {
+      navPhoto(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
   const handleHash = () => {
     const m = location.hash.match(/^#\/shoot\/([\w-]+)$/);
     if (m && SUBJECT_BY_ID[m[1]]) {
       openShoot(m[1], { fromHash: true });
     } else if (sh.classList.contains("open")) {
-      sh.classList.remove("open");
-      document.body.classList.remove("shoot-open");
+      closeShoot();
     }
   };
   window.addEventListener("popstate", handleHash);
