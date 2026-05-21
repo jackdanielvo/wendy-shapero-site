@@ -1257,23 +1257,24 @@ body.shoot-open .contact { display: none; }
   width: 100%;
 }
 .shoot__body {
-  /* Photo container — fills the stage. The figure inside is a flex
-     item that fills this; the img inside the figure is constrained
-     to max-width:100%/max-height:100% of that filled box, so portrait
-     AND landscape photos always show in full (object-fit:contain is
-     the belt-and-suspenders backup). */
+  /* Photo container — fills the stage. CRITICAL: we let the default
+     align-items:stretch apply so the figure inside actually grows to
+     the body's full height. (Setting align-items:center here meant the
+     figure was content-sized, so the img's max-height:100% had no
+     definite parent to resolve against — and the img fell back to its
+     natural pixels and overflowed.) The figure itself centers the img. */
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* (no align-items / justify-content — stretch is the default and
+     is exactly what we want) */
   padding: clamp(16px, 3vh, 36px) clamp(14px, 3vw, 50px);
-  cursor: pointer;   /* clicking the photo advances; cursor reads as "go" */
+  cursor: pointer;
 }
 .shoot__photo {
-  /* Fill the body so the img has a definite parent to size against.
-     min-width/min-height: 0 lets flex shrink the figure as needed. */
+  /* Fills the body (flex: 1 + default stretch on cross-axis). NOW has
+     a definite width AND height, so the img's percentage maxes resolve. */
   margin: 0;
   flex: 1 1 auto;
   min-width: 0;
@@ -1288,11 +1289,15 @@ body.shoot-open .contact { display: none; }
 }
 .shoot__photo img {
   display: block;
-  /* Constrained by the figure's (definite) box. width/height auto
+  /* Constrained by the figure's (now definite) box. width/height auto
      keeps the image's natural aspect ratio, so portrait portraits
-     and landscape photos both fit fully — no cropping, no squashing. */
+     and landscape photos both fit fully — no cropping, no squashing.
+     The calc() fallback bounds the img to the viewport minus measured
+     chrome (~80px bar + ~80px foot + ~40px body padding ≈ 200px) so
+     that even if the flex parent doesn't resolve to a definite size
+     in some browser, the img is still capped. */
   max-width: 100%;
-  max-height: 100%;
+  max-height: min(100%, calc(100vh - 200px));
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1362,9 +1367,13 @@ body.shoot-open .contact { display: none; }
 }
 
 .shoot__foot {
-  padding: clamp(30px, 6vh, 60px) 20px;
+  /* Compact — the photo gets the screen, the foot is just a thin
+     courtesy line linking to booking. */
+  padding: 14px 20px;
   text-align: center;
   border-top: 1px solid var(--rule);
+  flex: 0 0 auto;
+  font-size: 12px;
 }
 .shoot__foot a {
   color: var(--accent);
