@@ -615,34 +615,10 @@ function buildFeatured(subjects, featuredSlugs) {
     dragStartX = null; didDrag = false;
   });
 
-  // Mouse-wheel nav. Wheeling up while hovering the carousel = previous,
-  // wheeling down = next. Throttled so a single gesture advances at most
-  // one step. Once the carousel is at either end, wheel events pass
-  // through and the page scrolls normally — so the user is never trapped.
-  let wheelLockUntil = 0;
-  carousel.addEventListener("wheel", (e) => {
-    // Prefer whichever axis the input is dominantly using. Most mice send
-    // deltaY; some trackpads send deltaX for horizontal wheels.
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) < 4) return;          // ignore stray micro-events
-
-    const wantsForward = delta > 0;
-    const canForward   = active < tiles.length - 1;
-    const canBackward  = active > 0;
-    // At the edges, let the page scroll naturally — don't trap the user.
-    if (wantsForward && !canForward)   return;
-    if (!wantsForward && !canBackward) return;
-
-    e.preventDefault();                       // we're consuming this event
-    const now = performance.now();
-    if (now < wheelLockUntil) return;         // throttle: 1 advance per gesture
-
-    if (wantsForward) active++; else active--;
-    layout();
-    // ~350ms cooldown — long enough to absorb macOS momentum-scroll trains
-    // but short enough that a deliberate second flick still registers.
-    wheelLockUntil = now + 350;
-  }, { passive: false });
+  // (No wheel-to-advance hijack — vertical mouse-wheel scrolling stays
+  // with the page. The carousel is navigated by clicking flanks, the
+  // dots, drag/swipe, or arrow keys. The category sections also get
+  // explicit left/right arrow buttons, see buildCategorySection.)
 }
 
 // ============================================================
@@ -670,8 +646,16 @@ function buildCategorySection(people, catConfig, anchorBefore) {
   section.innerHTML = `
     <h2 class="display">${labelHtml}</h2>
     ${subHtml}
-    <div class="featured-carousel" tabindex="0"
-         role="region" aria-roledescription="carousel" aria-label="${labelHtml}">
+    <div class="featured-carousel-wrap">
+      <button type="button" class="featured-arrow featured-arrow--prev" aria-label="Previous person">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="featured-carousel" tabindex="0"
+           role="region" aria-roledescription="carousel" aria-label="${labelHtml}">
+      </div>
+      <button type="button" class="featured-arrow featured-arrow--next" aria-label="Next person">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
     <div class="featured-dots" aria-hidden="true"></div>
   `;
@@ -685,6 +669,8 @@ function buildCategorySection(people, catConfig, anchorBefore) {
 
   const carousel = section.querySelector(".featured-carousel");
   const dotsEl   = section.querySelector(".featured-dots");
+  const prevBtn  = section.querySelector(".featured-arrow--prev");
+  const nextBtn  = section.querySelector(".featured-arrow--next");
   let active = Math.min(people.length - 1, Math.floor(people.length / 2));
 
   // Build a tile per person. Each tile shows the person's lead photo and
@@ -730,8 +716,25 @@ function buildCategorySection(people, catConfig, anchorBefore) {
       else                  tile.classList.add("far-right");
     });
     dots.forEach((dot, i) => dot.classList.toggle("on", i === active));
+    // Arrow buttons: disable at boundaries
+    if (prevBtn) prevBtn.disabled = (active <= 0);
+    if (nextBtn) nextBtn.disabled = (active >= tiles.length - 1);
   }
   layout();
+
+  // Visible left/right arrow nav. Page scroll stays uninterrupted —
+  // these buttons (plus the dots, click-the-flank, drag, and arrow
+  // keys) are how the user moves through subjects.
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      if (active > 0) { active--; layout(); }
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      if (active < tiles.length - 1) { active++; layout(); }
+    });
+  }
 
   // Same nav surface as Featured Work: keyboard arrows, mouse wheel,
   // touch/mouse drag-to-advance.
@@ -784,22 +787,13 @@ function buildCategorySection(people, catConfig, anchorBefore) {
   });
   carousel.addEventListener("pointercancel", () => { dragStartX = null; didDrag = false; });
 
-  let wheelLockUntil = 0;
-  carousel.addEventListener("wheel", (e) => {
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) < 4) return;
-    const wantsForward = delta > 0;
-    const canForward   = active < tiles.length - 1;
-    const canBackward  = active > 0;
-    if (wantsForward && !canForward)   return;
-    if (!wantsForward && !canBackward) return;
-    e.preventDefault();
-    const now = performance.now();
-    if (now < wheelLockUntil) return;
-    if (wantsForward) active++; else active--;
-    layout();
-    wheelLockUntil = now + 350;
-  }, { passive: false });
+  // NOTE: there used to be a wheel listener here that hijacked vertical
+  // mouse-wheel events to advance the carousel horizontally. It fought
+  // normal page scrolling — readers trying to scroll down past a
+  // category section would see the page either get stuck on the
+  // section or scroll past unpredictably. The visible Prev / Next
+  // arrows, dots, drag, click-a-flank, and arrow-key nav cover the
+  // browsing case more clearly. So: no wheel hijack.
 }
 
 // Tiny helper so HTML strings injected via innerHTML can't introduce XSS

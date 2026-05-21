@@ -558,7 +558,12 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   --tile-w: clamp(240px, 28vw, 420px);
   --tile-h: clamp(320px, 50vh, 540px);
   position: relative;
+  /* When wrapped in .featured-carousel-wrap (flex container with arrow
+     buttons either side), the carousel needs to flex-grow to absorb
+     the remaining width — otherwise it'd collapse to content width. */
+  flex: 1 1 auto;
   width: 100%;
+  min-width: 0;
   height: var(--tile-h);
   margin: 0 auto;
   /* Allow flanking tiles to extend past the section's content box. The
@@ -682,6 +687,80 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
 }
 .ftile.flank-right:hover {
   transform: translateX(86%) scale(0.81) rotate(6deg);
+}
+
+/* ------------------------------------------------------------
+   Carousel wrap + left/right arrow buttons.
+   The wrap puts the carousel between two prominent arrow buttons.
+   Vertical mouse-wheel stays with the page — these buttons (plus the
+   dots below, drag, click-the-flank, and arrow keys) are how readers
+   move between subjects. No more wheel-hijacking.
+   ------------------------------------------------------------ */
+.featured-carousel-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.4vw, 24px);
+  width: 100%;
+}
+.featured-arrow {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(42px, 5vw, 56px);
+  height: clamp(42px, 5vw, 56px);
+  border-radius: 50%;
+  border: 1.5px solid var(--rule);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+  box-shadow: var(--shadow);
+  transition:
+    background 0.25s var(--ease),
+    color 0.25s var(--ease),
+    border-color 0.25s var(--ease),
+    transform 0.25s var(--ease),
+    opacity 0.25s var(--ease);
+  /* Stack on top of the carousel's overflowing flank tiles so the
+     button is always reachable. */
+  position: relative;
+  z-index: 3;
+}
+.featured-arrow:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+.featured-arrow:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.featured-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.featured-arrow svg {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .featured-arrow {
+    /* On phones, anchor the arrows over the edges of the carousel
+       so they don't steal width from the tiles. */
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+  }
+  .featured-arrow--prev { left: 6px; }
+  .featured-arrow--next { right: 6px; }
+  .featured-carousel-wrap {
+    position: relative;
+    gap: 0;
+  }
 }
 
 /* --- Dot indicators --- */
