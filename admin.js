@@ -76,6 +76,7 @@
       });
       if (active === "bookings") loadBookings().catch(console.error);
       if (active === "settings") loadSettings().catch(console.error);
+      if (active === "photos")   loadPhotos().catch((e) => photosStatus("err", e.message));
     });
   });
 
@@ -559,6 +560,298 @@
 
   function settingsStatus(kind, msg) {
     const el = document.getElementById("settingsStatus");
+    if (!el) return;
+    el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
+  }
+
+  // -----------------------------------------------------------
+  // PHOTOS TAB — browse, reorder, upload (uploads come next pass).
+  //
+  // Data model:
+  //   `photosOriginal`  — manifest as it was when we loaded (immutable)
+  //   `photosState`     — working copy we mutate as the user drags things
+  //                       around. Each subject / photo carries an
+  //                       `originalFolder` / `originalFile` pointer so the
+  //                       publish endpoint can find the source blob even
+  //                       after the user has renumbered things.
+  // -----------------------------------------------------------
+  let photosOriginal = null;
+  let photosState = null;
+  let photosSortables = []; // SortableJS instances we destroy on reload
+  let photosActiveCatIdx = 0;
+  let photosActiveSubjIdx = 0;
+
+  async function loadPhotos() {
+    photosStatus("", "Loading…");
+    setPhotosPending(0);
+    try {
+      const res = await authFetch("/api/admin-photos-manifest");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Load failed (${res.status})`);
+      }
+      const data = await res.json();
+      photosOriginal = data;
+      // Deep clone + annotate each subject/photo with its originalFolder/originalFile
+      photosState = {
+        commitSha: data.commitSha,
+        categories: data.categories.map((c) => ({
+          folder: c.folder,
+          originalFolder: c.folder,
+          subjects: c.subjects.map((s) => ({
+            folder: s.folder,
+            originalFolder: s.folder,
+            photos: s.photos.map((f) => ({
+              file: f,
+              originalFile: f,
+            })),
+          })),
+        })),
+      };
+      photosActiveCatIdx = 0;
+      photosActiveSubjIdx = 0;
+      renderPhotos();
+      photosStatus("", "");
+    } catch (e) {
+      photosStatus("err", e.message);
+    }
+  }
+
+  function destroyPhotoSortables() {
+    photosSortables.forEach((s) => { try { s.destroy(); } catch (_) {} });
+    photosSortables = [];
+  }
+
+  function renderPhotos() {
+    destroyPhotoSortables();
+    const pane = document.getElementById("photosPane");
+    if (!photosState || !photosState.categories.length) {
+      pane.innerHTML = `<p class="admin__status">No photos to manage.</p>`;
+      return;
+    }
+
+    const cat = photosState.categories[photosActiveCatIdx];
+    const subj = cat && cat.subjects[photosActiveSubjIdx];
+
+    pane.innerHTML = `
+      <div class="admin__photos__layout">
+        <div class="admin__photos__col" id="adminPhotoCats">
+          <h4 class="admin__photos__h">Categories</h4>
+          <ul class="admin__photos__list" id="adminPhotoCatsList"></ul>
+        </div>
+        <div class="admin__photos__col" id="adminPhotoSubjs">
+          <h4 class="admin__photos__h">Subjects ${cat ? "in " + escapeHtml(stripPrefix(cat.folder)) : ""}</h4>
+          <ul class="admin__photos__list admin__photos__list--draggable" id="adminPhotoSubjsList"></ul>
+          <p class="admin__photos__hint">Drag subjects to reorder</p>
+        </div>
+        <div class="admin__photos__col admin__photos__col--wide" id="adminPhotoFiles">
+          <h4 class="admin__photos__h">Photos ${subj ? "in " + escapeHtml(stripPrefix(subj.folder)) : ""}</h4>
+          <ul class="admin__photos__grid admin__photos__grid--draggable" id="adminPhotoFilesList"></ul>
+          <p class="admin__photos__hint">Drag photos to reorder. The first one is the lead/cover.</p>
+        </div>
+      </div>
+    `;
+
+    // Categories list — clickable, no drag (reordering categories is rare
+    // and we don't want to risk breaking the category slug mapping)
+    const catsUl = document.getElementById("adminPhotoCatsList");
+    photosState.categories.forEach((c, i) => {
+      const li = document.createElement("li");
+      li.className =
+        "admin__photos__item" + (i === photosActiveCatIdx ? " is-active" : "");
+      li.innerHTML = `<span>${escapeHtml(c.folder)}</span><span class="admin__photos__count">${c.subjects.length}</span>`;
+      li.addEventListener("click", () => {
+        photosActiveCatIdx = i;
+        photosActiveSubjIdx = 0;
+        renderPhotos();
+      });
+      catsUl.appendChild(li);
+    });
+
+    // Subjects list — draggable
+    const subjsUl = document.getElementById("adminPhotoSubjsList");
+    if (cat) {
+      cat.subjects.forEach((s, i) => {
+        const li = document.createElement("li");
+        li.className =
+          "admin__photos__item admin__photos__item--draggable" +
+          (i === photosActiveSubjIdx ? " is-active" : "");
+        li.dataset.subjIdx = String(i);
+        li.innerHTML =
+          `<span class="admin__photos__grip" aria-hidden="true">⋮⋮</span>` +
+          `<span>${escapeHtml(stripPrefix(s.folder))}</span>` +
+          `<span class="admin__photos__count">${s.photos.length}</span>`;
+        li.addEventListener("click", (ev) => {
+          if (ev.target.closest(".admin__photos__grip")) return;
+          photosActiveSubjIdx = i;
+          renderPhotos();
+        });
+        subjsUl.appendChild(li);
+      });
+
+      photosSortables.push(new Sortable(subjsUl, {
+        handle: ".admin__photos__grip",
+        animation: 160,
+        ghostClass: "is-dragging",
+        onEnd: (evt) => {
+          if (evt.oldIndex === evt.newIndex) return;
+          const moved = cat.subjects.splice(evt.oldIndex, 1)[0];
+          cat.subjects.splice(evt.newIndex, 0, moved);
+          // Recompute "01-Name", "02-Name", … prefixes
+          renumberSubjects(cat);
+          // Keep active subject pointing to the moved one
+          photosActiveSubjIdx = evt.newIndex;
+          renderPhotos();
+          recountPending();
+        },
+      }));
+    }
+
+    // Photos grid — draggable thumbnails
+    const filesUl = document.getElementById("adminPhotoFilesList");
+    if (subj) {
+      const catFolder = cat.folder;
+      const subjFolder = subj.folder;
+      subj.photos.forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "admin__photos__tile";
+        li.dataset.fileIdx = String(i);
+        const url =
+          "/photos-web/" +
+          encodeURIComponent(catFolder) +
+          "/" +
+          encodeURIComponent(subjFolder) +
+          "/" +
+          encodeURIComponent(p.originalFile || p.file);
+        const isLead = i === 0;
+        li.innerHTML =
+          `<img src="${url}" alt="" loading="lazy"/>` +
+          (isLead ? `<span class="admin__photos__lead">LEAD</span>` : "") +
+          `<span class="admin__photos__filename">${escapeHtml(p.file)}</span>`;
+        filesUl.appendChild(li);
+      });
+
+      photosSortables.push(new Sortable(filesUl, {
+        animation: 160,
+        ghostClass: "is-dragging",
+        onEnd: (evt) => {
+          if (evt.oldIndex === evt.newIndex) return;
+          const moved = subj.photos.splice(evt.oldIndex, 1)[0];
+          subj.photos.splice(evt.newIndex, 0, moved);
+          renumberPhotos(subj);
+          renderPhotos();
+          recountPending();
+        },
+      }));
+    }
+  }
+
+  // After a drag, regenerate the leading "NN-" prefixes so the
+  // current array order becomes the alphabetic order on the filesystem.
+  function renumberSubjects(cat) {
+    cat.subjects.forEach((s, i) => {
+      const pad = String(i + 1).padStart(2, "0");
+      const stripped = stripPrefix(s.folder);
+      s.folder = `${pad}-${stripped}`;
+    });
+  }
+  function renumberPhotos(subj) {
+    subj.photos.forEach((p, i) => {
+      const pad = String(i + 1).padStart(2, "0");
+      const stripped = stripPrefix(p.file).replace(/^[-_]+/, "");
+      // Preserve the original extension
+      p.file = `${pad}-${stripped}`;
+    });
+  }
+
+  function stripPrefix(name) {
+    return String(name || "").replace(/^\d+-\s*/, "");
+  }
+
+  function recountPending() {
+    if (!photosState || !photosOriginal) {
+      setPhotosPending(0);
+      return;
+    }
+    let changes = 0;
+    photosState.categories.forEach((cat, ci) => {
+      const orig = photosOriginal.categories[ci];
+      if (!orig) return;
+      cat.subjects.forEach((subj, si) => {
+        const origSubj = orig.subjects.find(
+          (s) => s.folder === subj.originalFolder
+        );
+        if (!origSubj) return;
+        if (subj.folder !== subj.originalFolder) changes++;
+        subj.photos.forEach((p, pi) => {
+          if (p.file !== p.originalFile) changes++;
+        });
+      });
+    });
+    setPhotosPending(changes);
+  }
+
+  function setPhotosPending(n) {
+    const el = document.getElementById("photosPending");
+    const btn = document.getElementById("photosPublishBtn");
+    if (n === 0) {
+      el.textContent = "No pending changes";
+      el.className = "admin__status admin__status--inline";
+      if (btn) btn.disabled = true;
+    } else {
+      el.textContent = `${n} pending change${n === 1 ? "" : "s"}`;
+      el.className = "admin__status admin__status--inline admin__status--pending";
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function publishPhotos() {
+    if (!photosState) return;
+    photosStatus("", "Publishing…");
+    const btn = document.getElementById("photosPublishBtn");
+    if (btn) btn.disabled = true;
+    try {
+      const payload = {
+        commitSha: photosState.commitSha,
+        categories: photosState.categories.map((c) => ({
+          folder: c.folder,
+          originalFolder: c.originalFolder,
+          subjects: c.subjects.map((s) => ({
+            folder: s.folder,
+            originalFolder: s.originalFolder,
+            photos: s.photos.map((p) => ({
+              file: p.file,
+              originalFile: p.originalFile,
+            })),
+          })),
+        })),
+        uploads: {},
+        commitMessage: "Photos reorder via /admin",
+      };
+      const res = await authFetch("/api/admin-photos-publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Publish failed (${res.status})`);
+      photosStatus("ok", body.message || "Published.");
+      // After publish, reload from the new tree so we start fresh
+      await loadPhotos();
+    } catch (e) {
+      photosStatus("err", e.message);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.getElementById("photosPublishBtn").addEventListener("click", publishPhotos);
+  document.getElementById("photosRefreshBtn").addEventListener("click", () => {
+    loadPhotos().catch((e) => photosStatus("err", e.message));
+  });
+
+  function photosStatus(kind, msg) {
+    const el = document.getElementById("photosStatus");
     if (!el) return;
     el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
     el.textContent = msg || "";
