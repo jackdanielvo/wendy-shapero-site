@@ -29,3 +29,8 @@ wendy-portait.jpg
 # generates from this tree. Wendy keeps the masters locally for
 # any print work / future re-export needs.
 photos/
+
+# Recovery-leftover hidden dirs inside photos-web/ (sandbox couldn't
+# delete files owned by the host user; they're moved here and ignored)
+photos-web/.old_trash/
+photos-web/.empty_*/
