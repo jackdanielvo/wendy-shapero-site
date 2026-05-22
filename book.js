@@ -94,11 +94,14 @@
   // hidden by default; show only the active one.
   // ----------------------------------------------------------
   function gotoStep(n) {
+    // Steps can be numeric (1, 2, 3, 4) or named (e.g., "2-inquiry").
+    // Compare as strings so both work.
+    const target = String(n);
     document.querySelectorAll("[data-step]").forEach((el) => {
-      el.hidden = Number(el.dataset.step) !== n;
+      el.hidden = String(el.dataset.step) !== target;
     });
     // Smooth scroll to the new step
-    const active = document.querySelector(`[data-step="${n}"]`);
+    const active = document.querySelector(`[data-step="${target}"]`);
     if (active) active.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -153,15 +156,28 @@
   // ----------------------------------------------------------
   function selectPackage(pkg) {
     if (pkg.inquiry) {
-      // Quote-based — open mailto with subject line. Phase 1.
-      window.location.href =
-        "mailto:wendy@wendypix.com" +
-        "?subject=" +
-        encodeURIComponent(pkg.name + " inquiry") +
-        "&body=" +
-        encodeURIComponent(
-          `Hi Wendy,\n\nI'm interested in booking a ${pkg.name.toLowerCase()} session.\n\nA bit about the project:\n\n— `
-        );
+      // Quote-based packages route to an inline inquiry form instead of
+      // the slot picker. The form posts to /api/inquiry which emails
+      // Wendy via Resend. No mailto: app-launch dialog, works on every
+      // device.
+      state.package = pkg;
+      const chosen = document.getElementById("inquiryChosenPackage");
+      if (chosen) chosen.textContent = `${pkg.name} · quote-based`;
+      // Show/hide the guest-count row based on package id
+      const guestsRow = document.getElementById("row-i-guests");
+      if (guestsRow) {
+        const isEvent = /event/i.test(pkg.id) || /event/i.test(pkg.name);
+        guestsRow.hidden = !isEvent;
+      }
+      // Clear any prior status / submit-button state
+      const status = document.getElementById("inquiryStatus");
+      if (status) {
+        status.textContent = "";
+        status.className = "admin__status admin__status--inline";
+      }
+      const submitBtn = document.getElementById("inquirySubmitBtn");
+      if (submitBtn) submitBtn.disabled = false;
+      gotoStep("2-inquiry");
       return;
     }
     state.package = pkg;
@@ -169,6 +185,85 @@
       `${pkg.name} · $${pkg.price.toLocaleString()} · ${pkg.duration / 60} hours`;
     loadAvailability();
     gotoStep(2);
+  }
+
+  // ----------------------------------------------------------
+  // INQUIRY FORM submit — POST to /api/inquiry, show in-page result
+  // ----------------------------------------------------------
+  const inquiryForm = document.getElementById("inquiryForm");
+  if (inquiryForm) {
+    inquiryForm.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const pkg = state.package;
+      if (!pkg) {
+        inquirySetStatus("err", "Pick a package first.");
+        return;
+      }
+      const status = document.getElementById("inquiryStatus");
+      const submitBtn = document.getElementById("inquirySubmitBtn");
+
+      // Collect values
+      const payload = {
+        packageId: pkg.id,
+        packageName: pkg.name,
+        name: (document.getElementById("i-name").value || "").trim(),
+        email: (document.getElementById("i-email").value || "").trim(),
+        phone: (document.getElementById("i-phone").value || "").trim(),
+        eventDate: (document.getElementById("i-date").value || "").trim(),
+        guestCount: (document.getElementById("i-guests").value || "").trim(),
+        notes: (document.getElementById("i-notes").value || "").trim(),
+      };
+
+      // Client-side validation
+      if (!payload.name) {
+        inquirySetStatus("err", "Please add your name.");
+        return;
+      }
+      if (!payload.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+        inquirySetStatus("err", "Please add a valid email.");
+        return;
+      }
+      if (!payload.notes) {
+        inquirySetStatus("err", "Please tell me a bit about your project.");
+        return;
+      }
+
+      inquirySetStatus("", "Sending…");
+      if (submitBtn) submitBtn.disabled = true;
+
+      try {
+        const res = await fetch("/api/inquiry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body.error || `Send failed (${res.status})`);
+        }
+        // Success — show the same "done" step the booking flow uses
+        const doneSummary = document.getElementById("doneSummary");
+        if (doneSummary) {
+          doneSummary.textContent =
+            body.message ||
+            `Thanks, ${payload.name.split(" ")[0]}! Your inquiry is in — Wendy will be in touch within 24 hours.`;
+        }
+        gotoStep(4);
+        // Reset the form for any future submissions
+        inquiryForm.reset();
+      } catch (e) {
+        inquirySetStatus("err", e.message || "Couldn't send right now.");
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+  }
+
+  function inquirySetStatus(kind, msg) {
+    const el = document.getElementById("inquiryStatus");
+    if (!el) return;
+    el.className =
+      "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
   }
 
   // ----------------------------------------------------------
@@ -515,6 +610,7 @@
     const action = e.target.dataset && e.target.dataset.action;
     if (action === "back-to-package") gotoStep(1);
     else if (action === "back-to-slot") gotoStep(2);
+    else if (action === "back-to-package-from-inquiry") gotoStep(1);
   });
 
   // ----------------------------------------------------------

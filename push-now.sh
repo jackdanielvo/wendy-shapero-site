@@ -1,7 +1,7 @@
 #!/bin/bash
-# Admin Photos: add a "+ New subject" button so Wendy can create
-# new people as she gets new clients, without anyone having to
-# touch the codebase.
+# Inline inquiry form on /book — replaces the mailto: flow for
+# event + lifestyle packages so clients never see the
+# "Open Chrome.app?" macOS dialog.
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -27,56 +27,55 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add admin.html admin.js admin.css push-now.sh
+git add book.html book.js \
+        netlify/functions/inquiry.js \
+        push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: 'New subject' button — onboard new clients
+git commit -m "/book: inline inquiry form for event + lifestyle packages
 
-Wendy gets new clients regularly, and previously she had no way
-to add a new subject (new person) to a category — only to
-reorder, delete, or add photos to subjects that already existed.
-A new + New subject button now sits below the subjects list in
-the Photos tab.
+Previously, clicking an inquiry-only package (Lifestyle / Event
+Coverage) fired a mailto: link, which on macOS spawned an
+'Open Google Chrome.app?' app-launch dialog and required the
+user to have an email client configured. Half-broken on mobile.
 
-UX flow:
-1. Click '+ New subject' under the Subjects column.
-2. Browser prompt asks for the name (e.g., 'Maria Jones').
-3. Client-side validation:
-   - Non-blank after trim.
-   - No path-unfriendly characters (/, \\, :).
-   - No duplicate of an existing subject in the same category
-     (case-insensitive, ignoring the NN- prefix).
-4. New subject is appended to the category with the next
-   available NN- prefix (e.g., '04-Maria Jones'), auto-selected,
-   and the photo grid shows the + tile so she can immediately
-   drop photos in.
-5. Pending-changes counter increments by 1 (the new subject)
-   plus one per uploaded photo.
-6. On Publish, the existing upload pipeline commits each new
-   photo blob at photos-web/<cat>/<NN-Subject>/<NN-Subject>.jpg
-   in a single GitHub commit. Git materializes the folder
-   implicitly via the file paths.
+Replaced with an inline form rendered as a new step
+([data-step='2-inquiry']) that visitors see right after picking
+a quote-based package. Fields:
+  - Name (required)
+  - Email (required, validated)
+  - Phone (optional)
+  - Event / shoot date
+  - Guest count / scope (shown only when package id/name
+    matches /event/i)
+  - Notes (required, the heart of the inquiry)
 
-Edge case: if Wendy creates a subject but publishes without
-adding any photos, the subject silently vanishes — git can't
-track empty folders. The status hint after creation tells her
-what to do next ('Click the + tile in the photo grid to add
-photos.'), and the pending counter still reflects the empty
-subject so she's aware she has unfinished work.
+Submit POSTs JSON to /api/inquiry (new Netlify Function
+netlify/functions/inquiry.js), which:
+  - Validates server-side
+  - Uses Resend (already in use for booking confirmations)
+    to send a formatted email to wendy@wendypix.com with a
+    Reply-To set to the client's email so she can reply
+    directly from her inbox
+  - Sends an automatic 'we got it' confirmation back to the
+    client so they know it landed
+  - Returns a friendly success message; book.js then routes
+    the visitor to the existing 'You're on the list' done
+    step so the visual flow is consistent with the booking
+    completion path
 
-Style: the button is a dashed-bordered, full-width, plum-leaning
-teal pill, visually distinct from the photo + tile so the two
-add-actions don't read as the same control.
+step-navigation tweak: gotoStep() now compares step IDs as
+strings instead of Number-coercing them, so the named
+'2-inquiry' step plays nicely with the existing 1/2/3/4
+numeric flow.
 
-No server-side changes needed — admin-photos-publish.js already
-handles subj.originalFolder = null gracefully by falling back
-to subj.folder for the upload branch (which is the only branch
-that runs for a brand-new subject, since all its photos are
-uploads).
+Required Netlify env: RESEND_API_KEY (already set, same key
+booking uses). Optional: WENDY_EMAIL override (defaults to
+wendy@wendypix.com).
 
-Cache buster: admin.css and admin.js bumped to v=2026-05-22-newsubj."
+book.js cache buster bumped to v=2026-05-22-inquiry."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

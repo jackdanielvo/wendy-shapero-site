@@ -91,6 +91,56 @@
       </div>
     </section>
 
+    <!-- STEP 2-INQUIRY: Inquiry form (for quote-based packages — lifestyle,
+         events). Replaces the slot picker + form for inquiry packages. -->
+    <section class="block" id="step-inquiry" data-step="2-inquiry" hidden>
+      <p class="block__num">02.</p>
+      <h2 class="block__title">Tell me about your shoot.</h2>
+
+      <p class="book__chosen-package" id="inquiryChosenPackage" aria-live="polite">
+        <!-- e.g. "Event Coverage — quote-based" -->
+      </p>
+
+      <p class="book__lede" style="margin: 8px 0 24px; color: var(--muted);">
+        Quote-based packages need a quick scoping conversation. Fill this out
+        and I'll reply within 24 hours with availability and a quote.
+      </p>
+
+      <form class="book__form" id="inquiryForm" novalidate>
+        <div class="book__row">
+          <label for="i-name">Full name</label>
+          <input type="text" id="i-name" name="name" required autocomplete="name" />
+        </div>
+        <div class="book__row">
+          <label for="i-email">Email</label>
+          <input type="email" id="i-email" name="email" required autocomplete="email" />
+        </div>
+        <div class="book__row">
+          <label for="i-phone">Phone <span class="muted">(optional)</span></label>
+          <input type="tel" id="i-phone" name="phone" autocomplete="tel" />
+        </div>
+        <div class="book__row">
+          <label for="i-date">Event / shoot date <span class="muted">(approximate is fine)</span></label>
+          <input type="date" id="i-date" name="eventDate" />
+        </div>
+        <div class="book__row" id="row-i-guests">
+          <label for="i-guests">Estimated guests / scope <span class="muted">(events only)</span></label>
+          <input type="text" id="i-guests" name="guestCount" placeholder="e.g., 60 people, or '2-hour cocktail'" />
+        </div>
+        <div class="book__row">
+          <label for="i-notes">Tell me about the project</label>
+          <textarea id="i-notes" name="notes" rows="5" required
+            placeholder="What's the occasion? Location? Vibe / references? Any deliverables you need (specific image counts, usage rights)? The more detail, the better I can scope."></textarea>
+        </div>
+
+        <p class="cta__actions">
+          <button type="submit" class="btn btn--primary" id="inquirySubmitBtn">Send inquiry</button>
+          <button type="button" class="btn btn--ghost" data-action="back-to-package-from-inquiry">&larr; Change package</button>
+        </p>
+        <p class="admin__status admin__status--inline" id="inquiryStatus" aria-live="polite"></p>
+      </form>
+    </section>
+
     <!-- STEP 2: Pick a date & time -->
     <section class="block" id="step-slot" data-step="2" hidden>
       <p class="block__num">02.</p>
@@ -177,7 +227,7 @@
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
   </footer>
 
-  <script src="book.js?v=2026-05-08-slotlock"></script>
+  <script src="book.js?v=2026-05-22-inquiry"></script>
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
     (function () {
