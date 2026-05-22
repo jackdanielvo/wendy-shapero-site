@@ -234,8 +234,10 @@ function main() {
     // Match both the BUILDTIME placeholder (template state) and any
     // previously substituted timestamp, so re-running the build always
     // produces a fresh value.
+    // Match the literal placeholder OR any prior baked-in token (alnum
+     // + dashes) so this regex catches whatever the previous build wrote.
     html = html.replace(
-      /(data\/photos\.js\?v=)(?:BUILDTIME|\d{8}T\d{6})/g,
+      /(data\/photos\.js\?v=)[\w-]+/g,
       `$1${stamp}`
     );
     if (html !== before) {

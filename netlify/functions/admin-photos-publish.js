@@ -106,11 +106,22 @@ exports.handler = async (event, context) => {
       `/repos/${repo}/git/trees/${baseTreeSha}?recursive=1`,
       { token }
     );
+    // We key the blob lookup by both the literal path AND a
+    // segment-trimmed version, because folder/file names with
+    // accidental leading/trailing whitespace would otherwise fail
+    // lookup after sanitizeSegment() trims them client-side. (Real
+    // example: "15-Rebecca " with trailing space was breaking
+    // every publish that touched the Women category.)
     const blobByPath = new Map();
     const existingPhotoPaths = new Set();
     for (const entry of treeRes.tree) {
       if (entry.type === "blob") {
         blobByPath.set(entry.path, entry.sha);
+        // Also index by the trimmed-segment variant if it differs
+        const trimmed = trimPathSegments(entry.path);
+        if (trimmed !== entry.path) {
+          blobByPath.set(trimmed, entry.sha);
+        }
         if (
           entry.path.startsWith(PHOTOS_PREFIX) &&
           IMAGE_RE.test(entry.path)
@@ -272,6 +283,14 @@ exports.handler = async (event, context) => {
     return json(500, { error: err.message || String(err) });
   }
 };
+
+// Trim whitespace from each segment of a slash-separated path. Used
+// to make the blob lookup tolerant of folder/file names that
+// accidentally have leading/trailing spaces in the repo (e.g.
+// "15-Rebecca " — easy to introduce when renaming in Finder).
+function trimPathSegments(p) {
+  return String(p || "").split("/").map((s) => s.trim()).join("/");
+}
 
 // Defensive — block any path traversal attempts in folder/file names.
 function sanitizeSegment(s) {
