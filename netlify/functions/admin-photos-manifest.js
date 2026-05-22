@@ -104,19 +104,44 @@ exports.handler = async (event, context) => {
 };
 
 async function gh(path, { token }) {
-  const res = await fetch(`https://api.github.com${path}`, {
+  const opts = {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "wendypix-admin",
     },
-  });
-  if (!res.ok) {
+  };
+  // Retry transient 5xx / 429 with exponential backoff.
+  const maxAttempts = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res;
+    try {
+      res = await fetch(`https://api.github.com${path}`, opts);
+    } catch (netErr) {
+      lastErr = netErr;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+      throw netErr;
+    }
+    if (res.ok) return res.json();
     const txt = await res.text();
-    throw new Error(`GitHub ${res.status} on ${path}: ${txt.slice(0, 250)}`);
+    const err = new Error(
+      `GitHub ${res.status} on ${path}: ${txt.slice(0, 250)}`
+    );
+    if (res.status >= 500 || res.status === 429) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+    }
+    throw err;
   }
-  return res.json();
+  throw lastErr || new Error("GitHub call failed");
 }
 
 function json(code, body) {

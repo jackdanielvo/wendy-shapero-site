@@ -194,15 +194,39 @@ async function gh(path, { token, method = "GET", body }) {
     opts.body = JSON.stringify(body);
     opts.headers["Content-Type"] = "application/json";
   }
-  const res = await fetch(`https://api.github.com${path}`, opts);
-  if (!res.ok) {
+  // Retry transient 5xx / 429 errors with exponential backoff.
+  const maxAttempts = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res;
+    try {
+      res = await fetch(`https://api.github.com${path}`, opts);
+    } catch (netErr) {
+      lastErr = netErr;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+      throw netErr;
+    }
+    if (res.ok) {
+      if (res.status === 204) return null;
+      return res.json();
+    }
     const txt = await res.text();
-    throw new Error(
+    const err = new Error(
       `GitHub ${res.status} on ${method} ${path}: ${txt.slice(0, 300)}`
     );
+    if (res.status >= 500 || res.status === 429) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+    }
+    throw err;
   }
-  if (res.status === 204) return null;
-  return res.json();
+  throw lastErr || new Error("GitHub call failed");
 }
 
 function json(code, body) {

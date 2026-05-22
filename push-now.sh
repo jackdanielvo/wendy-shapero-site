@@ -1,9 +1,7 @@
 #!/bin/bash
-# Fix the Rebecca/Shari trailing-space bug — admin publish was
-# failing on the Women category because two folder names had
-# stray trailing spaces that sanitizeSegment() trimmed but the
-# blob lookup couldn't reconcile. Also makes the publish function
-# tolerant of future stray-whitespace cases.
+# Fix the GitHub 502 on /git/trees during admin publish:
+#  - Shrink the request by skipping no-op tree entries
+#  - Retry transient 5xx / 429 errors with backoff
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -29,63 +27,40 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add -A photos-web/ \
-        netlify/functions/admin-photos-publish.js \
-        scripts/build-photos.js \
-        index.html \
-        data/photos.js data/photos.json \
+git add netlify/functions/admin-photos-publish.js \
+        netlify/functions/admin-hero.js \
+        netlify/functions/admin-photos-manifest.js \
         push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Fix admin publish failing on Women — trailing-space folder names
+git commit -m "Admin publish: skip no-op tree entries + retry on GitHub 5xx
 
-Symptom: trying to delete a Rene photo in /admin Publish returned
-  'Cannot find original blob for photos-web/1-Women/15-Rebecca/01-Rebecca.jpg'
-even though Rene's edit had nothing to do with Rebecca. Same
-error would happen for any Women-category change — the first
-blob the publish function couldn't resolve was Rebecca's.
+Two related fixes for the 'GitHub 502 on POST /git/trees' error
+that hit when trying to delete a Rene photo in /admin Publish:
 
-Root cause: two folders in photos-web/1-Women had accidental
-trailing spaces in their names:
-  photos-web/1-Women/15-Rebecca <-- trailing space
-  photos-web/1-Women/16-Shari   <-- trailing space
-The admin UI displayed them trimmed (because the admin's
-sanitizeSegment() trims input). When the manifest came back to
-the publish function, sanitizeSegment trimmed again, but the
-GitHub blob path map keyed by the LITERAL (untrimmed) path. So
-every Women publish hit a 'Cannot find original blob for ...'
-on the first attempt to reference a Rebecca or Shari file.
+1) The publish function was emitting a tree entry for every
+photo in the new manifest, including those whose path didn't
+change at all. With ~340 photos in the catalog, even a
+single-photo delete sent ~340 tree entries to GitHub. Skip the
+ones where oldPath === newPath — those are no-ops and GitHub
+doesn't need to know about them. Reduces the typical payload by
+1-2 orders of magnitude.
 
-Two-part fix:
+2) Wrap the gh() helper in admin-photos-publish.js,
+admin-photos-manifest.js, and admin-hero.js with retry-on-5xx
+logic: 3 attempts total with exponential backoff (500ms, 1s),
+re-trying only on 5xx and 429. 4xx errors are our bug and don't
+get retried. Network-level failures (DNS, connection reset)
+also trigger a retry.
 
-1. Rename the offending folders to drop trailing spaces:
-     photos-web/1-Women/15-Rebecca <space> -> 15-Rebecca
-     photos-web/1-Women/16-Shari <space>   -> 16-Shari
-   Did this via git mv so history is preserved as a rename, not
-   a delete+add.
-
-2. Belt-and-suspenders: admin-photos-publish.js now indexes the
-   blob lookup map by BOTH the literal path AND a segment-trimmed
-   variant. So any future stray whitespace anywhere in the tree
-   won't break publishes. New helper trimPathSegments() handles
-   the normalization.
-
-Also fixed a small regex bug in scripts/build-photos.js that
-prevented the cache-buster substitution on subsequent runs:
-the original regex required the timestamp to contain a literal
-'T' separator, but the .replace() that produces the timestamp
-strips T along with - and :. Switched to a looser
-'?v=[\\w-]+' match so any previous token (BUILDTIME, with-T, or
-without-T timestamps) gets substituted on every build.
-
-Effect: Women-category publishes work again. Future folder
-typos won't surface as cryptic blob-lookup errors. And the
-data/photos.js cache buster updates reliably on every deploy."
+Net effect: small edits in /admin should commit fast and
+reliably. Even when GitHub's tree endpoint is having a moment,
+a single 502 won't fail the user-facing publish."
 echo ""
 
-echo "=== 5. Pulling latest from origin (admin endpoints commit directly via the GitHub API, so the remote may have moved on without us) ==="
+echo "=== 5. Pulling latest from origin ==="
 git pull --rebase origin main || {
   echo "    pull failed - resolve conflicts then re-run"
   exit 3

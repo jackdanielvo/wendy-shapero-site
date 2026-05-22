@@ -197,6 +197,14 @@ exports.handler = async (event, context) => {
                 error: `Cannot find original blob for ${oldPath}`,
               });
             }
+            // Skip no-ops: if the photo is at the SAME path with the
+            // SAME content, GitHub doesn't need a tree entry. Sending
+            // hundreds of identical entries on every publish was
+            // bloating the request and occasionally tripping GitHub
+            // 502s on the /git/trees endpoint.
+            if (oldPath === newPath) {
+              continue;
+            }
             treeChanges.push({
               path: newPath,
               mode: "100644",
@@ -316,15 +324,44 @@ async function gh(path, { token, method = "GET", body }) {
     opts.body = JSON.stringify(body);
     opts.headers["Content-Type"] = "application/json";
   }
-  const res = await fetch(`https://api.github.com${path}`, opts);
-  if (!res.ok) {
+  // Retry transient 5xx errors with exponential backoff. GitHub
+  // occasionally 502s on the trees endpoint and a quick retry
+  // usually succeeds. We don't retry 4xx since those are our bug.
+  const maxAttempts = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let res;
+    try {
+      res = await fetch(`https://api.github.com${path}`, opts);
+    } catch (netErr) {
+      // Network-level failure (DNS, connection reset, etc.)
+      lastErr = netErr;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+      throw netErr;
+    }
+    if (res.ok) {
+      if (res.status === 204) return null;
+      return res.json();
+    }
     const txt = await res.text();
-    throw new Error(
+    const err = new Error(
       `GitHub ${res.status} on ${method} ${path}: ${txt.slice(0, 300)}`
     );
+    // Only retry on transient 5xx (502, 503, 504) or 429 (rate limited).
+    // 4xx errors are our bug and won't change on retry.
+    if (res.status >= 500 || res.status === 429) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+        continue;
+      }
+    }
+    throw err;
   }
-  if (res.status === 204) return null;
-  return res.json();
+  throw lastErr || new Error("GitHub call failed");
 }
 
 function json(code, body) {
