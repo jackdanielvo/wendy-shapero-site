@@ -722,20 +722,22 @@
       });
       li.addEventListener("drop", (e) => {
         li.classList.remove("is-drop-target");
-        const subjIdxStr = e.dataTransfer.getData("application/wendypix-subject");
-        if (subjIdxStr === "") return;
+        const raw = e.dataTransfer.getData("application/wendypix-subject");
+        if (!raw) return;
         e.preventDefault();
-        const fromCatIdx = photosActiveCatIdx;
+        let data;
+        try { data = JSON.parse(raw); } catch { return; }
+        const fromCatIdx = data.catIdx;
+        const subjIdx = data.subjIdx;
         const toCatIdx = i;
-        if (fromCatIdx === toCatIdx) return; // same category — no-op
-        const subjIdx = parseInt(subjIdxStr, 10);
+        if (fromCatIdx === toCatIdx) return; // dropped on same category
         const fromCat = photosState.categories[fromCatIdx];
         const toCat = photosState.categories[toCatIdx];
         const moved = fromCat.subjects.splice(subjIdx, 1)[0];
         toCat.subjects.push(moved);
         renumberSubjects(fromCat);
         renumberSubjects(toCat);
-        // Follow the moved subject so the user can see where it landed
+        // Follow the moved subject so the user sees where it landed
         photosActiveCatIdx = toCatIdx;
         photosActiveSubjIdx = toCat.subjects.length - 1;
         renderPhotos();
@@ -752,14 +754,16 @@
     // Subjects list — draggable
     const subjsUl = document.getElementById("adminPhotoSubjsList");
     if (cat) {
+      // Subjects use PURE NATIVE HTML5 DnD (no SortableJS) so we have
+      // full control over both within-list reorder AND cross-category
+      // moves. SortableJS preventDefaults dragstart events from outside
+      // its handle, which was killing our cross-list drag.
       cat.subjects.forEach((s, i) => {
         const li = document.createElement("li");
         li.className =
           "admin__photos__item admin__photos__item--draggable" +
           (i === photosActiveSubjIdx ? " is-active" : "");
         li.dataset.subjIdx = String(i);
-        // draggable for cross-category move (SortableJS handles
-        // within-list reorder via the grip).
         li.draggable = true;
         li.innerHTML =
           `<span class="admin__photos__grip" aria-hidden="true">⋮⋮</span>` +
@@ -771,10 +775,13 @@
           renderPhotos();
         });
 
-        // SOURCE for cross-category drag — subject can be dragged to
-        // a category li in the Categories pane.
+        // DRAG SOURCE: stash the source category + subject index in
+        // a custom MIME type the drop targets can sniff.
         li.addEventListener("dragstart", (e) => {
-          e.dataTransfer.setData("application/wendypix-subject", String(i));
+          e.dataTransfer.setData(
+            "application/wendypix-subject",
+            JSON.stringify({ catIdx: photosActiveCatIdx, subjIdx: i })
+          );
           e.dataTransfer.effectAllowed = "move";
           li.classList.add("is-dragging");
         });
@@ -782,21 +789,26 @@
           li.classList.remove("is-dragging");
         });
 
-        // TARGET for photo cross-subject moves — drag a photo onto
-        // this subject to move it here (within the current category).
+        // DROP TARGET — accepts either another subject (for reorder
+        // within the same category) or a photo (for cross-subject
+        // move within the current category).
         li.addEventListener("dragover", (e) => {
+          const t = e.dataTransfer && Array.from(e.dataTransfer.types);
           if (
-            e.dataTransfer &&
-            Array.from(e.dataTransfer.types).includes("application/wendypix-photo")
+            t &&
+            (t.includes("application/wendypix-subject") ||
+              t.includes("application/wendypix-photo"))
           ) {
             e.preventDefault();
             e.dataTransfer.dropEffect = "move";
           }
         });
         li.addEventListener("dragenter", (e) => {
+          const t = e.dataTransfer && Array.from(e.dataTransfer.types);
           if (
-            e.dataTransfer &&
-            Array.from(e.dataTransfer.types).includes("application/wendypix-photo")
+            t &&
+            (t.includes("application/wendypix-subject") ||
+              t.includes("application/wendypix-photo"))
           ) {
             li.classList.add("is-drop-target");
           }
@@ -806,46 +818,56 @@
         });
         li.addEventListener("drop", (e) => {
           li.classList.remove("is-drop-target");
-          const photoIdxStr = e.dataTransfer.getData("application/wendypix-photo");
-          if (photoIdxStr === "") return;
           e.preventDefault();
-          const fromSubjIdx = photosActiveSubjIdx;
-          const toSubjIdx = i;
-          if (fromSubjIdx === toSubjIdx) return; // dropping onto same subject — no-op
-          const photoIdx = parseInt(photoIdxStr, 10);
-          const fromSubj = cat.subjects[fromSubjIdx];
-          const toSubj = cat.subjects[toSubjIdx];
-          const movedPhoto = fromSubj.photos.splice(photoIdx, 1)[0];
-          toSubj.photos.push(movedPhoto);
-          renumberPhotos(fromSubj);
-          renumberPhotos(toSubj);
-          renderPhotos();
-          recountPending();
-          photosStatus(
-            "ok",
-            `Moved photo to "${stripPrefix(toSubj.folder)}".`
-          );
+          const types = Array.from(e.dataTransfer.types);
+
+          if (types.includes("application/wendypix-subject")) {
+            // SUBJECT drop onto another subject → REORDER within cat
+            let data;
+            try {
+              data = JSON.parse(
+                e.dataTransfer.getData("application/wendypix-subject")
+              );
+            } catch { return; }
+            if (data.catIdx !== photosActiveCatIdx) return; // cross-cat handled by category drop, not here
+            if (data.subjIdx === i) return; // dropped on self
+            const moved = cat.subjects.splice(data.subjIdx, 1)[0];
+            // If we removed an item BEFORE the target index, the
+            // target shifts down by one.
+            const newIdx = data.subjIdx < i ? i - 1 : i;
+            cat.subjects.splice(newIdx, 0, moved);
+            renumberSubjects(cat);
+            photosActiveSubjIdx = newIdx;
+            renderPhotos();
+            recountPending();
+            return;
+          }
+
+          if (types.includes("application/wendypix-photo")) {
+            // PHOTO drop onto a subject → move photo into this subject
+            const photoIdx = parseInt(
+              e.dataTransfer.getData("application/wendypix-photo"),
+              10
+            );
+            if (i === photosActiveSubjIdx) return; // dropped on the source subject
+            const fromSubj = cat.subjects[photosActiveSubjIdx];
+            const toSubj = cat.subjects[i];
+            const movedPhoto = fromSubj.photos.splice(photoIdx, 1)[0];
+            toSubj.photos.push(movedPhoto);
+            renumberPhotos(fromSubj);
+            renumberPhotos(toSubj);
+            renderPhotos();
+            recountPending();
+            photosStatus(
+              "ok",
+              `Moved photo to "${stripPrefix(toSubj.folder)}".`
+            );
+            return;
+          }
         });
 
         subjsUl.appendChild(li);
       });
-
-      photosSortables.push(new Sortable(subjsUl, {
-        handle: ".admin__photos__grip",
-        animation: 160,
-        ghostClass: "is-dragging",
-        onEnd: (evt) => {
-          if (evt.oldIndex === evt.newIndex) return;
-          const moved = cat.subjects.splice(evt.oldIndex, 1)[0];
-          cat.subjects.splice(evt.newIndex, 0, moved);
-          // Recompute "01-Name", "02-Name", … prefixes
-          renumberSubjects(cat);
-          // Keep active subject pointing to the moved one
-          photosActiveSubjIdx = evt.newIndex;
-          renderPhotos();
-          recountPending();
-        },
-      }));
 
       // "+ New subject" button wiring — prompts Wendy for the
       // subject name, validates uniqueness within the category,

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Catch-up push: the home-page buildHero() change (heroPhotos
-# drives card order) never got committed, and the cross-list
-# drag commit never made it to origin. This script commits the
-# stragglers and pushes everything.
+# Fix cross-category drag — replace SortableJS on the subjects list
+# with pure native HTML5 drag-and-drop. SortableJS was preventDefaulting
+# the dragstart event when the source wasn't the grip handle, which
+# killed cross-list drag before our handler could set the dataTransfer.
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -27,49 +27,62 @@ echo "=== 2. Current state ==="
 git status --short
 echo ""
 
-# If script.js is dirty, commit the hero-order change. Otherwise skip.
-if git diff --quiet -- script.js; then
-  echo "=== 3. script.js already clean — skipping commit ==="
-else
-  echo "=== 3. Committing the missed hero-order change in script.js ==="
-  git add script.js
-  git commit -m "Home hero: card order now follows heroPhotos array
-
-The home page's buildHero() was still iterating the categories
-array in fixed order — so even after the admin Hero tab gained
-drag-to-reorder, the live page kept rendering the cards in
-Women / Men / Kids & Teens / Lifestyle / Events order
-regardless of what Wendy did in /admin.
-
-Rewrote the resolution logic: when heroPhotosConfig is
-non-empty (the admin-driven flow), iterate it IN ORDER. Each
-entry resolves to a { url, subjectId }; the subject's category
-determines the card's label and scroll target. Fall back to
-the original categories-array iteration only when
-heroPhotosConfig is empty.
-
-Category sections below the hero still render in
-categories-array order — that decoupling stays intentional.
-
-This was supposed to ship with the admin Hero reorder commit
-but the file never got staged in the original push-now.sh.
-Committing it now alongside the cross-list-drag commit so the
-admin reorder actually has an effect on the live page."
-fi
+echo "=== 3. Staging files ==="
+git add admin.html admin.js push-now.sh
+echo "    staged"
 echo ""
 
-echo "=== 4. Pulling latest from origin ==="
+echo "=== 4. Committing ==="
+git commit -m "Admin Photos: native DnD for cross-list drag
+
+The previous commit added cross-category drag wiring but it
+didn't actually work — SortableJS calls event.preventDefault()
+on dragstart when the user starts dragging from outside its
+configured handle, which killed our native dragstart handler
+before it could set the dataTransfer. Result: dragging a
+subject from anywhere but the grip looked like nothing
+happened.
+
+Fix: remove SortableJS from the subjects list entirely and
+re-implement both within-list reorder AND cross-category drop
+with pure native HTML5 DnD. We now have full control: no other
+library is calling preventDefault on our dragstart.
+
+How it works:
+  - Subject li: draggable=true, dragstart stashes
+    JSON.stringify({catIdx, subjIdx}) into the custom MIME
+    type application/wendypix-subject.
+  - Subject li is also a drop target: accepts
+    'wendypix-subject' (for within-list reorder) and
+    'wendypix-photo' (for moving a photo into this subject).
+  - Category li: dragover/drop accept 'wendypix-subject' and
+    move the dragged subject between categories.
+
+Reorder semantics: the receiving subject's index is adjusted
+down by one if the dragged subject was BEFORE it (standard
+splice-correction). Tested both same-cat reorder and
+cross-cat moves; both work end-to-end including renumbering
+and follow-the-moved-item active selection.
+
+Photos still use SortableJS for in-grid reorder — that one
+doesn't conflict because photos are dragged from anywhere on
+the tile (no handle), so SortableJS doesn't preventDefault.
+The photo dragstart we attach co-exists and the
+'wendypix-photo' MIME makes it through to the subject drop
+target.
+
+Cache buster bumped to v=2026-05-22-crossdrag2."
+echo ""
+
+echo "=== 5. Pulling latest from origin ==="
 git pull --rebase origin main || {
-  echo "    pull failed — resolve conflicts, then 'git rebase --continue' and re-run"
+  echo "    pull failed - resolve conflicts then re-run"
   exit 3
 }
 echo ""
 
-echo "=== 5. Pushing everything that's local-only ==="
+echo "=== 6. Pushing ==="
 git push
 echo ""
 
-echo "=== DONE — watch Netlify deploy log ==="
-echo "    Expect TWO commits to appear on origin:"
-echo "      - Admin Photos: cross-list drag (subject→category, photo→subject)"
-echo "      - Home hero: card order now follows heroPhotos array"
+echo "=== DONE - watch Netlify deploy log ==="
