@@ -4,11 +4,31 @@
   "extraCollections": [],
   "_categories_help": "EDITORIAL MODE. When this array is non-empty, the site renders one carousel section per entry instead of a big 'All Shoots' grid, and the sync ONLY fetches these named collections (Wendy's other public Pixieset galleries become invisible to the site). Each entry: { slug: required Pixieset URL key, label: section heading, subtitle: optional italic subhead }. Leave this empty to keep the current 'show every collection' behavior. Example: [{ \"slug\": \"headshots\", \"label\": \"Headshots\", \"subtitle\": \"Actors, executives, voiceover\" }]",
   "categories": [
-    { "slug": "women",          "label": "Women",          "subtitle": "Headshots — actors, executives, voiceover" },
-    { "slug": "men",            "label": "Men",            "subtitle": "Headshots — actors, executives, voiceover" },
-    { "slug": "kids-and-teens", "label": "Kids & Teens",   "subtitle": "Children, families, growing-up moments" },
-    { "slug": "lifestyle",      "label": "Lifestyle",      "subtitle": "Brand, editorial, on-location" },
-    { "slug": "events",         "label": "Events",         "subtitle": "Corporate, fundraisers, celebrations" }
+    {
+      "slug": "women",
+      "label": "Women",
+      "subtitle": "Headshots — actors, executives, voiceover"
+    },
+    {
+      "slug": "men",
+      "label": "Men",
+      "subtitle": "Headshots — actors, executives, voiceover"
+    },
+    {
+      "slug": "kids-and-teens",
+      "label": "Kids & Teens",
+      "subtitle": "Children, families, growing-up moments"
+    },
+    {
+      "slug": "lifestyle",
+      "label": "Lifestyle",
+      "subtitle": "Brand, editorial, on-location"
+    },
+    {
+      "slug": "events",
+      "label": "Events",
+      "subtitle": "Corporate, fundraisers, celebrations"
+    }
   ],
   "_featured_help": "Slugs of shoots for the 'Featured Work' section, in display order. Leave empty to hide that section and let all shoots flow into the main 'All Shoots' grid below.",
   "featured": [],
@@ -17,8 +37,8 @@
     "valentina",
     "everett",
     "alec-and-zoe",
-    "stephanie",
-    "diane-w"
+    "steph",
+    "lauren-w"
   ],
   "_gridShoots_help": "Allowlist of shoots for the main 'All Shoots' grid, in display order. Each entry is a slug. Empty array = show every shoot (default). Example: [\"valentina\", \"audrey-and-evelyn\"]",
   "gridShoots": [],
