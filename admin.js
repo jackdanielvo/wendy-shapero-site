@@ -566,7 +566,7 @@
   }
 
   // -----------------------------------------------------------
-  // PHOTOS TAB — browse, reorder, upload (uploads come next pass).
+  // PHOTOS TAB — browse, reorder, upload, delete.
   //
   // Data model:
   //   `photosOriginal`  — manifest as it was when we loaded (immutable)
@@ -575,16 +575,30 @@
   //                       `originalFolder` / `originalFile` pointer so the
   //                       publish endpoint can find the source blob even
   //                       after the user has renumbered things.
+  //   `photosUploads`   — Map<uploadKey, base64Jpeg> of pending uploads.
+  //                       New photo entries in `photosState` carry an
+  //                       `uploadKey` that looks the bytes up at publish.
+  //                       Also tracks `previewUrl` (object URL) for
+  //                       displaying the local preview before publish.
   // -----------------------------------------------------------
   let photosOriginal = null;
   let photosState = null;
+  let photosUploads = new Map();
   let photosSortables = []; // SortableJS instances we destroy on reload
   let photosActiveCatIdx = 0;
   let photosActiveSubjIdx = 0;
+  let photoUploadCounter = 0;
 
   async function loadPhotos() {
     photosStatus("", "Loading…");
     setPhotosPending(0);
+    // Release any blob URLs we created for upload previews
+    photosUploads.forEach((entry) => {
+      if (entry && entry.previewUrl) {
+        try { URL.revokeObjectURL(entry.previewUrl); } catch (_) {}
+      }
+    });
+    photosUploads = new Map();
     try {
       const res = await authFetch("/api/admin-photos-manifest");
       if (!res.ok) {
@@ -646,9 +660,22 @@
           <p class="admin__photos__hint">Drag subjects to reorder</p>
         </div>
         <div class="admin__photos__col admin__photos__col--wide" id="adminPhotoFiles">
-          <h4 class="admin__photos__h">Photos ${subj ? "in " + escapeHtml(stripPrefix(subj.folder)) : ""}</h4>
+          <h4 class="admin__photos__h">
+            Photos ${subj ? "in " + escapeHtml(stripPrefix(subj.folder)) : ""}
+            ${subj ? `
+              <button type="button" class="admin__photos__add-btn" id="adminPhotoAddBtn">+ Add photos</button>
+              <input type="file" id="adminPhotoAddInput" accept="image/jpeg,image/png" multiple hidden />
+            ` : ""}
+          </h4>
           <ul class="admin__photos__grid admin__photos__grid--draggable" id="adminPhotoFilesList"></ul>
-          <p class="admin__photos__hint">Drag photos to reorder. The first one is the lead/cover.</p>
+          <p class="admin__photos__hint">
+            Drag photos to reorder. The first one is the lead/cover.
+            Click the &times; on a tile to remove it.
+            Or drop new JPEG/PNG files anywhere on the photo grid to upload — they'll be resized automatically.
+          </p>
+          <div class="admin__photos__dropzone" id="adminPhotoDropzone" hidden>
+            <p>Drop to upload</p>
+          </div>
         </div>
       </div>
     `;
@@ -711,23 +738,36 @@
     // Photos grid — draggable thumbnails
     const filesUl = document.getElementById("adminPhotoFilesList");
     if (subj) {
-      const catFolder = cat.folder;
-      const subjFolder = subj.folder;
+      const catFolder = cat.originalFolder || cat.folder;
+      const subjFolderForUrl = subj.originalFolder || subj.folder;
       subj.photos.forEach((p, i) => {
         const li = document.createElement("li");
-        li.className = "admin__photos__tile";
+        li.className =
+          "admin__photos__tile" + (p.uploadKey ? " is-pending-add" : "");
         li.dataset.fileIdx = String(i);
-        const url =
-          "/photos-web/" +
-          encodeURIComponent(catFolder) +
-          "/" +
-          encodeURIComponent(subjFolder) +
-          "/" +
-          encodeURIComponent(p.originalFile || p.file);
+        // For pending uploads, show the local blob preview.
+        // For existing photos, point at the live /photos-web/ URL
+        // using the ORIGINAL folder/file names — the rename hasn't
+        // been published yet, so the new names don't exist on disk.
+        let url;
+        if (p.uploadKey) {
+          const entry = photosUploads.get(p.uploadKey);
+          url = (entry && entry.previewUrl) || "";
+        } else {
+          url =
+            "/photos-web/" +
+            encodeURIComponent(catFolder) +
+            "/" +
+            encodeURIComponent(subjFolderForUrl) +
+            "/" +
+            encodeURIComponent(p.originalFile || p.file);
+        }
         const isLead = i === 0;
         li.innerHTML =
-          `<img src="${url}" alt="" loading="lazy"/>` +
+          `<img src="${url}" alt="" loading="lazy" draggable="false"/>` +
           (isLead ? `<span class="admin__photos__lead">LEAD</span>` : "") +
+          (p.uploadKey ? `<span class="admin__photos__new">NEW</span>` : "") +
+          `<button type="button" class="admin__photos__delete" data-photo-del="${i}" title="Remove this photo" aria-label="Remove">&times;</button>` +
           `<span class="admin__photos__filename">${escapeHtml(p.file)}</span>`;
         filesUl.appendChild(li);
       });
@@ -735,6 +775,8 @@
       photosSortables.push(new Sortable(filesUl, {
         animation: 160,
         ghostClass: "is-dragging",
+        filter: ".admin__photos__delete",
+        preventOnFilter: false,
         onEnd: (evt) => {
           if (evt.oldIndex === evt.newIndex) return;
           const moved = subj.photos.splice(evt.oldIndex, 1)[0];
@@ -744,6 +786,160 @@
           recountPending();
         },
       }));
+
+      wirePhotoActions(subj);
+    }
+  }
+
+  // Wire up the delete buttons + add-photos button + drop zone for the
+  // current subject's photo grid. Called from renderPhotos AFTER the
+  // grid has been re-rendered.
+  function wirePhotoActions(subj) {
+    // Delete buttons
+    document
+      .querySelectorAll("[data-photo-del]")
+      .forEach((btn) => {
+        btn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const idx = Number(btn.dataset.photoDel);
+          if (!Number.isFinite(idx)) return;
+          const photo = subj.photos[idx];
+          if (!photo) return;
+          const label = photo.uploadKey ? "this new (unpublished) photo" : photo.file;
+          if (!confirm(`Remove ${label}? You can still undo by hitting Refresh before Publish.`)) return;
+          if (photo.uploadKey) {
+            const entry = photosUploads.get(photo.uploadKey);
+            if (entry && entry.previewUrl) {
+              try { URL.revokeObjectURL(entry.previewUrl); } catch (_) {}
+            }
+            photosUploads.delete(photo.uploadKey);
+          }
+          subj.photos.splice(idx, 1);
+          renumberPhotos(subj);
+          renderPhotos();
+          recountPending();
+        });
+      });
+
+    // Add-photos button → trigger hidden file input
+    const addBtn = document.getElementById("adminPhotoAddBtn");
+    const addInput = document.getElementById("adminPhotoAddInput");
+    if (addBtn && addInput) {
+      addBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        addInput.click();
+      });
+      addInput.addEventListener("change", async () => {
+        const files = Array.from(addInput.files || []);
+        addInput.value = ""; // allow re-selecting same file
+        if (files.length) await handlePhotoUploads(subj, files);
+      });
+    }
+
+    // Drag-drop zone (covers the entire photo grid)
+    const grid = document.getElementById("adminPhotoFilesList");
+    const dz = document.getElementById("adminPhotoDropzone");
+    if (grid && dz) {
+      let dragDepth = 0;
+      const showZone = () => { dz.hidden = false; dz.classList.add("is-active"); };
+      const hideZone = () => { dz.hidden = true; dz.classList.remove("is-active"); };
+      grid.addEventListener("dragenter", (e) => {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+        e.preventDefault();
+        dragDepth++;
+        showZone();
+      });
+      grid.addEventListener("dragover", (e) => {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      });
+      grid.addEventListener("dragleave", (e) => {
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) hideZone();
+      });
+      grid.addEventListener("drop", async (e) => {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+        e.preventDefault();
+        dragDepth = 0;
+        hideZone();
+        const files = Array.from(e.dataTransfer.files || []).filter((f) =>
+          /^image\/(jpeg|jpg|png)$/i.test(f.type)
+        );
+        if (files.length) await handlePhotoUploads(subj, files);
+      });
+    }
+  }
+
+  // Resize a File to a JPEG <= 1600px on the long edge at q82 via canvas.
+  // Returns { base64, previewUrl, width, height, bytes }.
+  async function resizePhotoToJpeg(file) {
+    const blobUrl = URL.createObjectURL(file);
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Couldn't decode image: " + file.name));
+      i.src = blobUrl;
+    });
+    URL.revokeObjectURL(blobUrl);
+    const max = 1600;
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if (w >= h && w > max) { h = Math.round((h * max) / w); w = max; }
+    else if (h > w && h > max) { w = Math.round((w * max) / h); h = max; }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; // flatten transparency
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+    const base64 = dataUrl.split(",")[1];
+    // Build a Blob from the data URL for a stable preview URL
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: "image/jpeg" });
+    return {
+      base64,
+      previewUrl: URL.createObjectURL(blob),
+      width: w,
+      height: h,
+      bytes: bytes.length,
+    };
+  }
+
+  async function handlePhotoUploads(subj, files) {
+    photosStatus("", `Resizing ${files.length} photo${files.length === 1 ? "" : "s"}…`);
+    const subjectName = stripPrefix(subj.folder);
+    let added = 0;
+    for (const f of files) {
+      try {
+        const resized = await resizePhotoToJpeg(f);
+        const key = "u" + Date.now().toString(36) + (++photoUploadCounter).toString(36);
+        photosUploads.set(key, {
+          base64: resized.base64,
+          previewUrl: resized.previewUrl,
+          sourceName: f.name,
+        });
+        // Tentative high NN — renumberPhotos will fix it
+        subj.photos.push({
+          file: `99-${subjectName}.jpg`,
+          originalFile: null,
+          uploadKey: key,
+        });
+        added++;
+      } catch (e) {
+        console.warn("upload skip:", f.name, e);
+      }
+    }
+    renumberPhotos(subj);
+    renderPhotos();
+    recountPending();
+    if (added) {
+      photosStatus("ok", `${added} photo${added === 1 ? "" : "s"} queued. Hit Publish to commit.`);
+    } else {
+      photosStatus("err", "Couldn't process any of those files.");
     }
   }
 
@@ -769,26 +965,50 @@
     return String(name || "").replace(/^\d+-\s*/, "");
   }
 
+  // Count: renames (file or subject folder name changed) + uploads +
+  // deletions (original photo no longer represented in state).
   function recountPending() {
     if (!photosState || !photosOriginal) {
       setPhotosPending(0);
       return;
     }
     let changes = 0;
-    photosState.categories.forEach((cat, ci) => {
-      const orig = photosOriginal.categories[ci];
-      if (!orig) return;
-      cat.subjects.forEach((subj, si) => {
-        const origSubj = orig.subjects.find(
-          (s) => s.folder === subj.originalFolder
-        );
-        if (!origSubj) return;
-        if (subj.folder !== subj.originalFolder) changes++;
-        subj.photos.forEach((p, pi) => {
-          if (p.file !== p.originalFile) changes++;
+    // Build a set of the original-paths kept by the current state so
+    // we can detect deletions by absence.
+    const keptOriginalPaths = new Set();
+
+    photosState.categories.forEach((cat) => {
+      cat.subjects.forEach((subj) => {
+        const subjRenamed = subj.folder !== subj.originalFolder;
+        if (subjRenamed) changes++;
+        subj.photos.forEach((p) => {
+          if (p.uploadKey) {
+            // Pending upload
+            changes++;
+          } else {
+            // Existing photo — count rename if any segment changed
+            const curPath = `${cat.folder}/${subj.folder}/${p.file}`;
+            const origPath = `${cat.originalFolder || cat.folder}/${subj.originalFolder}/${p.originalFile}`;
+            keptOriginalPaths.add(origPath);
+            // Subject-rename was already counted once for the whole
+            // subject; for the file itself only count if its filename
+            // changed (file rename within a subject).
+            if (p.file !== p.originalFile) changes++;
+          }
         });
       });
     });
+
+    // Deletions: original photos that no longer appear in state
+    photosOriginal.categories.forEach((cat) => {
+      cat.subjects.forEach((subj) => {
+        subj.photos.forEach((file) => {
+          const origPath = `${cat.folder}/${subj.folder}/${file}`;
+          if (!keptOriginalPaths.has(origPath)) changes++;
+        });
+      });
+    });
+
     setPhotosPending(changes);
   }
 
@@ -812,6 +1032,26 @@
     const btn = document.getElementById("photosPublishBtn");
     if (btn) btn.disabled = true;
     try {
+      // Build uploads map { uploadKey: base64 } from photosUploads,
+      // but only include keys actually referenced by photosState
+      // (in case the user added then deleted an upload).
+      const referencedKeys = new Set();
+      photosState.categories.forEach((c) => {
+        c.subjects.forEach((s) => {
+          s.photos.forEach((p) => {
+            if (p.uploadKey) referencedKeys.add(p.uploadKey);
+          });
+        });
+      });
+      const uploads = {};
+      referencedKeys.forEach((key) => {
+        const entry = photosUploads.get(key);
+        if (entry && entry.base64) uploads[key] = entry.base64;
+      });
+
+      // Summarize the change so the commit message tells the story
+      const summary = summarizeChanges();
+
       const payload = {
         commitSha: photosState.commitSha,
         categories: photosState.categories.map((c) => ({
@@ -823,11 +1063,12 @@
             photos: s.photos.map((p) => ({
               file: p.file,
               originalFile: p.originalFile,
+              uploadKey: p.uploadKey,
             })),
           })),
         })),
-        uploads: {},
-        commitMessage: "Photos reorder via /admin",
+        uploads,
+        commitMessage: summary || "Photos: edits via /admin",
       };
       const res = await authFetch("/api/admin-photos-publish", {
         method: "POST",
@@ -843,6 +1084,52 @@
       photosStatus("err", e.message);
       if (btn) btn.disabled = false;
     }
+  }
+
+  // Build a one-line commit message from the pending state — e.g.
+  // "Photos: 3 reorders, 2 uploads, 1 delete (Women / Kids & Teens)"
+  function summarizeChanges() {
+    if (!photosState || !photosOriginal) return null;
+    let renames = 0, uploads = 0, deletes = 0;
+    const cats = new Set();
+    const kept = new Set();
+
+    photosState.categories.forEach((cat) => {
+      cat.subjects.forEach((subj) => {
+        subj.photos.forEach((p) => {
+          if (p.uploadKey) {
+            uploads++;
+            cats.add(stripPrefix(cat.folder));
+          } else {
+            const origPath = `${cat.originalFolder || cat.folder}/${subj.originalFolder}/${p.originalFile}`;
+            kept.add(origPath);
+            if (p.file !== p.originalFile || subj.folder !== subj.originalFolder) {
+              renames++;
+              cats.add(stripPrefix(cat.folder));
+            }
+          }
+        });
+      });
+    });
+    photosOriginal.categories.forEach((cat) => {
+      cat.subjects.forEach((subj) => {
+        subj.photos.forEach((file) => {
+          const origPath = `${cat.folder}/${subj.folder}/${file}`;
+          if (!kept.has(origPath)) {
+            deletes++;
+            cats.add(stripPrefix(cat.folder));
+          }
+        });
+      });
+    });
+
+    const bits = [];
+    if (renames) bits.push(`${renames} reorder${renames === 1 ? "" : "s"}`);
+    if (uploads) bits.push(`${uploads} upload${uploads === 1 ? "" : "s"}`);
+    if (deletes) bits.push(`${deletes} delete${deletes === 1 ? "" : "s"}`);
+    if (!bits.length) return null;
+    const catList = Array.from(cats).slice(0, 4).join(", ");
+    return `Photos: ${bits.join(", ")} (${catList})`;
   }
 
   document.getElementById("photosPublishBtn").addEventListener("click", publishPhotos);

@@ -498,6 +498,98 @@
   pointer-events: none;
 }
 
+/* Per-tile delete (X) button — top-right corner */
+.admin__photos__delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.72);
+  color: #fff;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  z-index: 2;
+}
+.admin__photos__tile:hover .admin__photos__delete,
+.admin__photos__tile:focus-within .admin__photos__delete {
+  opacity: 1;
+}
+.admin__photos__delete:hover {
+  background: #d32a2a;
+  transform: scale(1.08);
+}
+
+/* NEW (pending upload) badge */
+.admin__photos__new {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: #1d5e62;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.admin__photos__tile.is-pending-add {
+  outline: 2px dashed #1d5e62;
+  outline-offset: -2px;
+}
+
+/* + Add photos button in the column header */
+.admin__photos__add-btn {
+  margin-left: 12px;
+  background: #1d5e62;
+  color: #fff;
+  border: none;
+  font-family: var(--body-font, inherit);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+  vertical-align: middle;
+}
+.admin__photos__add-btn:hover {
+  background: #2a8c92;
+  transform: translateY(-1px);
+}
+
+/* Drop zone — full-grid overlay when files are being dragged over */
+.admin__photos__col--wide { position: relative; }
+.admin__photos__dropzone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(29, 94, 98, 0.86);
+  color: #fff;
+  border: 3px dashed #fff;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 5;
+}
+.admin__photos__dropzone p { margin: 0; }
+
 /* Pending changes pill */
 .admin__status--pending {
   background: rgba(179,71,185,0.14);
@@ -512,4 +604,6 @@
   .admin__photos__layout {
     grid-template-columns: 1fr;
   }
+  /* Always show the delete button on mobile — no hover state */
+  .admin__photos__delete { opacity: 0.9; }
 }

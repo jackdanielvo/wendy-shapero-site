@@ -107,21 +107,29 @@ exports.handler = async (event, context) => {
       { token }
     );
     const blobByPath = new Map();
+    const existingPhotoPaths = new Set();
     for (const entry of treeRes.tree) {
       if (entry.type === "blob") {
         blobByPath.set(entry.path, entry.sha);
+        if (
+          entry.path.startsWith(PHOTOS_PREFIX) &&
+          IMAGE_RE.test(entry.path)
+        ) {
+          existingPhotoPaths.add(entry.path);
+        }
       }
     }
 
     // 3. Walk the manifest, planning the new tree.
     //    `treeChanges` is a list of { path, mode, type, sha|content }.
-    //    For renames: we record the desired new path with the existing
-    //                 blob SHA, plus a deletion of the old path (path
-    //                 with sha: null).
-    //    For uploads: we create a new blob and reference it at the new path.
+    //    For renames / no-change: record the desired new path with the
+    //                 existing blob SHA. The old path is detected in
+    //                 step 4 (any existing photo path not represented
+    //                 in the new manifest gets deleted — this single
+    //                 rule covers both renames and explicit deletes).
+    //    For uploads: create a new blob and reference it at the new path.
     const treeChanges = [];
     const newPathsTouched = new Set(); // dedupe
-    const oldPathsTouched = new Set();
 
     for (const cat of manifest.categories) {
       if (!cat || !cat.folder || !Array.isArray(cat.subjects)) continue;
@@ -184,21 +192,29 @@ exports.handler = async (event, context) => {
               type: "blob",
               sha: blobSha,
             });
-            if (oldPath !== newPath) {
-              oldPathsTouched.add(oldPath);
-            }
           }
         }
       }
     }
 
-    // 4. Add deletions for any old paths that no longer appear at the
-    //    same path in the new tree. (If old path X moved to new path
-    //    Y, and X != Y, we delete X.)
-    for (const oldPath of oldPathsTouched) {
-      if (!newPathsTouched.has(oldPath)) {
+    // 4. Add deletions: any existing photo blob not represented in the
+    //    new manifest gets removed. This covers renames (the old path is
+    //    gone because the photo is at a new path) and explicit deletes
+    //    (the photo isn't in the manifest at all).
+    //
+    //    SAFETY: if the new manifest covers no photos at all but the
+    //    repo has photos, refuse — this is almost certainly a mistake
+    //    (e.g. admin failed to load before publishing).
+    if (newPathsTouched.size === 0 && existingPhotoPaths.size > 0) {
+      return json(400, {
+        error:
+          "Manifest has no photos but the repo does. Refusing to delete everything — reload the Photos tab and try again.",
+      });
+    }
+    for (const existingPath of existingPhotoPaths) {
+      if (!newPathsTouched.has(existingPath)) {
         treeChanges.push({
-          path: oldPath,
+          path: existingPath,
           mode: "100644",
           type: "blob",
           sha: null, // delete
