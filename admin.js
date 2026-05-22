@@ -658,7 +658,8 @@
         <div class="admin__photos__col" id="adminPhotoSubjs">
           <h4 class="admin__photos__h">Subjects ${cat ? "in " + escapeHtml(stripPrefix(cat.folder)) : ""}</h4>
           <ul class="admin__photos__list admin__photos__list--draggable" id="adminPhotoSubjsList"></ul>
-          <p class="admin__photos__hint">Drag subjects to reorder</p>
+          <button type="button" class="admin__photos__add-subj" id="adminPhotoAddSubjBtn">+ New subject</button>
+          <p class="admin__photos__hint">Drag subjects to reorder. Click a subject to manage its photos.</p>
         </div>
         <div class="admin__photos__col admin__photos__col--wide" id="adminPhotoFiles">
           <h4 class="admin__photos__h">
@@ -728,6 +729,60 @@
           recountPending();
         },
       }));
+
+      // "+ New subject" button wiring — prompts Wendy for the
+      // subject name, validates uniqueness within the category,
+      // creates an empty subject at the end, auto-selects it so she
+      // can immediately drop photos in. The new subject's photos
+      // array starts empty; uploads added via the photo grid's "+"
+      // tile will be the entire content of this subject. If she
+      // publishes without adding any photos, the subject is silently
+      // skipped (git doesn't track empty folders).
+      const addSubjBtn = document.getElementById("adminPhotoAddSubjBtn");
+      if (addSubjBtn) {
+        addSubjBtn.addEventListener("click", () => {
+          const raw = window.prompt(
+            "Name of the new subject (e.g., 'Maria Jones'):",
+            ""
+          );
+          if (raw == null) return; // user hit Cancel
+          const name = String(raw).trim();
+          if (!name) {
+            alert("Subject name can't be blank.");
+            return;
+          }
+          if (/[\/\\:]/.test(name)) {
+            alert("Subject name can't contain / \\ or :");
+            return;
+          }
+          // Reject duplicates (case-insensitive, ignoring NN- prefix)
+          const cleanLower = name.toLowerCase();
+          const dupe = cat.subjects.find(
+            (s) => stripPrefix(s.folder).toLowerCase() === cleanLower
+          );
+          if (dupe) {
+            alert(
+              `There's already a subject called "${stripPrefix(dupe.folder)}" in this category.`
+            );
+            return;
+          }
+          // Push a new subject at the end. originalFolder = null is
+          // the marker for "this subject didn't exist before".
+          const pad = String(cat.subjects.length + 1).padStart(2, "0");
+          cat.subjects.push({
+            folder: `${pad}-${name}`,
+            originalFolder: null,
+            photos: [],
+          });
+          photosActiveSubjIdx = cat.subjects.length - 1;
+          renderPhotos();
+          recountPending();
+          photosStatus(
+            "ok",
+            `Created "${name}". Click the + tile in the photo grid to add photos.`
+          );
+        });
+      }
     }
 
     // Photos grid — draggable thumbnails

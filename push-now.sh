@@ -1,7 +1,7 @@
 #!/bin/bash
-# Fix the GitHub 502 on /git/trees during admin publish:
-#  - Shrink the request by skipping no-op tree entries
-#  - Retry transient 5xx / 429 errors with backoff
+# Admin Photos: add a "+ New subject" button so Wendy can create
+# new people as she gets new clients, without anyone having to
+# touch the codebase.
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -27,37 +27,56 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add netlify/functions/admin-photos-publish.js \
-        netlify/functions/admin-hero.js \
-        netlify/functions/admin-photos-manifest.js \
-        push-now.sh
+git add admin.html admin.js admin.css push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin publish: skip no-op tree entries + retry on GitHub 5xx
+git commit -m "Admin Photos: 'New subject' button — onboard new clients
 
-Two related fixes for the 'GitHub 502 on POST /git/trees' error
-that hit when trying to delete a Rene photo in /admin Publish:
+Wendy gets new clients regularly, and previously she had no way
+to add a new subject (new person) to a category — only to
+reorder, delete, or add photos to subjects that already existed.
+A new + New subject button now sits below the subjects list in
+the Photos tab.
 
-1) The publish function was emitting a tree entry for every
-photo in the new manifest, including those whose path didn't
-change at all. With ~340 photos in the catalog, even a
-single-photo delete sent ~340 tree entries to GitHub. Skip the
-ones where oldPath === newPath — those are no-ops and GitHub
-doesn't need to know about them. Reduces the typical payload by
-1-2 orders of magnitude.
+UX flow:
+1. Click '+ New subject' under the Subjects column.
+2. Browser prompt asks for the name (e.g., 'Maria Jones').
+3. Client-side validation:
+   - Non-blank after trim.
+   - No path-unfriendly characters (/, \\, :).
+   - No duplicate of an existing subject in the same category
+     (case-insensitive, ignoring the NN- prefix).
+4. New subject is appended to the category with the next
+   available NN- prefix (e.g., '04-Maria Jones'), auto-selected,
+   and the photo grid shows the + tile so she can immediately
+   drop photos in.
+5. Pending-changes counter increments by 1 (the new subject)
+   plus one per uploaded photo.
+6. On Publish, the existing upload pipeline commits each new
+   photo blob at photos-web/<cat>/<NN-Subject>/<NN-Subject>.jpg
+   in a single GitHub commit. Git materializes the folder
+   implicitly via the file paths.
 
-2) Wrap the gh() helper in admin-photos-publish.js,
-admin-photos-manifest.js, and admin-hero.js with retry-on-5xx
-logic: 3 attempts total with exponential backoff (500ms, 1s),
-re-trying only on 5xx and 429. 4xx errors are our bug and don't
-get retried. Network-level failures (DNS, connection reset)
-also trigger a retry.
+Edge case: if Wendy creates a subject but publishes without
+adding any photos, the subject silently vanishes — git can't
+track empty folders. The status hint after creation tells her
+what to do next ('Click the + tile in the photo grid to add
+photos.'), and the pending counter still reflects the empty
+subject so she's aware she has unfinished work.
 
-Net effect: small edits in /admin should commit fast and
-reliably. Even when GitHub's tree endpoint is having a moment,
-a single 502 won't fail the user-facing publish."
+Style: the button is a dashed-bordered, full-width, plum-leaning
+teal pill, visually distinct from the photo + tile so the two
+add-actions don't read as the same control.
+
+No server-side changes needed — admin-photos-publish.js already
+handles subj.originalFolder = null gracefully by falling back
+to subj.folder for the upload branch (which is the only branch
+that runs for a brand-new subject, since all its photos are
+uploads).
+
+Cache buster: admin.css and admin.js bumped to v=2026-05-22-newsubj."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

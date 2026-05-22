@@ -431,6 +431,28 @@
   user-select: none;
 }
 .admin__photos__grip:active { cursor: grabbing; }
+/* "+ New subject" button — sits below the subjects list */
+.admin__photos__add-subj {
+  width: 100%;
+  background: transparent;
+  border: 2px dashed #cfc9bd;
+  color: #1d5e62;
+  font-family: var(--body-font, inherit);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 12px 0 6px;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.admin__photos__add-subj:hover {
+  background: rgba(29, 94, 98, 0.06);
+  border-color: #1d5e62;
+  transform: translateY(-1px);
+}
 .admin__photos__hint {
   margin: 10px 0 0;
   font-size: 11px;
