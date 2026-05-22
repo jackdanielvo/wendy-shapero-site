@@ -608,7 +608,14 @@
       }
       const data = await res.json();
       photosOriginal = data;
-      // Deep clone + annotate each subject/photo with its originalFolder/originalFile
+      // Deep clone + annotate each subject/photo with its origin
+      // location (folder names + category). The "original*" fields
+      // are pointers back to where the data lived at load time, so
+      // the publish function can find the source blob even after
+      // Wendy has reordered, renamed, or moved things across
+      // categories. Subjects carry originalCategory (their loaded
+      // category's folder) so the server can construct the correct
+      // old path when a subject moves between categories.
       photosState = {
         commitSha: data.commitSha,
         categories: data.categories.map((c) => ({
@@ -617,6 +624,7 @@
           subjects: c.subjects.map((s) => ({
             folder: s.folder,
             originalFolder: s.folder,
+            originalCategory: c.folder,
             photos: s.photos.map((f) => ({
               file: f,
               originalFile: f,
@@ -689,6 +697,55 @@
         photosActiveSubjIdx = 0;
         renderPhotos();
       });
+
+      // Category li is a DROP TARGET for subject moves. Drag a subject
+      // from the Subjects pane onto a category here to move it.
+      li.addEventListener("dragover", (e) => {
+        if (
+          e.dataTransfer &&
+          Array.from(e.dataTransfer.types).includes("application/wendypix-subject")
+        ) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      });
+      li.addEventListener("dragenter", (e) => {
+        if (
+          e.dataTransfer &&
+          Array.from(e.dataTransfer.types).includes("application/wendypix-subject")
+        ) {
+          li.classList.add("is-drop-target");
+        }
+      });
+      li.addEventListener("dragleave", () => {
+        li.classList.remove("is-drop-target");
+      });
+      li.addEventListener("drop", (e) => {
+        li.classList.remove("is-drop-target");
+        const subjIdxStr = e.dataTransfer.getData("application/wendypix-subject");
+        if (subjIdxStr === "") return;
+        e.preventDefault();
+        const fromCatIdx = photosActiveCatIdx;
+        const toCatIdx = i;
+        if (fromCatIdx === toCatIdx) return; // same category — no-op
+        const subjIdx = parseInt(subjIdxStr, 10);
+        const fromCat = photosState.categories[fromCatIdx];
+        const toCat = photosState.categories[toCatIdx];
+        const moved = fromCat.subjects.splice(subjIdx, 1)[0];
+        toCat.subjects.push(moved);
+        renumberSubjects(fromCat);
+        renumberSubjects(toCat);
+        // Follow the moved subject so the user can see where it landed
+        photosActiveCatIdx = toCatIdx;
+        photosActiveSubjIdx = toCat.subjects.length - 1;
+        renderPhotos();
+        recountPending();
+        photosStatus(
+          "ok",
+          `Moved "${stripPrefix(moved.folder)}" to ${stripPrefix(toCat.folder)}.`
+        );
+      });
+
       catsUl.appendChild(li);
     });
 
@@ -701,6 +758,9 @@
           "admin__photos__item admin__photos__item--draggable" +
           (i === photosActiveSubjIdx ? " is-active" : "");
         li.dataset.subjIdx = String(i);
+        // draggable for cross-category move (SortableJS handles
+        // within-list reorder via the grip).
+        li.draggable = true;
         li.innerHTML =
           `<span class="admin__photos__grip" aria-hidden="true">⋮⋮</span>` +
           `<span>${escapeHtml(stripPrefix(s.folder))}</span>` +
@@ -710,6 +770,63 @@
           photosActiveSubjIdx = i;
           renderPhotos();
         });
+
+        // SOURCE for cross-category drag — subject can be dragged to
+        // a category li in the Categories pane.
+        li.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("application/wendypix-subject", String(i));
+          e.dataTransfer.effectAllowed = "move";
+          li.classList.add("is-dragging");
+        });
+        li.addEventListener("dragend", () => {
+          li.classList.remove("is-dragging");
+        });
+
+        // TARGET for photo cross-subject moves — drag a photo onto
+        // this subject to move it here (within the current category).
+        li.addEventListener("dragover", (e) => {
+          if (
+            e.dataTransfer &&
+            Array.from(e.dataTransfer.types).includes("application/wendypix-photo")
+          ) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }
+        });
+        li.addEventListener("dragenter", (e) => {
+          if (
+            e.dataTransfer &&
+            Array.from(e.dataTransfer.types).includes("application/wendypix-photo")
+          ) {
+            li.classList.add("is-drop-target");
+          }
+        });
+        li.addEventListener("dragleave", () => {
+          li.classList.remove("is-drop-target");
+        });
+        li.addEventListener("drop", (e) => {
+          li.classList.remove("is-drop-target");
+          const photoIdxStr = e.dataTransfer.getData("application/wendypix-photo");
+          if (photoIdxStr === "") return;
+          e.preventDefault();
+          const fromSubjIdx = photosActiveSubjIdx;
+          const toSubjIdx = i;
+          if (fromSubjIdx === toSubjIdx) return; // dropping onto same subject — no-op
+          const photoIdx = parseInt(photoIdxStr, 10);
+          const fromSubj = cat.subjects[fromSubjIdx];
+          const toSubj = cat.subjects[toSubjIdx];
+          const movedPhoto = fromSubj.photos.splice(photoIdx, 1)[0];
+          toSubj.photos.push(movedPhoto);
+          renumberPhotos(fromSubj);
+          renumberPhotos(toSubj);
+          renderPhotos();
+          recountPending();
+          photosStatus(
+            "ok",
+            `Moved photo to "${stripPrefix(toSubj.folder)}".`
+          );
+        });
+
         subjsUl.appendChild(li);
       });
 
@@ -795,6 +912,15 @@
         li.className =
           "admin__photos__tile" + (p.uploadKey ? " is-pending-add" : "");
         li.dataset.fileIdx = String(i);
+        // draggable=true so the photo tile can be dragged onto a
+        // subject in the Subjects pane to move it. (SortableJS
+        // already sets this for in-grid reorder, but we set it again
+        // so the native dragstart we attach below fires cleanly.)
+        li.draggable = true;
+        li.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("application/wendypix-photo", String(i));
+          e.dataTransfer.effectAllowed = "move";
+        });
         // For pending uploads, show the local blob preview.
         // For existing photos, point at the live /photos-web/ URL
         // using the ORIGINAL folder/file names — the rename hasn't
@@ -1052,19 +1178,22 @@
     photosState.categories.forEach((cat) => {
       cat.subjects.forEach((subj) => {
         const subjRenamed = subj.folder !== subj.originalFolder;
-        if (subjRenamed) changes++;
+        const subjMovedCat =
+          subj.originalCategory && subj.originalCategory !== cat.folder;
+        if (subjRenamed || subjMovedCat) changes++;
         subj.photos.forEach((p) => {
           if (p.uploadKey) {
             // Pending upload
             changes++;
           } else {
-            // Existing photo — count rename if any segment changed
-            const curPath = `${cat.folder}/${subj.folder}/${p.file}`;
-            const origPath = `${cat.originalFolder || cat.folder}/${subj.originalFolder}/${p.originalFile}`;
+            // The original path lookup uses the subject's
+            // originalCategory (where it loaded from) — so even if
+            // Wendy dragged the subject across categories, we can
+            // still match the photo back to its source path for
+            // deletion-by-omission detection.
+            const origCatFolder = subj.originalCategory || cat.originalFolder || cat.folder;
+            const origPath = `${origCatFolder}/${subj.originalFolder}/${p.originalFile}`;
             keptOriginalPaths.add(origPath);
-            // Subject-rename was already counted once for the whole
-            // subject; for the file itself only count if its filename
-            // changed (file rename within a subject).
             if (p.file !== p.originalFile) changes++;
           }
         });
@@ -1132,6 +1261,11 @@
           subjects: c.subjects.map((s) => ({
             folder: s.folder,
             originalFolder: s.originalFolder,
+            // originalCategory is the category folder where this
+            // subject lived at load time. If Wendy dragged the
+            // subject across categories, this still points at the
+            // SOURCE — the server uses it to find the old blob path.
+            originalCategory: s.originalCategory,
             photos: s.photos.map((p) => ({
               file: p.file,
               originalFile: p.originalFile,
@@ -1364,7 +1498,30 @@
     }
   }
 
-  const HERO_LABELS = ["1 · Women", "2 · Men", "3 · Kids & Teens", "4 · Lifestyle", "5 · Events"];
+  // Position labels (1st, 2nd, ...). The CATEGORY label below each
+  // slot is derived dynamically from the subject currently in the slot
+  // — so dragging a Lifestyle subject into slot 1 makes the first hero
+  // card represent Lifestyle.
+  const HERO_POSITIONS = ["1st", "2nd", "3rd", "4th", "5th"];
+
+  let heroSortable = null;
+
+  // Find the human-readable category label for the subject in a slot.
+  function heroSlotCategoryLabel(entry) {
+    if (!entry) return "(empty)";
+    if (typeof entry === "object" && entry.url) return "(pinned URL)";
+    if (typeof entry !== "string") return "(unknown)";
+    const slug = entry.split("#")[0].toLowerCase();
+    if (!photosOriginal) return slug;
+    for (const cat of photosOriginal.categories) {
+      for (const subj of cat.subjects) {
+        if (slugify(subj.folder) === slug) {
+          return cat.folder.replace(/^\d+-\s*/, "");
+        }
+      }
+    }
+    return slug + " (not found)";
+  }
 
   function renderHero() {
     const pane = document.getElementById("heroPane");
@@ -1372,22 +1529,56 @@
       pane.innerHTML = `<p class="admin__status">Loading…</p>`;
       return;
     }
+    if (heroSortable) {
+      try { heroSortable.destroy(); } catch (_) {}
+      heroSortable = null;
+    }
+
     const slotsHtml = heroState.map((entry, i) => {
       const url = heroEntryToUrl(entry);
-      const label = heroEntryLabel(entry);
+      const subjLabel = heroEntryLabel(entry);
+      const catLabel = heroSlotCategoryLabel(entry);
       const isUnset = !url;
       return `
         <div class="admin__hero__slot" data-slot="${i}">
-          <div class="admin__hero__slot-num">${HERO_LABELS[i]}</div>
-          <div class="admin__hero__thumb ${isUnset ? "is-empty" : ""}">
-            ${url ? `<img src="${url}" alt="" />` : `<span>?</span>`}
+          <div class="admin__hero__slot-head">
+            <span class="admin__hero__slot-pos">${HERO_POSITIONS[i] || i + 1}</span>
+            <span class="admin__hero__slot-grip" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
           </div>
-          <div class="admin__hero__caption">${escapeHtml(label)}</div>
+          <div class="admin__hero__thumb ${isUnset ? "is-empty" : ""}">
+            ${url ? `<img src="${url}" alt="" draggable="false" />` : `<span>?</span>`}
+          </div>
+          <div class="admin__hero__cat caps">${escapeHtml(catLabel)}</div>
+          <div class="admin__hero__caption">${escapeHtml(subjLabel)}</div>
           <button type="button" class="btn admin__hero__change" data-change-slot="${i}">Change</button>
         </div>
       `;
     }).join("");
-    pane.innerHTML = `<div class="admin__hero__row">${slotsHtml}</div>`;
+    pane.innerHTML = `
+      <p class="admin__photos__hint" style="margin-bottom:14px">
+        Drag a slot by its <strong>⋮⋮</strong> handle to reorder. The category label
+        under each photo shows which section the card jumps to — drag a Lifestyle
+        subject into the first slot and the first hero card becomes Lifestyle.
+      </p>
+      <div class="admin__hero__row" id="heroSlotsRow">${slotsHtml}</div>
+    `;
+
+    // Drag-to-reorder via SortableJS (already loaded for the Photos tab)
+    const row = document.getElementById("heroSlotsRow");
+    if (row && typeof Sortable !== "undefined") {
+      heroSortable = new Sortable(row, {
+        handle: ".admin__hero__slot-grip",
+        animation: 180,
+        ghostClass: "is-dragging",
+        onEnd: (evt) => {
+          if (evt.oldIndex === evt.newIndex) return;
+          const moved = heroState.splice(evt.oldIndex, 1)[0];
+          heroState.splice(evt.newIndex, 0, moved);
+          renderHero();
+          recountHeroPending();
+        },
+      });
+    }
 
     pane.querySelectorAll("[data-change-slot]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1409,8 +1600,12 @@
       heroPickerCatIdx = slotIdx;
     }
     document.getElementById("heroPickerModal").hidden = false;
+    // Title shows the current slot's category, if any — but since the
+     // slot order is now Wendy-controlled, we lead with the position.
+    const currentCat = heroSlotCategoryLabel(heroState[slotIdx]);
     document.getElementById("heroPickerTitle").textContent =
-      `Pick photo for slot ${slotIdx + 1} (${HERO_LABELS[slotIdx].split("· ")[1] || ""})`;
+      `Pick photo for the ${HERO_POSITIONS[slotIdx] || slotIdx + 1} hero slot` +
+      (currentCat && !currentCat.startsWith("(") ? ` (currently ${currentCat})` : "");
     renderHeroPicker();
   }
   function closeHeroPicker() {

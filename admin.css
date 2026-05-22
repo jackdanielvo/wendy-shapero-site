@@ -411,6 +411,12 @@
   border-color: rgba(179,71,185,0.4);
   font-weight: 700;
 }
+/* Drop-target highlight for cross-list drags (subject→category, photo→subject) */
+.admin__photos__item.is-drop-target {
+  background: rgba(29, 94, 98, 0.12);
+  outline: 2px solid #1d5e62;
+  outline-offset: -2px;
+}
 .admin__photos__item.is-dragging {
   opacity: 0.4;
 }
@@ -651,6 +657,43 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted, #8d8676);
+}
+/* New head row: position label + drag grip */
+.admin__hero__slot-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin__hero__slot-pos {
+  font-family: var(--body-font, inherit);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, #8d8676);
+}
+.admin__hero__slot-grip {
+  cursor: grab;
+  user-select: none;
+  font-size: 18px;
+  letter-spacing: -2px;
+  color: var(--muted, #8d8676);
+  padding: 0 4px;
+  transition: color 0.15s ease;
+}
+.admin__hero__slot-grip:hover { color: #1d5e62; }
+.admin__hero__slot-grip:active { cursor: grabbing; }
+.admin__hero__slot.is-dragging { opacity: 0.4; }
+
+/* Dynamic category label sitting between the photo and the subject caption */
+.admin__hero__cat {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #1d5e62;
+  margin-top: 2px;
 }
 .admin__hero__thumb {
   position: relative;

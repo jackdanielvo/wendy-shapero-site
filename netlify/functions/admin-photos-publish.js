@@ -155,6 +155,14 @@ exports.handler = async (event, context) => {
         const oldSubjFolder = subj.originalFolder
           ? sanitizeSegment(subj.originalFolder)
           : subjFolder;
+        // If the subject was dragged across categories in admin, its
+        // originalCategory points back at the SOURCE category folder,
+        // and the file blobs live under that path. Fall back to the
+        // current category's old folder if no cross-category move
+        // happened.
+        const oldCatFolderForSubj = subj.originalCategory
+          ? sanitizeSegment(subj.originalCategory)
+          : oldCatFolder;
 
         for (const photo of subj.photos) {
           if (!photo) continue;
@@ -186,11 +194,14 @@ exports.handler = async (event, context) => {
               sha: blob.sha,
             });
           } else {
-            // RENAME or NO-CHANGE — reuse existing blob SHA
+            // RENAME or NO-CHANGE or CROSS-CATEGORY MOVE — reuse the
+            // existing blob SHA from its source path. The source path
+            // uses oldCatFolderForSubj (which respects originalCategory
+            // if the subject was dragged between categories).
             const originalFile = sanitizeSegment(
               photo.originalFile || photo.file
             );
-            const oldPath = `${PHOTOS_PREFIX}${oldCatFolder}/${oldSubjFolder}/${originalFile}`;
+            const oldPath = `${PHOTOS_PREFIX}${oldCatFolderForSubj}/${oldSubjFolder}/${originalFile}`;
             const blobSha = blobByPath.get(oldPath);
             if (!blobSha) {
               return json(400, {
