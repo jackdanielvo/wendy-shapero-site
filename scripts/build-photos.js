@@ -217,6 +217,38 @@ function main() {
     `window.WENDY_PHOTOS = ${JSON.stringify(out, null, 2)};\n`
   );
 
+  // Cache-bust the <script src="data/photos.js?v=BUILDTIME"> reference in
+  // index.html so visitors' browsers re-fetch the data file every time
+  // the build runs. Without this, an admin Hero publish (or Photos
+  // publish) would update the deployed file but visitors would keep
+  // seeing the old version from HTTP cache.
+  const stamp =
+    new Date()
+      .toISOString()
+      .replace(/[-:T]/g, "")
+      .replace(/\..+$/, ""); // e.g. "20260522T180530"
+  const indexPath = path.join(ROOT, "index.html");
+  if (fs.existsSync(indexPath)) {
+    let html = fs.readFileSync(indexPath, "utf8");
+    const before = html;
+    // Match both the BUILDTIME placeholder (template state) and any
+    // previously substituted timestamp, so re-running the build always
+    // produces a fresh value.
+    html = html.replace(
+      /(data\/photos\.js\?v=)(?:BUILDTIME|\d{8}T\d{6})/g,
+      `$1${stamp}`
+    );
+    if (html !== before) {
+      fs.writeFileSync(indexPath, html);
+      console.log(`Cache-busted data/photos.js → ?v=${stamp}`);
+    } else {
+      console.log(
+        `No ?v=BUILDTIME/timestamp placeholder found in index.html — ` +
+        `cache buster not updated.`
+      );
+    }
+  }
+
   console.log(
     `\nWrote ${subjects.length} subjects across ${categories.length} categor${
       categories.length === 1 ? "y" : "ies"
