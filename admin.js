@@ -1149,9 +1149,28 @@
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Publish failed (${res.status})`);
-      photosStatus("ok", body.message || "Published.");
-      // After publish, reload from the new tree so we start fresh
-      await loadPhotos();
+
+      // Deliberately DO NOT call loadPhotos() here. The publish call
+      // succeeded — GitHub has the new state — but Netlify takes 1-3
+      // minutes to rebuild and redeploy the static files. If we
+      // re-fetched the manifest now, the admin would render photo URLs
+      // with their new filenames, but Netlify would still be serving
+      // the old files at those paths. That mismatch caused the brief
+      // window of broken images on the live site (and in the admin
+      // grid for renames).
+      //
+      // Instead: show a clear "deploying, refresh in a couple minutes"
+      // status, zero out the pending counter (since the changes ARE
+      // published, they're just not deployed yet), and let the user
+      // click Refresh manually when they want to see the new state.
+      setPhotosPending(0);
+      photosStatus(
+        "ok",
+        (body.message
+          ? body.message + " "
+          : "Published. ") +
+          "Site will redeploy in 1-3 min — click Refresh after that to see the latest state."
+      );
     } catch (e) {
       photosStatus("err", e.message);
       if (btn) btn.disabled = false;
@@ -1501,9 +1520,22 @@
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Publish failed (${res.status})`);
-      heroStatus("ok", body.message || "Published.");
-      // Reload to pick up the new commit SHA
-      await loadHero();
+
+      // Same reasoning as publishPhotos: don't auto-reload the
+      // manifest here. The Hero picker would re-fetch from GitHub
+      // (current commit), but the live home page is still serving the
+      // old data/photos.js for 1-3 min while Netlify rebuilds.
+      // Just sync the local "original" snapshot to the just-published
+      // state so the pending counter zeroes out, and tell the user to
+      // refresh after the deploy.
+      heroOriginal = JSON.parse(JSON.stringify(heroState));
+      heroCommitSha = body.commitSha || heroCommitSha;
+      setHeroPending(0);
+      heroStatus(
+        "ok",
+        (body.message ? body.message + " " : "Published. ") +
+          "Home page will refresh in 1-3 min once the deploy goes green."
+      );
     } catch (e) {
       heroStatus("err", e.message);
       if (btn) btn.disabled = false;

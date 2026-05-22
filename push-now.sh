@@ -1,7 +1,7 @@
 #!/bin/bash
-# Inline inquiry form on /book — replaces the mailto: flow for
-# event + lifestyle packages so clients never see the
-# "Open Chrome.app?" macOS dialog.
+# Admin publish UX: don't auto-reload after publish so the
+# admin doesn't briefly show broken images during Netlify's
+# 1-3 min deploy window.
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -27,55 +27,39 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add book.html book.js \
-        netlify/functions/inquiry.js \
-        push-now.sh
+git add admin.html admin.js push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "/book: inline inquiry form for event + lifestyle packages
+git commit -m "Admin: don't auto-reload after publish (deploy-lag fix)
 
-Previously, clicking an inquiry-only package (Lifestyle / Event
-Coverage) fired a mailto: link, which on macOS spawned an
-'Open Google Chrome.app?' app-launch dialog and required the
-user to have an email client configured. Half-broken on mobile.
+After hitting Publish on the Photos or Hero tab, the admin was
+re-fetching the manifest from GitHub immediately. The manifest
+reflected the just-committed state, so admin rendered photo
+URLs with their NEW filenames — but Netlify hadn't rebuilt yet,
+so those URLs 404'd against the still-old deployed file tree.
+Result: 1-3 minutes of broken images in the admin grid and on
+the live site, until the deploy went green.
 
-Replaced with an inline form rendered as a new step
-([data-step='2-inquiry']) that visitors see right after picking
-a quote-based package. Fields:
-  - Name (required)
-  - Email (required, validated)
-  - Phone (optional)
-  - Event / shoot date
-  - Guest count / scope (shown only when package id/name
-    matches /event/i)
-  - Notes (required, the heart of the inquiry)
+New behavior:
+- Photos tab Publish: don't call loadPhotos(). Zero out the
+  pending counter (changes ARE committed, just not deployed),
+  show 'Published. Site will redeploy in 1-3 min — click
+  Refresh after that to see the latest state.'
+- Hero tab Publish: same idea — sync heroOriginal to heroState
+  locally so the pending pill goes to zero, but don't refetch.
 
-Submit POSTs JSON to /api/inquiry (new Netlify Function
-netlify/functions/inquiry.js), which:
-  - Validates server-side
-  - Uses Resend (already in use for booking confirmations)
-    to send a formatted email to wendy@wendypix.com with a
-    Reply-To set to the client's email so she can reply
-    directly from her inbox
-  - Sends an automatic 'we got it' confirmation back to the
-    client so they know it landed
-  - Returns a friendly success message; book.js then routes
-    the visitor to the existing 'You're on the list' done
-    step so the visual flow is consistent with the booking
-    completion path
+User clicks the existing Refresh button when the Netlify
+deploy is done. By then the live site has the new files and
+the admin manifest fetch produces URLs that resolve. No
+broken-image window.
 
-step-navigation tweak: gotoStep() now compares step IDs as
-strings instead of Number-coercing them, so the named
-'2-inquiry' step plays nicely with the existing 1/2/3/4
-numeric flow.
+Trade-off: if the user wants to verify the publish actually
+landed, they need to wait + click Refresh. Worth it to remove
+the confusing broken-image state.
 
-Required Netlify env: RESEND_API_KEY (already set, same key
-booking uses). Optional: WENDY_EMAIL override (defaults to
-wendy@wendypix.com).
-
-book.js cache buster bumped to v=2026-05-22-inquiry."
+Cache buster bumped to v=2026-05-22-deploylag."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="
