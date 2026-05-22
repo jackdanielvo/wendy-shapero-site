@@ -85,7 +85,14 @@ typos won't surface as cryptic blob-lookup errors. And the
 data/photos.js cache buster updates reliably on every deploy."
 echo ""
 
-echo "=== 5. Pushing ==="
+echo "=== 5. Pulling latest from origin (admin endpoints commit directly via the GitHub API, so the remote may have moved on without us) ==="
+git pull --rebase origin main || {
+  echo "    pull failed - resolve conflicts then re-run"
+  exit 3
+}
+echo ""
+
+echo "=== 6. Pushing ==="
 git push
 echo ""
 
