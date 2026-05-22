@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-22-biglabels" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-22-plus-tile" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-22-hero" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -63,6 +63,7 @@
       <button type="button" class="admin__tab" data-tab="bookings">Bookings</button>
       <button type="button" class="admin__tab" data-tab="settings">Settings</button>
       <button type="button" class="admin__tab" data-tab="photos">Photos</button>
+      <button type="button" class="admin__tab" data-tab="hero">Hero</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -153,6 +154,41 @@
       <p class="admin__status admin__status--inline" id="photosStatus" aria-live="polite"></p>
     </section>
 
+    <!-- HERO TAB -->
+    <section class="block admin__pane" data-tab="hero" hidden>
+      <p class="block__num">05.</p>
+      <h2 class="block__title">Hero.</h2>
+      <p class="pricing__lede">
+        The five large photo cards at the top of the home page. Click a slot to
+        swap in a different photo. <strong>Order matters</strong> — slot 1
+        appears on the far left under "WOMEN", slot 5 on the far right under
+        "EVENTS".
+      </p>
+
+      <div class="admin__hero" id="heroPane">
+        <p class="admin__status">Loading…</p>
+      </div>
+
+      <p class="cta__actions" style="margin-top:32px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button type="button" class="btn btn--primary" id="heroPublishBtn" disabled>Publish changes</button>
+        <button type="button" class="btn" id="heroRefreshBtn">Refresh</button>
+        <span id="heroPending" class="admin__status admin__status--inline" aria-live="polite">No pending changes</span>
+      </p>
+      <p class="admin__status admin__status--inline" id="heroStatus" aria-live="polite"></p>
+    </section>
+
+    <!-- Hero picker modal (lives outside any pane, controlled by JS) -->
+    <div class="admin__hero-picker" id="heroPickerModal" hidden>
+      <div class="admin__hero-picker__backdrop" id="heroPickerBackdrop"></div>
+      <div class="admin__hero-picker__panel" role="dialog" aria-labelledby="heroPickerTitle">
+        <header class="admin__hero-picker__head">
+          <h3 id="heroPickerTitle">Pick a photo</h3>
+          <button type="button" class="admin__hero-picker__close" id="heroPickerClose" aria-label="Close">&times;</button>
+        </header>
+        <div class="admin__hero-picker__body" id="heroPickerBody"></div>
+      </div>
+    </div>
+
   </main>
 
   <footer class="pricing__footer">
@@ -162,6 +198,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-22-plus-tile"></script>
+  <script src="admin.js?v=2026-05-22-hero"></script>
 </body>
 </html>

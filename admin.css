@@ -605,3 +605,192 @@
   /* Always show the delete button on mobile — no hover state */
   .admin__photos__delete { opacity: 0.9; }
 }
+
+/* HERO tab ==================================================== */
+.admin__hero {
+  margin: clamp(24px, 3vw, 36px) 0 clamp(16px, 2vw, 24px);
+}
+.admin__hero__row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: clamp(10px, 1.4vw, 18px);
+}
+.admin__hero__slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.admin__hero__slot-num {
+  font-family: var(--body-font, inherit);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, #8d8676);
+}
+.admin__hero__thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--ghost, #efece5);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.admin__hero__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.admin__hero__thumb.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted, #8d8676);
+  font-size: 32px;
+  border: 2px dashed #cfc9bd;
+}
+.admin__hero__caption {
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.3;
+  min-height: 2.6em;
+  word-break: break-word;
+}
+.admin__hero__change {
+  width: 100%;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 900px) {
+  .admin__hero__row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .admin__hero__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* HERO picker modal =========================================== */
+.admin__hero-picker[hidden] { display: none; }
+.admin__hero-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin__hero-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.55);
+  backdrop-filter: blur(2px);
+}
+.admin__hero-picker__panel {
+  position: relative;
+  width: min(960px, 92vw);
+  max-height: 88vh;
+  background: var(--bg, #fff);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.admin__hero-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--rule);
+}
+.admin__hero-picker__head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+.admin__hero-picker__close {
+  background: transparent;
+  border: none;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 4px;
+}
+.admin__hero-picker__close:hover { color: var(--ink); }
+.admin__hero-picker__body {
+  padding: 18px 24px 24px;
+  overflow: auto;
+}
+.admin__hero-picker__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.admin__hero-picker__cat {
+  background: transparent;
+  border: 1px solid var(--rule);
+  font-family: var(--body-font, inherit);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.admin__hero-picker__cat:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.admin__hero-picker__cat.is-active {
+  background: #1d5e62;
+  color: #fff;
+  border-color: #1d5e62;
+}
+.admin__hero-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.admin__hero-picker__tile {
+  background: transparent;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+.admin__hero-picker__tile img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+}
+.admin__hero-picker__tile span {
+  display: block;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+}
+.admin__hero-picker__tile:hover {
+  border-color: #1d5e62;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}

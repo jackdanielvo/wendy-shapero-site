@@ -77,6 +77,7 @@
       if (active === "bookings") loadBookings().catch(console.error);
       if (active === "settings") loadSettings().catch(console.error);
       if (active === "photos")   loadPhotos().catch((e) => photosStatus("err", e.message));
+      if (active === "hero")     loadHero().catch((e) => heroStatus("err", e.message));
     });
   });
 
@@ -1155,6 +1156,312 @@
 
   function photosStatus(kind, msg) {
     const el = document.getElementById("photosStatus");
+    if (!el) return;
+    el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
+  }
+
+  // -----------------------------------------------------------
+  // HERO TAB — pick the 5 photos that lead the home page.
+  //
+  // Each entry in heroState/heroOriginal is either:
+  //   - a string slug like "valentina"
+  //   - a string slug#N like "valentina#3" (Nth photo, 0-indexed)
+  //   - an object { url: "https://..." } for pinned URLs (used rarely;
+  //     the picker UI never produces these but we preserve them on load)
+  //
+  // The picker modal reuses the photos manifest we already fetch for
+  // the Photos tab to enumerate available subjects + previews.
+  // -----------------------------------------------------------
+  let heroOriginal = null;       // array as loaded
+  let heroState = null;          // working copy
+  let heroCommitSha = null;
+  let heroPickerSlot = null;     // which slot (0-4) the picker is editing
+  let heroPickerStage = null;    // "categories" | "photos"
+  let heroPickerCatIdx = 0;
+
+  // The Photos tab manifest gives us folder names with NN- prefixes,
+  // which we need to convert to slugs for matching to heroPhotos.
+  function slugify(folder) {
+    return String(folder || "")
+      .replace(/^\d+-\s*/, "")
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  // Stable URL for the lead (or Nth) photo of a subject, given the
+  // raw manifest tree (with NN- prefixes).
+  function heroPhotoUrl(catFolder, subjFolder, photoIndex) {
+    const list = currentManifestPhotos(catFolder, subjFolder);
+    if (!list || !list.length) return "";
+    const idx = Math.min(Math.max(0, photoIndex || 0), list.length - 1);
+    const file = list[idx];
+    return (
+      "/photos-web/" +
+      encodeURIComponent(catFolder) +
+      "/" +
+      encodeURIComponent(subjFolder) +
+      "/" +
+      encodeURIComponent(file)
+    );
+  }
+
+  function currentManifestPhotos(catFolder, subjFolder) {
+    if (!photosOriginal) return null;
+    const cat = photosOriginal.categories.find((c) => c.folder === catFolder);
+    if (!cat) return null;
+    const subj = cat.subjects.find((s) => s.folder === subjFolder);
+    return subj ? subj.photos : null;
+  }
+
+  // Find the (cat, subj) pair in the manifest whose slug matches `slug`.
+  // Returns { catFolder, subjFolder } or null.
+  function manifestLookupBySlug(slug) {
+    if (!photosOriginal || !slug) return null;
+    const cleanSlug = String(slug).split("#")[0].toLowerCase();
+    for (const cat of photosOriginal.categories) {
+      for (const subj of cat.subjects) {
+        if (slugify(subj.folder) === cleanSlug) {
+          return { catFolder: cat.folder, subjFolder: subj.folder };
+        }
+      }
+    }
+    return null;
+  }
+
+  function heroEntryToUrl(entry) {
+    if (entry && typeof entry === "object" && entry.url) return entry.url;
+    if (typeof entry === "string") {
+      const parts = entry.split("#");
+      const slug = parts[0];
+      const idx = parts.length > 1 ? Number(parts[1]) || 0 : 0;
+      const m = manifestLookupBySlug(slug);
+      if (m) return heroPhotoUrl(m.catFolder, m.subjFolder, idx);
+    }
+    return "";
+  }
+
+  function heroEntryLabel(entry) {
+    if (entry && typeof entry === "object" && entry.url) return "(pinned URL)";
+    if (typeof entry === "string") {
+      const parts = entry.split("#");
+      const slug = parts[0];
+      const m = manifestLookupBySlug(slug);
+      if (m) {
+        const name = m.subjFolder.replace(/^\d+-\s*/, "");
+        return parts.length > 1 ? `${name} · photo ${Number(parts[1]) + 1}` : name;
+      }
+      return entry + " (not found)";
+    }
+    return "(unset)";
+  }
+
+  async function loadHero() {
+    heroStatus("", "Loading…");
+    setHeroPending(0);
+    try {
+      // Need the photos manifest too so we can render thumbnails.
+      // If it hasn't been loaded yet (i.e., user jumped straight to
+      // Hero), fetch it now.
+      if (!photosOriginal) {
+        const pm = await authFetch("/api/admin-photos-manifest");
+        if (!pm.ok) throw new Error("Couldn't load photo list");
+        photosOriginal = await pm.json();
+      }
+
+      const res = await authFetch("/api/admin-hero");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Load failed (${res.status})`);
+      }
+      const data = await res.json();
+      heroOriginal = JSON.parse(JSON.stringify(data.heroPhotos || []));
+      heroState = JSON.parse(JSON.stringify(data.heroPhotos || []));
+      heroCommitSha = data.commitSha;
+      // Pad/truncate to exactly 5
+      while (heroState.length < 5) heroState.push("");
+      heroState.length = 5;
+      renderHero();
+      heroStatus("", "");
+    } catch (e) {
+      heroStatus("err", e.message);
+    }
+  }
+
+  const HERO_LABELS = ["1 · Women", "2 · Men", "3 · Kids & Teens", "4 · Lifestyle", "5 · Events"];
+
+  function renderHero() {
+    const pane = document.getElementById("heroPane");
+    if (!heroState) {
+      pane.innerHTML = `<p class="admin__status">Loading…</p>`;
+      return;
+    }
+    const slotsHtml = heroState.map((entry, i) => {
+      const url = heroEntryToUrl(entry);
+      const label = heroEntryLabel(entry);
+      const isUnset = !url;
+      return `
+        <div class="admin__hero__slot" data-slot="${i}">
+          <div class="admin__hero__slot-num">${HERO_LABELS[i]}</div>
+          <div class="admin__hero__thumb ${isUnset ? "is-empty" : ""}">
+            ${url ? `<img src="${url}" alt="" />` : `<span>?</span>`}
+          </div>
+          <div class="admin__hero__caption">${escapeHtml(label)}</div>
+          <button type="button" class="btn admin__hero__change" data-change-slot="${i}">Change</button>
+        </div>
+      `;
+    }).join("");
+    pane.innerHTML = `<div class="admin__hero__row">${slotsHtml}</div>`;
+
+    pane.querySelectorAll("[data-change-slot]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const slot = Number(btn.dataset.changeSlot);
+        openHeroPicker(slot);
+      });
+    });
+
+    recountHeroPending();
+  }
+
+  // PICKER MODAL --------------------------------------------------
+  function openHeroPicker(slotIdx) {
+    heroPickerSlot = slotIdx;
+    heroPickerStage = "categories";
+    heroPickerCatIdx = 0;
+    // Default to the category that matches the slot (Women, Men, …)
+    if (photosOriginal && photosOriginal.categories[slotIdx]) {
+      heroPickerCatIdx = slotIdx;
+    }
+    document.getElementById("heroPickerModal").hidden = false;
+    document.getElementById("heroPickerTitle").textContent =
+      `Pick photo for slot ${slotIdx + 1} (${HERO_LABELS[slotIdx].split("· ")[1] || ""})`;
+    renderHeroPicker();
+  }
+  function closeHeroPicker() {
+    document.getElementById("heroPickerModal").hidden = true;
+    heroPickerSlot = null;
+  }
+  function renderHeroPicker() {
+    const body = document.getElementById("heroPickerBody");
+    if (!photosOriginal) {
+      body.innerHTML = `<p class="admin__status">No photo manifest loaded.</p>`;
+      return;
+    }
+    // Always render the category tabs at the top
+    const tabsHtml = photosOriginal.categories.map((cat, i) =>
+      `<button type="button" class="admin__hero-picker__cat ${i === heroPickerCatIdx ? "is-active" : ""}" data-pick-cat="${i}">${escapeHtml(cat.folder.replace(/^\d+-\s*/, ""))}</button>`
+    ).join("");
+
+    const cat = photosOriginal.categories[heroPickerCatIdx];
+    let gridHtml = "";
+    if (!cat) {
+      gridHtml = `<p class="admin__status">No category selected.</p>`;
+    } else {
+      const subjects = cat.subjects.map((s) => {
+        const url = heroPhotoUrl(cat.folder, s.folder, 0);
+        const name = s.folder.replace(/^\d+-\s*/, "");
+        return `
+          <button type="button" class="admin__hero-picker__tile" data-pick-subj="${escapeAttr(s.folder)}">
+            <img src="${url}" alt="" loading="lazy" />
+            <span>${escapeHtml(name)}</span>
+          </button>
+        `;
+      }).join("");
+      gridHtml = `<div class="admin__hero-picker__grid">${subjects}</div>`;
+    }
+
+    body.innerHTML = `
+      <div class="admin__hero-picker__cats">${tabsHtml}</div>
+      ${gridHtml}
+    `;
+
+    body.querySelectorAll("[data-pick-cat]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        heroPickerCatIdx = Number(btn.dataset.pickCat);
+        renderHeroPicker();
+      });
+    });
+    body.querySelectorAll("[data-pick-subj]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const subjFolder = btn.dataset.pickSubj;
+        const slug = slugify(subjFolder);
+        if (heroPickerSlot != null) {
+          heroState[heroPickerSlot] = slug;
+        }
+        closeHeroPicker();
+        renderHero();
+      });
+    });
+  }
+
+  document.getElementById("heroPickerClose").addEventListener("click", closeHeroPicker);
+  document.getElementById("heroPickerBackdrop").addEventListener("click", closeHeroPicker);
+
+  // PENDING + PUBLISH ---------------------------------------------
+  function recountHeroPending() {
+    if (!heroState || !heroOriginal) {
+      setHeroPending(0);
+      return;
+    }
+    let changes = 0;
+    for (let i = 0; i < 5; i++) {
+      const cur = heroState[i];
+      const orig = heroOriginal[i];
+      if (JSON.stringify(cur) !== JSON.stringify(orig)) changes++;
+    }
+    setHeroPending(changes);
+  }
+
+  function setHeroPending(n) {
+    const el = document.getElementById("heroPending");
+    const btn = document.getElementById("heroPublishBtn");
+    if (n === 0) {
+      el.textContent = "No pending changes";
+      el.className = "admin__status admin__status--inline";
+      if (btn) btn.disabled = true;
+    } else {
+      el.textContent = `${n} pending change${n === 1 ? "" : "s"}`;
+      el.className = "admin__status admin__status--inline admin__status--pending";
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function publishHero() {
+    if (!heroState) return;
+    heroStatus("", "Publishing…");
+    const btn = document.getElementById("heroPublishBtn");
+    if (btn) btn.disabled = true;
+    try {
+      const payload = {
+        heroPhotos: heroState,
+        commitSha: heroCommitSha,
+        commitMessage: `Hero: ${heroState.map((e) => typeof e === "string" ? e : "url").join(", ")}`,
+      };
+      const res = await authFetch("/api/admin-hero", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || `Publish failed (${res.status})`);
+      heroStatus("ok", body.message || "Published.");
+      // Reload to pick up the new commit SHA
+      await loadHero();
+    } catch (e) {
+      heroStatus("err", e.message);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  document.getElementById("heroPublishBtn").addEventListener("click", publishHero);
+  document.getElementById("heroRefreshBtn").addEventListener("click", () => {
+    loadHero().catch((e) => heroStatus("err", e.message));
+  });
+
+  function heroStatus(kind, msg) {
+    const el = document.getElementById("heroStatus");
     if (!el) return;
     el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
     el.textContent = msg || "";
