@@ -662,20 +662,14 @@
         <div class="admin__photos__col admin__photos__col--wide" id="adminPhotoFiles">
           <h4 class="admin__photos__h">
             Photos ${subj ? "in " + escapeHtml(stripPrefix(subj.folder)) : ""}
-            ${subj ? `
-              <button type="button" class="admin__photos__add-btn" id="adminPhotoAddBtn">+ Add photos</button>
-              <input type="file" id="adminPhotoAddInput" accept="image/jpeg,image/png" multiple hidden />
-            ` : ""}
           </h4>
           <ul class="admin__photos__grid admin__photos__grid--draggable" id="adminPhotoFilesList"></ul>
+          ${subj ? `<input type="file" id="adminPhotoAddInput" accept="image/jpeg,image/png" multiple hidden />` : ""}
           <p class="admin__photos__hint">
             Drag photos to reorder. The first one is the lead/cover.
             Click the &times; on a tile to remove it.
-            Or drop new JPEG/PNG files anywhere on the photo grid to upload — they'll be resized automatically.
+            Click the dashed <strong>+</strong> tile (or drop JPEG/PNG files onto it) to add new photos.
           </p>
-          <div class="admin__photos__dropzone" id="adminPhotoDropzone" hidden>
-            <p>Drop to upload</p>
-          </div>
         </div>
       </div>
     `;
@@ -772,15 +766,38 @@
         filesUl.appendChild(li);
       });
 
+      // "+ Add" tile at the end of the grid — click to pick files,
+      // or drop files onto it. Always sits at the end of the photos list.
+      const addLi = document.createElement("li");
+      addLi.className = "admin__photos__tile admin__photos__tile--add";
+      addLi.id = "adminPhotoAddTile";
+      addLi.innerHTML =
+        `<span class="admin__photos__plus" aria-hidden="true">+</span>` +
+        `<span class="admin__photos__add-label">Add photos</span>`;
+      filesUl.appendChild(addLi);
+
       photosSortables.push(new Sortable(filesUl, {
         animation: 160,
         ghostClass: "is-dragging",
-        filter: ".admin__photos__delete",
+        // Don't initiate drag on the delete button or the + tile
+        filter: ".admin__photos__delete, .admin__photos__tile--add",
         preventOnFilter: false,
+        // Pin the + tile at the end of the list — it must never be
+        // dragged or have other tiles dropped after it
+        onMove: (evt) => {
+          if (evt.related && evt.related.classList.contains("admin__photos__tile--add")) {
+            return false;
+          }
+        },
         onEnd: (evt) => {
           if (evt.oldIndex === evt.newIndex) return;
-          const moved = subj.photos.splice(evt.oldIndex, 1)[0];
-          subj.photos.splice(evt.newIndex, 0, moved);
+          // The + tile is always the last child; only photo tiles can
+          // be reordered. Cap newIndex at photos.length - 1 just in case.
+          const oldI = evt.oldIndex;
+          const newI = Math.min(evt.newIndex, subj.photos.length - 1);
+          if (oldI === newI) return;
+          const moved = subj.photos.splice(oldI, 1)[0];
+          subj.photos.splice(newI, 0, moved);
           renumberPhotos(subj);
           renderPhotos();
           recountPending();
@@ -821,11 +838,11 @@
         });
       });
 
-    // Add-photos button → trigger hidden file input
-    const addBtn = document.getElementById("adminPhotoAddBtn");
+    // The "+" tile — click to pick files, or drop files onto it.
+    const addTile = document.getElementById("adminPhotoAddTile");
     const addInput = document.getElementById("adminPhotoAddInput");
-    if (addBtn && addInput) {
-      addBtn.addEventListener("click", (ev) => {
+    if (addTile && addInput) {
+      addTile.addEventListener("click", (ev) => {
         ev.preventDefault();
         addInput.click();
       });
@@ -834,35 +851,34 @@
         addInput.value = ""; // allow re-selecting same file
         if (files.length) await handlePhotoUploads(subj, files);
       });
-    }
 
-    // Drag-drop zone (covers the entire photo grid)
-    const grid = document.getElementById("adminPhotoFilesList");
-    const dz = document.getElementById("adminPhotoDropzone");
-    if (grid && dz) {
+      // Drag-drop ONLY onto the + tile. Photos elsewhere on the grid
+      // stay fully visible. The tile highlights itself while a file is
+      // hovering over it.
       let dragDepth = 0;
-      const showZone = () => { dz.hidden = false; dz.classList.add("is-active"); };
-      const hideZone = () => { dz.hidden = true; dz.classList.remove("is-active"); };
-      grid.addEventListener("dragenter", (e) => {
-        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+      const hasFiles = (e) =>
+        e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+
+      addTile.addEventListener("dragenter", (e) => {
+        if (!hasFiles(e)) return;
         e.preventDefault();
         dragDepth++;
-        showZone();
+        addTile.classList.add("is-drop-target");
       });
-      grid.addEventListener("dragover", (e) => {
-        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+      addTile.addEventListener("dragover", (e) => {
+        if (!hasFiles(e)) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = "copy";
       });
-      grid.addEventListener("dragleave", (e) => {
+      addTile.addEventListener("dragleave", () => {
         dragDepth = Math.max(0, dragDepth - 1);
-        if (dragDepth === 0) hideZone();
+        if (dragDepth === 0) addTile.classList.remove("is-drop-target");
       });
-      grid.addEventListener("drop", async (e) => {
-        if (!e.dataTransfer || !Array.from(e.dataTransfer.types || []).includes("Files")) return;
+      addTile.addEventListener("drop", async (e) => {
+        if (!hasFiles(e)) return;
         e.preventDefault();
         dragDepth = 0;
-        hideZone();
+        addTile.classList.remove("is-drop-target");
         const files = Array.from(e.dataTransfer.files || []).filter((f) =>
           /^image\/(jpeg|jpg|png)$/i.test(f.type)
         );

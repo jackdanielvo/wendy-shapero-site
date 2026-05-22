@@ -547,48 +547,46 @@
   outline-offset: -2px;
 }
 
-/* + Add photos button in the column header */
-.admin__photos__add-btn {
-  margin-left: 12px;
-  background: #1d5e62;
-  color: #fff;
-  border: none;
-  font-family: var(--body-font, inherit);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 6px 12px;
-  border-radius: 999px;
+/* "+ Add" tile — sits at the end of the photo grid as a click target
+   and drop target. Matches photo tile dimensions. */
+.admin__photos__tile--add {
+  background: transparent;
+  border: 2px dashed #cfc9bd;
+  box-shadow: none;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-  vertical-align: middle;
-}
-.admin__photos__add-btn:hover {
-  background: #2a8c92;
-  transform: translateY(-1px);
-}
-
-/* Drop zone — full-grid overlay when files are being dragged over */
-.admin__photos__col--wide { position: relative; }
-.admin__photos__dropzone {
-  position: absolute;
-  inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(29, 94, 98, 0.86);
+  gap: 8px;
+  color: #8d8676;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.admin__photos__tile--add:hover {
+  border-color: #1d5e62;
+  color: #1d5e62;
+  background: rgba(29, 94, 98, 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+.admin__photos__tile--add.is-drop-target {
+  border-color: #1d5e62;
+  border-style: solid;
   color: #fff;
-  border: 3px dashed #fff;
-  border-radius: 12px;
-  font-size: 22px;
-  font-weight: 800;
+  background: #1d5e62;
+  transform: translateY(-2px);
+}
+.admin__photos__plus {
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 300;
+}
+.admin__photos__add-label {
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  pointer-events: none;
-  z-index: 5;
 }
-.admin__photos__dropzone p { margin: 0; }
 
 /* Pending changes pill */
 .admin__status--pending {
