@@ -141,17 +141,47 @@ function buildHero(subjects, categories, heroPhotosConfig) {
   const row = document.getElementById("heroImages");
   if (!row) return;
   row.innerHTML = "";
-  // Each hero card represents a CATEGORY rather than a single shoot.
-  // Click a card to scroll to that category's section on the page.
-  // The card photo is auto-picked as the first photo of the first
-  // subject in the category — but heroPhotos config can override this
-  // per category by listing a specific subject slug (or "slug#index").
-  const overrides = buildHeroOverrideMap(subjects, heroPhotosConfig);
-  (categories || []).slice(0, 5).forEach((cat) => {
-    const subjectsInCat = subjects.filter((s) => s.cat === cat.slug);
-    if (!subjectsInCat.length) return;
-    const override = overrides[cat.slug];
-    const photoUrl = override || subjectsInCat[0].photoUrls[0];
+
+  // Resolve the rendering order. Two paths:
+  //
+  // A) `heroPhotosConfig` is populated (the new admin-driven flow):
+  //    iterate it IN ORDER. Each entry resolves to a subject; the
+  //    subject's category determines the card's label and link target.
+  //    Wendy controls hero card order by dragging slots in /admin → Hero.
+  //
+  // B) `heroPhotosConfig` is empty / missing: fall back to the original
+  //    behavior — iterate `categories` array, pick the first subject's
+  //    lead photo per category.
+  //
+  // The category section grids below the hero are always rendered in
+  // categories-array order (intentionally — not affected by hero
+  // reorder).
+  const byId = Object.fromEntries(subjects.map((s) => [s.id, s]));
+  const catBySlug = Object.fromEntries(
+    (categories || []).map((c) => [c.slug, c])
+  );
+
+  let plan;
+  if (Array.isArray(heroPhotosConfig) && heroPhotosConfig.length) {
+    plan = heroPhotosConfig
+      .map((entry) => resolveHeroEntry(entry, byId))
+      .filter(Boolean)
+      .map((r) => {
+        const subj = r.subjectId ? byId[r.subjectId] : null;
+        const cat = subj ? catBySlug[subj.cat] : null;
+        return cat ? { cat, photoUrl: r.url } : null;
+      })
+      .filter(Boolean)
+      .slice(0, 5);
+  } else {
+    plan = (categories || []).slice(0, 5).map((cat) => {
+      const subjectsInCat = subjects.filter((s) => s.cat === cat.slug);
+      if (!subjectsInCat.length) return null;
+      return { cat, photoUrl: subjectsInCat[0].photoUrls[0] };
+    }).filter(Boolean);
+  }
+
+  plan.forEach(({ cat, photoUrl }) => {
     const label = cat.label || cat.slug;
 
     const wrap = document.createElement("button");
