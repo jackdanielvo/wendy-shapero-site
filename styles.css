@@ -317,10 +317,10 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   display: flex;
   justify-content: center;
   /* Top margin stays negative so the cards tuck up under the
-     wordmark like before. Bottom margin is now positive so the
-     category labels (which hang ~34px below each card) have room
+     wordmark like before. Bottom margin is positive so the bolder
+     category labels (which hang ~42px below each card) have room
      to sit before the PHOTOGRAPHER subtitle below. */
-  margin: clamp(-40px, -4vh, -10px) 0 clamp(40px, 6vh, 70px) 0;
+  margin: clamp(-40px, -4vh, -10px) 0 clamp(60px, 8vh, 90px) 0;
   position: relative;
   z-index: 1;
 }
@@ -395,12 +395,13 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
 .hero__image__label {
   position: absolute;
   left: 50%;
-  bottom: -34px;
+  bottom: -42px;
   transform: translateX(-50%);
   font-family: var(--body-font);
-  font-weight: 700;
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-weight: 900;          /* Inter Black, matches WENDYPIX wordmark */
+  font-size: clamp(14px, 1.4vw, 18px);
+  letter-spacing: 0.12em;    /* tightened to compensate for larger size */
+  line-height: 1.1;
   text-transform: uppercase;
   color: var(--ink);
   white-space: nowrap;
@@ -443,7 +444,7 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    padding: 14px 22vw 56px;
+    padding: 14px 22vw 74px;     /* extra bottom padding for bolder, larger category labels */
     gap: 18px;
     height: auto;
     max-width: none;

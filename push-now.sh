@@ -1,7 +1,7 @@
 #!/bin/bash
-# Push the photo-editor UX cleanup — replace the obtrusive teal
-# "Drop to upload" overlay with a discoverable "+ Add" tile that
-# sits at the end of the photo grid. Photos stay fully visible.
+# Push the hero category label refresh — bigger and bolder so visitors
+# can actually read WOMEN / MEN / KIDS & TEENS / LIFESTYLE / EVENTS
+# below the hero cards.
 set -uo pipefail
 
 cd "$(dirname "$0")" || exit 1
@@ -27,49 +27,37 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add admin.html admin.js admin.css push-now.sh
+git add styles.css index.html pricing.html book.html book-success.html admin.html push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: '+ Add' tile, drop the overlay
+git commit -m "Home hero: larger, bolder category labels
 
-The previous upload flow used a full-grid teal overlay that appeared
-when files were dragged onto the photo area. Two problems:
-1. A CSS rule (display:flex) was overriding the HTML [hidden]
-   attribute, so the overlay was effectively always visible — the
-   tile photos were obscured by a translucent teal panel.
-2. Even when working correctly, covering the photo grid with an
-   opaque overlay during drag-drop hid the photos Wendy wanted to
-   see while arranging.
+The labels under each hero card (WOMEN, MEN, KIDS & TEENS,
+LIFESTYLE, EVENTS) were 11px / weight 700 — visually small and
+easy to miss, which buried the nav affordance the cards rely on.
 
-New approach: at the end of the photo grid, render an extra
-.admin__photos__tile--add tile with the same dimensions as a photo
-tile, a dashed gray border, and a big '+' icon with the label 'Add
-photos'. Click it to open a file picker. Drop files directly on
-it to upload. The tile flips to solid teal (.is-drop-target) while
-a file is being dragged over it, but the rest of the photo grid is
-never covered up.
+Bumped to:
+- font-weight: 900 (Inter Black, matching the WENDYPIX wordmark)
+- font-size: clamp(14px, 1.4vw, 18px) — scales from 14px on small
+  desktops up to 18px on big screens
+- letter-spacing: 0.12em (tightened from 0.18em so the larger
+  letters don't sprawl)
+- line-height: 1.1 so the label sits tight as one line
+- bottom offset: -34px to -42px so it doesn't crowd the card
 
-Photos stay fully visible at all times. The drop affordance is
-discoverable (sits inline at the end of the grid, matching the
-existing visual rhythm) and the click affordance is the same
-element (no separate header button competing for attention).
+The container around the cards (.hero__mid) needed a bigger
+bottom margin to keep the new labels from crashing into the
+'PHOTOGRAPHER' subtitle below: clamp(40, 6vh, 70) →
+clamp(60, 8vh, 90).
 
-Implementation notes:
-- The '+' tile is appended after the photo tiles every render so
-  SortableJS sees it as a list child. It's excluded from drag
-  via `filter: '.admin__photos__delete, .admin__photos__tile--add'`
-  and pinned to the end via an `onMove` rule that returns false
-  when a photo would land below it. `onEnd` also caps newIndex at
-  photos.length - 1 just in case.
-- Drag handlers attach to the '+' tile only, not the grid as a
-  whole. dragenter/dragover/dragleave/drop track a depth counter
-  to handle child-element bubbling cleanly.
-- Mobile-friendly: the tile is a button-sized click target, so
-  Wendy can tap it on phone/tablet to upload from camera roll.
+Mobile (<640px) carousel container bumped its padding-bottom
+from 56px to 74px so the heavier label still fits inside the
+clipped scroll area instead of getting chopped off.
 
-Cache buster: admin.css and admin.js bumped to v=2026-05-22-plus-tile."
+Cache buster bumped to v=2026-05-22-biglabels on all five HTML
+pages that load styles.css."
 echo ""
 
 echo "=== 5. Pushing ==="
