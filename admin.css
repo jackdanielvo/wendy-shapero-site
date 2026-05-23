@@ -411,6 +411,33 @@
   border-color: rgba(179,71,185,0.4);
   font-weight: 700;
 }
+/* Subject delete (X) button — sits at the right of each subject row,
+   hover-revealed on desktop, always visible on mobile. */
+.admin__photos__subj-delete {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.admin__photos__item:hover .admin__photos__subj-delete,
+.admin__photos__item:focus-within .admin__photos__subj-delete { opacity: 1; }
+.admin__photos__subj-delete:hover { background: #d32a2a; }
+@media (max-width: 900px) {
+  .admin__photos__subj-delete { opacity: 0.85; }
+}
+
 /* Drop-target highlight for cross-list drags (subject→category, photo→subject) */
 .admin__photos__item.is-drop-target {
   background: rgba(29, 94, 98, 0.12);

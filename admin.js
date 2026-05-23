@@ -700,6 +700,11 @@
 
       // Category li is a DROP TARGET for subject moves. Drag a subject
       // from the Subjects pane onto a category here to move it.
+      // Depth counter prevents the flicker that happens when the
+      // cursor crosses child element boundaries (the name span, count
+      // badge, etc.) — each enter/leave pair on a child fires on the
+      // parent too, which would otherwise make the highlight blink.
+      let catDragDepth = 0;
       li.addEventListener("dragover", (e) => {
         if (
           e.dataTransfer &&
@@ -711,16 +716,18 @@
       });
       li.addEventListener("dragenter", (e) => {
         if (
-          e.dataTransfer &&
-          Array.from(e.dataTransfer.types).includes("application/wendypix-subject")
-        ) {
-          li.classList.add("is-drop-target");
-        }
+          !e.dataTransfer ||
+          !Array.from(e.dataTransfer.types).includes("application/wendypix-subject")
+        ) return;
+        catDragDepth++;
+        li.classList.add("is-drop-target");
       });
       li.addEventListener("dragleave", () => {
-        li.classList.remove("is-drop-target");
+        catDragDepth = Math.max(0, catDragDepth - 1);
+        if (catDragDepth === 0) li.classList.remove("is-drop-target");
       });
       li.addEventListener("drop", (e) => {
+        catDragDepth = 0;
         li.classList.remove("is-drop-target");
         const raw = e.dataTransfer.getData("application/wendypix-subject");
         if (!raw) return;
@@ -768,12 +775,58 @@
         li.innerHTML =
           `<span class="admin__photos__grip" aria-hidden="true">⋮⋮</span>` +
           `<span>${escapeHtml(stripPrefix(s.folder))}</span>` +
-          `<span class="admin__photos__count">${s.photos.length}</span>`;
+          `<span class="admin__photos__count">${s.photos.length}</span>` +
+          `<button type="button" class="admin__photos__subj-delete" data-subj-del="${i}" title="Remove this subject" aria-label="Remove subject">&times;</button>`;
         li.addEventListener("click", (ev) => {
-          if (ev.target.closest(".admin__photos__grip")) return;
+          if (
+            ev.target.closest(".admin__photos__grip") ||
+            ev.target.closest("[data-subj-del]")
+          ) return;
           photosActiveSubjIdx = i;
           renderPhotos();
         });
+        // Delete this subject (and all its photos in pending state).
+        const delBtn = li.querySelector("[data-subj-del]");
+        if (delBtn) {
+          delBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            const subjName = stripPrefix(s.folder);
+            const photoCount = s.photos.length;
+            const photoLabel =
+              photoCount === 0
+                ? "no photos"
+                : photoCount === 1
+                ? "1 photo"
+                : `${photoCount} photos`;
+            if (
+              !confirm(
+                `Remove subject "${subjName}" (${photoLabel})? You can still undo by hitting Refresh before Publish.`
+              )
+            ) return;
+            // Revoke any in-flight upload blob URLs to avoid leaks
+            s.photos.forEach((p) => {
+              if (p.uploadKey) {
+                const entry = photosUploads.get(p.uploadKey);
+                if (entry && entry.previewUrl) {
+                  try { URL.revokeObjectURL(entry.previewUrl); } catch (_) {}
+                }
+                photosUploads.delete(p.uploadKey);
+              }
+            });
+            cat.subjects.splice(i, 1);
+            renumberSubjects(cat);
+            // Adjust active selection so we don't end up out-of-bounds
+            if (photosActiveSubjIdx >= cat.subjects.length) {
+              photosActiveSubjIdx = Math.max(0, cat.subjects.length - 1);
+            }
+            renderPhotos();
+            recountPending();
+            photosStatus(
+              "ok",
+              `Removed "${subjName}". Publish to commit.`
+            );
+          });
+        }
 
         // DRAG SOURCE: stash the source category + subject index in
         // a custom MIME type the drop targets can sniff.
@@ -791,7 +844,9 @@
 
         // DROP TARGET — accepts either another subject (for reorder
         // within the same category) or a photo (for cross-subject
-        // move within the current category).
+        // move within the current category). Depth counter prevents
+        // flicker as the cursor crosses inner element boundaries.
+        let subjDragDepth = 0;
         li.addEventListener("dragover", (e) => {
           const t = e.dataTransfer && Array.from(e.dataTransfer.types);
           if (
@@ -806,17 +861,21 @@
         li.addEventListener("dragenter", (e) => {
           const t = e.dataTransfer && Array.from(e.dataTransfer.types);
           if (
-            t &&
-            (t.includes("application/wendypix-subject") ||
-              t.includes("application/wendypix-photo"))
-          ) {
-            li.classList.add("is-drop-target");
-          }
+            !t ||
+            !(
+              t.includes("application/wendypix-subject") ||
+              t.includes("application/wendypix-photo")
+            )
+          ) return;
+          subjDragDepth++;
+          li.classList.add("is-drop-target");
         });
         li.addEventListener("dragleave", () => {
-          li.classList.remove("is-drop-target");
+          subjDragDepth = Math.max(0, subjDragDepth - 1);
+          if (subjDragDepth === 0) li.classList.remove("is-drop-target");
         });
         li.addEventListener("drop", (e) => {
+          subjDragDepth = 0;
           li.classList.remove("is-drop-target");
           e.preventDefault();
           const types = Array.from(e.dataTransfer.types);
