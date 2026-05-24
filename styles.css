@@ -609,6 +609,15 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin: 16px 0 clamp(50px, 8vh, 110px) 0;
 }
 
+/* Category sections (WOMEN, MEN, KIDS & TEENS, LIFESTYLE, EVENTS) no
+   longer render the .featured-sub paragraph below the headline — its
+   bottom margin used to supply all the breathing room between the h2
+   and the carousel below. Without it, the carousel hugs the headline.
+   Put the gap on the h2 itself so the editorial rhythm comes back. */
+.category-section .display {
+  margin-bottom: clamp(48px, 7vh, 96px);
+}
+
 /* ------------------------------------------------------------
    Featured Work carousel — Spencer-style.
    Three tiles visible at a time:
