@@ -30,25 +30,30 @@ echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "WENDYPIX wordmark: tighten D-Y kerning
+git commit -m "Hero subtitle: drop comma, demote PORTRAITS & MOMENTS
 
-Inter Black gives D a near-flat right edge and Y a diagonal
-that converges low-center, so the optical space between
-them reads visibly wider than every other letter pair in
-WENDYPIX — even with the negative letter-spacing already
-applied at the .display level. Looks like a typo gap.
+Two-tier subtitle treatment, replacing the flat single-size
+'PHOTOGRAPHER, / PORTRAITS & MOMENTS' line:
 
-Fix: wrap the Y in its own <span class=\"brand-y\"> in the
-HTML, then pull it back with margin-left: -0.06em in CSS.
-The fix is a wrapper (not a per-letter targeting hack), so
-it applies cleanly to BOTH the big animated hero wordmark
-on index.html (where splitTitle further wraps each letter
-in a .char span — recursion handles the brand-y wrapper
-correctly) and the smaller .pricing__brand wordmark used
-on book / pricing / admin / book-success.
+  PHOTOGRAPHER          <- large, ghost gray, unchanged
+    PORTRAITS & MOMENTS <- smaller, brand teal, secondary
 
-Cache busters bumped to v=2026-05-24-dykern on all five
-HTML pages."
+This reads as 'role / what she does' rather than a single
+comma-separated phrase, which gives PHOTOGRAPHER the
+headline weight it earned and lets the descriptors sit
+quietly underneath.
+
+Changes:
+- index.html: drop the comma after PHOTOGRAPHER, wrap the
+  second line in <span class=\"sub__tag\">
+- styles.css: new .hero .sub__tag rule — inline-block,
+  font-size clamp(20px, 4.2vw, 64px) (~60% of PHOTOGRAPHER),
+  color #1d5e62 (brand teal — echoes BOOK in the hero nav),
+  margin-top for a touch of breathing room above (parent
+  line-height 0.85 would otherwise stack them too tight at
+  the size delta)
+
+Cache busters bumped to v=2026-05-24-subtag."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

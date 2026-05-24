@@ -312,6 +312,20 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-top: clamp(20px, 4vh, 60px);
 }
 
+/* Second line of the hero subtitle. Sits below PHOTOGRAPHER as a
+   subordinate tagline — visibly smaller and recolored to brand
+   teal so it reads as a secondary descriptor rather than a comma-
+   separated continuation. Inline-block so margin-top works for a
+   touch of breathing room above it (the parent's tight line-height
+   0.85 from .display would otherwise stack the two lines too close
+   given the size delta). */
+.hero .sub__tag {
+  display: inline-block;
+  font-size: clamp(20px, 4.2vw, 64px);
+  color: #1d5e62;
+  margin-top: clamp(6px, 1.2vh, 18px);
+}
+
 .services {
   margin-top: clamp(36px, 6vh, 80px);
 }
