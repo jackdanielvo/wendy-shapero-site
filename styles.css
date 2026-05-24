@@ -267,6 +267,16 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    a small color accent without breaking the grayscale rest-of-page. */
 .hero h1.display.brand .brand-wendy { color: var(--ink); }
 .hero h1.display.brand .brand-pix   { color: #b347b9; }
+
+/* D-Y kerning fix. Inter Black gives D a near-flat right edge and Y a
+   diagonal that converges low-center, so the optical space between
+   them reads wider than every other letter pair in WENDYPIX even with
+   the negative letter-spacing already applied. Wrap the Y in
+   .brand-y (in HTML) and pull it back with a small negative margin
+   so the gap matches the rest of the wordmark. Applies to both the
+   big hero wordmark on index.html and the smaller .pricing__brand
+   wordmark used on book / pricing / admin / book-success. */
+.brand-y { margin-left: -0.06em; }
 .hero h1.display {
   color: #8e3a8c;
 }

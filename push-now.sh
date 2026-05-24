@@ -30,28 +30,25 @@ echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Mobile home: stop hero cards from overlapping RATES.CALL.BOOK.
+git commit -m "WENDYPIX wordmark: tighten D-Y kerning
 
-On desktop, .hero__mid uses a negative top margin
-(clamp(-40px, -4vh, -10px)) to tuck the photo card row
-up under the WENDYPIX wordmark — a deliberate editorial
-overlap that reads as one composed block.
+Inter Black gives D a near-flat right edge and Y a diagonal
+that converges low-center, so the optical space between
+them reads visibly wider than every other letter pair in
+WENDYPIX — even with the negative letter-spacing already
+applied at the .display level. Looks like a typo gap.
 
-On mobile that backfires. The RATES.CALL.BOOK. hero nav
-sits BETWEEN the wordmark and the card row, so the same
--4vh pull lifts the cards up into the nav row and the
-two collide. From a phone you see photos sitting on top
-of the colored RATES / CALL / BOOK words.
+Fix: wrap the Y in its own <span class=\"brand-y\"> in the
+HTML, then pull it back with margin-left: -0.06em in CSS.
+The fix is a wrapper (not a per-letter targeting hack), so
+it applies cleanly to BOTH the big animated hero wordmark
+on index.html (where splitTitle further wraps each letter
+in a .char span — recursion handles the brand-y wrapper
+correctly) and the smaller .pricing__brand wordmark used
+on book / pricing / admin / book-success.
 
-Override .hero__mid margin-top inside the existing
-@media (max-width: 640px) block — clamp(12px, 3vh, 28px)
-gives the cards positive breathing room below the nav
-without making the home page feel airy. Desktop layout
-is untouched (the override only fires below 640px).
-
-Cache busters bumped to v=2026-05-24-mobnav on all five
-HTML pages so phones with the previous CSS cached pick
-up the fix on next visit."
+Cache busters bumped to v=2026-05-24-dykern on all five
+HTML pages."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="
