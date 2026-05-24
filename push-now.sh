@@ -30,7 +30,11 @@ echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: re-baseline state after publish (fix 'Tree changed' on repeat edits)
+git commit -m "Admin Photos: re-baseline state after publish + Instagram reminder email
+
+Two changes:
+
+A) RE-BASELINE STATE AFTER PUBLISH (fix 'Tree changed')
 
 Wendy was hitting 'Tree changed since you loaded it' on
 multi-edit sessions and her changes weren't taking effect.
@@ -71,7 +75,24 @@ blob lookup at originalFile-path fails, try the newPath.
 Covers any edge case where client pointers don't match
 server reality (e.g. session interrupted mid-publish).
 
-Cache busters: admin.js + admin.css v=2026-05-24-rebaseline."
+Cache busters: admin.js + admin.css v=2026-05-24-rebaseline.
+
+B) INSTAGRAM REMINDER EMAIL ON NEW SUBJECT
+
+After publishing any brand-new subject (added via the
+admin's '+ New subject' button), Wendy gets an email with
+the lead photo attached + a category-aware suggested
+caption + hashtag set. She saves the attachment to her
+camera roll and posts to IG manually — Path C from the
+design discussion: no Meta API setup, no Zapier dependency,
+no token refresh tax. The email fires from
+netlify/functions/admin-photos-publish.js after the
+GitHub commit lands. Best-effort: a Resend failure logs
+but doesn't fail the publish response. Detection signal:
+subj.originalFolder is null for a freshly-added subject
+(client convention) — renames don't trigger this. Reuses
+RESEND_API_KEY and WENDY_EMAIL env vars that the inquiry
+form already needs."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

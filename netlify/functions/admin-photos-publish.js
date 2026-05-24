@@ -299,6 +299,18 @@ exports.handler = async (event, context) => {
       body: { sha: commit.sha, force: false },
     });
 
+    // 8. Instagram reminder email — if this publish added any brand-new
+    //    subjects (originalFolder is null = client tag for "freshly
+    //    created in this session"), email Wendy a "ready to post on IG?"
+    //    note with the lead photo attached. Best-effort: any failure
+    //    here is logged but does NOT fail the publish — the commit is
+    //    already done at this point.
+    try {
+      await sendInstagramReminders(manifest);
+    } catch (err) {
+      console.error("[admin-photos-publish] ig reminder failed:", err.message);
+    }
+
     return json(200, {
       ok: true,
       commitSha: commit.sha,
@@ -390,4 +402,190 @@ function json(code, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   };
+}
+
+// ============================================================
+// Instagram reminder emails.
+//
+// When Wendy publishes a new subject (added via the admin's "+ New
+// subject" button), we email her the lead photo + a suggested caption
+// so she can post it on Instagram from her phone. Trigger: any subject
+// in the manifest with originalFolder falsy AND at least one photo.
+// Path C from the design discussion — no Meta API integration, no
+// Zapier dependency, just an email she can act on from her phone.
+// ============================================================
+async function sendInstagramReminders(manifest) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.log("[ig-reminder] RESEND_API_KEY not set, skipping");
+    return;
+  }
+  const wendyEmail = process.env.WENDY_EMAIL || "wendy@wendypix.com";
+
+  // Collect brand-new subjects with photos. (originalFolder is null/
+  // empty only for subjects the client just created via "+ New subject".
+  // An existing subject that was renamed has originalFolder set to the
+  // load-time folder, so it correctly doesn't trigger a reminder.)
+  const newSubjects = [];
+  for (const cat of manifest.categories || []) {
+    for (const subj of cat.subjects || []) {
+      const isNew = !subj.originalFolder;
+      const hasPhotos = Array.isArray(subj.photos) && subj.photos.length > 0;
+      if (isNew && hasPhotos) newSubjects.push({ cat, subj });
+    }
+  }
+  if (newSubjects.length === 0) return;
+
+  for (const { cat, subj } of newSubjects) {
+    const subjName = stripFolderPrefix(subj.folder);
+    const catName = stripFolderPrefix(cat.folder);
+    const leadPhoto = subj.photos[0];
+    // The lead photo of a brand-new subject is virtually always a
+    // pending upload (the subject didn't exist before this publish, so
+    // its photos came from drag-drop uploads in this session). Pull
+    // the base64 bytes from manifest.uploads to attach.
+    const leadKey = leadPhoto && leadPhoto.uploadKey;
+    const leadB64 = leadKey && (manifest.uploads || {})[leadKey];
+    if (!leadB64) {
+      console.log(
+        `[ig-reminder] no lead photo bytes for new subject "${subjName}", skipping`
+      );
+      continue;
+    }
+
+    const caption = buildIgCaption(subjName, catName);
+    const html = buildIgEmailHtml(subjName, catName, caption);
+    const attachmentName =
+      subjName.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() +
+      "-for-instagram.jpg";
+
+    try {
+      await resendSend(resendKey, {
+        from: "WendyPix Admin <wendy@wendypix.com>",
+        to: [wendyEmail],
+        subject: `New client added: ${subjName} — ready to post on Instagram?`,
+        html,
+        attachments: [
+          {
+            filename: attachmentName,
+            content: leadB64,
+          },
+        ],
+      });
+      console.log(`[ig-reminder] sent for new subject "${subjName}"`);
+    } catch (err) {
+      console.error(
+        `[ig-reminder] resend failed for "${subjName}":`,
+        err.message
+      );
+    }
+  }
+}
+
+// Strip the NN- numeric prefix and trim leftover whitespace from a
+// folder name. "06-Susan " → "Susan", "1-Women" → "Women".
+function stripFolderPrefix(name) {
+  return String(name || "")
+    .replace(/^\d+-\s*/, "")
+    .trim();
+}
+
+// Suggested caption Wendy can copy/paste/tweak. Kept friendly but
+// generic — she'll know her client and can personalize from there.
+// Hashtags pull in a small category-specific set on top of the
+// always-on WendyPix tags.
+function buildIgCaption(subjName, catName) {
+  const baseTags = [
+    "#LAPhotographer",
+    "#WendyPix",
+    "#LosAngelesPhotographer",
+    "#PortraitPhotography",
+  ];
+  const catLower = String(catName || "").toLowerCase();
+  const catTags = [];
+  if (catLower.includes("women") || catLower.includes("men")) {
+    catTags.push("#Headshots", "#ActorHeadshots", "#ExecutiveHeadshots");
+  } else if (catLower.includes("kid") || catLower.includes("teen")) {
+    catTags.push("#KidsPhotography", "#FamilyPortraits", "#LAKids");
+  } else if (catLower.includes("lifestyle")) {
+    catTags.push("#LifestylePhotography", "#BrandPhotography", "#OnLocation");
+  } else if (catLower.includes("event")) {
+    catTags.push("#EventPhotography", "#LAEvents", "#CorporateEvents");
+  }
+  const allTags = [...baseTags, ...catTags].join(" ");
+  return `Welcome ${subjName} to the WendyPix family ✨
+
+A favorite from a recent session — so much fun working together.
+New portraits always landing at wendypix.com.
+
+${allTags}`;
+}
+
+function buildIgEmailHtml(subjName, catName, caption) {
+  return `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background:#f5f1ea;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 24px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="font-size:32px;font-weight:900;letter-spacing:-0.02em;margin:0;">
+        <span style="color:#1a1a1a">WENDY</span><span style="color:#b347b9">PIX</span>
+      </h1>
+    </div>
+
+    <h2 style="font-size:24px;font-weight:900;letter-spacing:-0.01em;color:#1d5e62;margin:0 0 16px;">
+      📸 New client added: ${escapeHtmlIg(subjName)}
+    </h2>
+    <p style="font-size:16px;line-height:1.6;color:#444;margin:0 0 28px;">
+      You just published <strong>${escapeHtmlIg(subjName)}</strong> under <strong>${escapeHtmlIg(catName)}</strong>.
+      The lead photo is attached to this email — save it to your camera roll,
+      then post it to Instagram with the suggested caption below
+      (tweak however you like).
+    </p>
+
+    <div style="background:#fff;border-left:4px solid #1d5e62;padding:20px 24px;margin:0 0 24px;border-radius:4px;">
+      <p style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#1d5e62;margin:0 0 12px;">
+        Suggested caption — copy, paste, tweak
+      </p>
+      <pre style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;white-space:pre-wrap;word-wrap:break-word;margin:0;">${escapeHtmlIg(
+        caption
+      )}</pre>
+    </div>
+
+    <p style="font-size:14px;line-height:1.6;color:#666;margin:0 0 32px;">
+      📎 The lead photo is attached below. On your phone, tap it once to preview,
+      then tap the share icon to save to your camera roll — or "Save Image."
+      From there, open Instagram and post like any other photo.
+    </p>
+
+    <p style="font-size:12px;color:#999;margin:32px 0 0;border-top:1px solid #e0d8c8;padding-top:16px;">
+      You're getting this because a new client was added at
+      <a href="https://wendypix.com/admin" style="color:#1d5e62;text-decoration:none">wendypix.com/admin</a>.
+      The email fires automatically on Publish.
+    </p>
+  </div>
+</body></html>`;
+}
+
+function escapeHtmlIg(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function resendSend(apiKey, payload) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`resend ${res.status}: ${txt.slice(0, 200)}`);
+  }
+  return res.json();
 }
