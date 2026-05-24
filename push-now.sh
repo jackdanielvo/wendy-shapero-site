@@ -25,57 +25,33 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add admin.html admin.js admin.css push-now.sh
+git add styles.css index.html book.html pricing.html admin.html book-success.html push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: kill drag flicker + add subject delete
+git commit -m "Mobile home: stop hero cards from overlapping RATES.CALL.BOOK.
 
-Two improvements based on user feedback after the
-cross-category drag landed:
+On desktop, .hero__mid uses a negative top margin
+(clamp(-40px, -4vh, -10px)) to tuck the photo card row
+up under the WENDYPIX wordmark — a deliberate editorial
+overlap that reads as one composed block.
 
-1) DRAG TARGET FLICKER FIX
+On mobile that backfires. The RATES.CALL.BOOK. hero nav
+sits BETWEEN the wordmark and the card row, so the same
+-4vh pull lifts the cards up into the nav row and the
+two collide. From a phone you see photos sitting on top
+of the colored RATES / CALL / BOOK words.
 
-When dragging a subject onto a category, the teal outline
-would flash on and off as the cursor moved across the inner
-spans (name, count badge). Cause: HTML5 dragleave fires on
-the parent any time the cursor crosses INTO a child element,
-because the cursor logically 'leaves' the parent for the
-child. Then dragenter fires when over the child. Quick blink
-ensues.
+Override .hero__mid margin-top inside the existing
+@media (max-width: 640px) block — clamp(12px, 3vh, 28px)
+gives the cards positive breathing room below the nav
+without making the home page feel airy. Desktop layout
+is untouched (the override only fires below 640px).
 
-Standard fix: depth counter. Each dragenter increments a
-counter, each dragleave decrements. The drop-target class
-only gets removed when the counter reaches zero, meaning the
-cursor has actually left the entire element (including all
-descendants). Applied to both category drop targets (which
-accept subject drops) and subject drop targets (which accept
-both subject reorders and photo cross-subject moves). drop
-explicitly resets the counter to 0 to handle the case where
-the user releases over a child.
-
-2) SUBJECT DELETE BUTTON
-
-Wendy needs to remove clients who leave/age out as new ones
-come in. Each subject row in the Subjects pane now has a
-small circular X button on the right, hover-revealed on
-desktop and always-visible on mobile (matching the existing
-photo-tile delete pattern). Click → confirm dialog spelling
-out the subject name and photo count → subject is removed
-from working state. Any in-flight upload blob URLs in the
-subject are revoked so we don't leak memory. Active selection
-adjusts to stay in-bounds when the last subject is removed.
-
-The publish endpoint already handles subject deletion
-correctly via diff-by-omission: when the subject's photos
-aren't in newPathsTouched, the existing-vs-new comparison
-generates DELETE tree entries for all of them. So a subject
-delete becomes 'N photo deletes' on commit, which is exactly
-right — Git doesn't track empty folders, so the folder
-disappears once its contents are gone.
-
-Cache busters bumped to v=2026-05-22-subjdel."
+Cache busters bumped to v=2026-05-24-mobnav on all five
+HTML pages so phones with the previous CSS cached pick
+up the fix on next visit."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

@@ -431,6 +431,14 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
    wide, the row scrolls under your finger, and snaps to whichever card
    is centered. Tapping still opens the shoot (or lightbox). */
 @media (max-width: 640px) {
+  /* Desktop uses a negative top margin to tuck the cards up under the
+     WENDYPIX wordmark, but on mobile the RATES.CALL.BOOK. nav sits between
+     the wordmark and the cards — that negative margin pulls the cards UP
+     into the nav row and they overlap. Clear it on mobile so the cards
+     sit cleanly below the nav with breathing room. */
+  .hero__mid {
+    margin-top: clamp(12px, 3vh, 28px);
+  }
   .hero__images {
     overflow-x: auto;
     /* When one axis is non-visible (overflow-x: auto here), browsers
