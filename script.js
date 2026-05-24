@@ -670,12 +670,14 @@ function buildCategorySection(people, catConfig, anchorBefore) {
   section.className = "featured category-section";
   section.dataset.slug = catConfig.slug;
   const labelHtml = escapeHtml(catConfig.label || catConfig.slug);
-  const subHtml = catConfig.subtitle
-    ? `<p class="featured-sub">${escapeHtml(catConfig.subtitle)}</p>`
-    : "";
+  // Category subtitles ("Headshots — actors, executives, voiceover", etc.)
+  // were removed from the layout — they were repetitive across categories
+  // and didn't add information beyond what the bold category headline + the
+  // photos themselves already communicate. The subtitle field stays in
+  // pixieset.config.json / data/photos.js for now in case it's ever wanted
+  // back, but the render path no longer outputs it.
   section.innerHTML = `
     <h2 class="display">${labelHtml}</h2>
-    ${subHtml}
     <div class="featured-carousel-wrap">
       <button type="button" class="featured-arrow featured-arrow--prev" aria-label="Previous person">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>

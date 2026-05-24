@@ -25,35 +25,49 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add styles.css index.html book.html pricing.html admin.html book-success.html push-now.sh
+git add styles.css script.js index.html book.html pricing.html admin.html book-success.html push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Hero subtitle: drop comma, demote PORTRAITS & MOMENTS
+git commit -m "Home polish: drop category subheadings + subtitle / kerning / mobile fixes
 
-Two-tier subtitle treatment, replacing the flat single-size
-'PHOTOGRAPHER, / PORTRAITS & MOMENTS' line:
+Several home-page typography refinements bundled into one
+commit since they're all sitting uncommitted:
 
-  PHOTOGRAPHER          <- large, ghost gray, unchanged
-    PORTRAITS & MOMENTS <- smaller, brand teal, secondary
+1) CATEGORY SUBHEADINGS REMOVED
+   The per-category subtitle line under WOMEN, MEN, etc.
+   (e.g. 'Headshots — actors, executives, voiceover') was
+   repetitive across categories and added little beyond
+   what the headline + photos already say. Removed the
+   render path in script.js; the subtitle data stays in
+   pixieset.config.json for now in case it's wanted back.
 
-This reads as 'role / what she does' rather than a single
-comma-separated phrase, which gives PHOTOGRAPHER the
-headline weight it earned and lets the descriptors sit
-quietly underneath.
+2) HERO SUBTITLE TWO-TIER
+   'PHOTOGRAPHER, / PORTRAITS & MOMENTS' → drop the comma,
+   wrap PORTRAITS & MOMENTS in <span class=\"sub__tag\">.
+   New CSS .hero .sub__tag rule: ~60% size, brand teal,
+   letter-spacing reset (parent .display's -0.045em was
+   cramping at the smaller size), and word-spacing 0.12em
+   so the & has clear gaps around it.
 
-Changes:
-- index.html: drop the comma after PHOTOGRAPHER, wrap the
-  second line in <span class=\"sub__tag\">
-- styles.css: new .hero .sub__tag rule — inline-block,
-  font-size clamp(20px, 4.2vw, 64px) (~60% of PHOTOGRAPHER),
-  color #1d5e62 (brand teal — echoes BOOK in the hero nav),
-  margin-top for a touch of breathing room above (parent
-  line-height 0.85 would otherwise stack them too tight at
-  the size delta)
+3) WENDYPIX D-Y KERNING
+   Inter Black's near-flat D right edge + Y's empty upper
+   left made the D-Y pair read with a visible typo gap.
+   Wrapped Y in <span class=\"brand-y\"> and pulled it back
+   with margin-left: -0.06em. Applies to both the hero
+   wordmark and the smaller .pricing__brand wordmark on
+   book / pricing / admin / book-success.
 
-Cache busters bumped to v=2026-05-24-subtag."
+4) MOBILE HERO NAV CLEARANCE
+   .hero__mid's negative top margin (-4vh) was pulling the
+   photo cards up into the RATES.CALL.BOOK. row on phones.
+   Added a mobile-only override (margin-top: clamp(12px,
+   3vh, 28px)) inside the existing @media (max-width: 640px)
+   block. Desktop unchanged.
+
+Cache busters: styles.css v=2026-05-24-subtag2,
+script.js v=2026-05-24-nosub."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="
