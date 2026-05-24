@@ -324,6 +324,13 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   font-size: clamp(20px, 4.2vw, 64px);
   color: #1d5e62;
   margin-top: clamp(6px, 1.2vh, 18px);
+  /* Override the parent .display letter-spacing (-0.045em). That tight
+     tracking works at PHOTOGRAPHER's huge size but at ~60% scale the
+     letters of PORTRAITS / MOMENTS run together and the spaces around
+     the & collapse to nothing. Reset to neutral and add a touch of
+     word-spacing so the three tokens read as separate words. */
+  letter-spacing: 0;
+  word-spacing: 0.12em;
 }
 
 .services {
