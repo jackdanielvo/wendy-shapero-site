@@ -616,18 +616,35 @@
       // categories. Subjects carry originalCategory (their loaded
       // category's folder) so the server can construct the correct
       // old path when a subject moves between categories.
+      // displayFolder/displayUrl snapshot the LOAD-TIME tree paths.
+      // They are NEVER mutated for the rest of the session — even
+      // after a successful publish updates originalFolder/originalFile
+      // to track GitHub's new state. The admin grid's <img src> uses
+      // these display* pointers so it keeps showing photos from the
+      // still-live Netlify deploy. Wendy clicks Refresh to re-snapshot
+      // after the rebuild lands.
       photosState = {
         commitSha: data.commitSha,
         categories: data.categories.map((c) => ({
           folder: c.folder,
           originalFolder: c.folder,
+          displayFolder: c.folder,
           subjects: c.subjects.map((s) => ({
             folder: s.folder,
             originalFolder: s.folder,
             originalCategory: c.folder,
+            displayFolder: s.folder,
+            displayCategory: c.folder,
             photos: s.photos.map((f) => ({
               file: f,
               originalFile: f,
+              displayUrl:
+                "/photos-web/" +
+                encodeURIComponent(c.folder) +
+                "/" +
+                encodeURIComponent(s.folder) +
+                "/" +
+                encodeURIComponent(f),
             })),
           })),
         })),
@@ -986,8 +1003,13 @@
     // Photos grid — draggable thumbnails
     const filesUl = document.getElementById("adminPhotoFilesList");
     if (subj) {
-      const catFolder = cat.originalFolder || cat.folder;
-      const subjFolderForUrl = subj.originalFolder || subj.folder;
+      // catFolder / subjFolderForUrl are now used ONLY as a fallback for
+      // photos that don't have a captured displayUrl (shouldn't happen
+      // for load-time photos, but a safety net for any in-memory item
+      // that escaped the snapshot). The primary display path is
+      // p.displayUrl — see the comment in loadPhotos for why.
+      const catFolder = cat.displayFolder || cat.originalFolder || cat.folder;
+      const subjFolderForUrl = subj.displayFolder || subj.originalFolder || subj.folder;
       subj.photos.forEach((p, i) => {
         const li = document.createElement("li");
         li.className =
@@ -1008,9 +1030,18 @@
         // been published yet, so the new names don't exist on disk.
         let url;
         if (p.uploadKey) {
+          // Pending upload — use the local blob preview captured at
+          // file-drop time.
           const entry = photosUploads.get(p.uploadKey);
-          url = (entry && entry.previewUrl) || "";
+          url = (entry && entry.previewUrl) || p.displayUrl || "";
+        } else if (p.displayUrl) {
+          // Existing photo OR previously-uploaded-and-now-committed
+          // photo (uploadKey was cleared after publish but displayUrl
+          // remains for the rest of the session).
+          url = p.displayUrl;
         } else {
+          // Fallback for any photo that somehow lacks displayUrl —
+          // construct the path from current folder/file pointers.
           url =
             "/photos-web/" +
             encodeURIComponent(catFolder) +
@@ -1201,11 +1232,16 @@
           previewUrl: resized.previewUrl,
           sourceName: f.name,
         });
-        // Tentative high NN — renumberPhotos will fix it
+        // Tentative high NN — renumberPhotos will fix it.
+        // displayUrl carries the local blob URL so the grid keeps
+        // showing the photo even after publish clears uploadKey (the
+        // committed blob isn't deployed to Netlify for 1-3 min, so we
+        // rely on the local URL until Wendy clicks Refresh).
         subj.photos.push({
           file: `99-${subjectName}.jpg`,
           originalFile: null,
           uploadKey: key,
+          displayUrl: resized.previewUrl,
         });
         added++;
       } catch (e) {
@@ -1378,6 +1414,62 @@
       // status, zero out the pending counter (since the changes ARE
       // published, they're just not deployed yet), and let the user
       // click Refresh manually when they want to see the new state.
+      //
+      // BUT we DO need to re-baseline the internal pointers so that
+      // subsequent publishes in the same session work correctly:
+      //
+      // - commitSha is now whatever HEAD the server just created. Without
+      //   updating, the very next publish would 409 with "Tree changed
+      //   since you loaded it." (server compares the manifest's
+      //   commitSha to the current ref head).
+      //
+      // - originalFolder / originalFile / originalCategory all point
+      //   at where each photo lived when we LOADED. After publish, the
+      //   blobs are at NEW paths on GitHub. Without updating, the next
+      //   publish's blob lookup would fail with "Cannot find original
+      //   blob" because it'd look at the stale paths.
+      //
+      // - photosOriginal is the diff baseline for recountPending(); it
+      //   needs to match the just-published state so the pending counter
+      //   reads 0 (nothing pending against the new baseline).
+      //
+      // Display URLs in the admin grid keep using p.displayUrl /
+      // c.displayFolder / s.displayFolder — those snapshot the LOAD-TIME
+      // tree paths and are never updated mid-session, so the grid keeps
+      // showing photos from the still-live Netlify deploy until Wendy
+      // clicks Refresh (at which point a fresh loadPhotos resets every
+      // pointer at once).
+      photosState.commitSha = body.commitSha || photosState.commitSha;
+      photosState.categories.forEach((cat) => {
+        cat.originalFolder = cat.folder;
+        cat.subjects.forEach((subj) => {
+          subj.originalFolder = subj.folder;
+          subj.originalCategory = cat.folder;
+          subj.photos.forEach((photo) => {
+            photo.originalFile = photo.file;
+            if (photo.uploadKey) {
+              // The upload is now a real blob on GitHub. We don't need
+              // the base64 payload anymore, but we keep the previewUrl
+              // alive (via photo.displayUrl, captured at upload time)
+              // so the admin grid still renders the photo. The
+              // photosUploads Map entry can go — payload is committed.
+              photosUploads.delete(photo.uploadKey);
+              photo.uploadKey = null;
+            }
+          });
+        });
+      });
+      // Reset the diff baseline to reflect what we just published.
+      photosOriginal = {
+        commitSha: photosState.commitSha,
+        categories: photosState.categories.map((cat) => ({
+          folder: cat.folder,
+          subjects: cat.subjects.map((subj) => ({
+            folder: subj.folder,
+            photos: subj.photos.map((p) => p.file),
+          })),
+        })),
+      };
       setPhotosPending(0);
       photosStatus(
         "ok",

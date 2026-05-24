@@ -202,7 +202,16 @@ exports.handler = async (event, context) => {
               photo.originalFile || photo.file
             );
             const oldPath = `${PHOTOS_PREFIX}${oldCatFolderForSubj}/${oldSubjFolder}/${originalFile}`;
-            const blobSha = blobByPath.get(oldPath);
+            let blobSha = blobByPath.get(oldPath);
+            if (!blobSha) {
+              // Belt-and-suspenders fallback: if the client's
+              // originalFile pointer is stale (e.g. a prior publish in
+              // this session already moved the photo to newPath but the
+              // client didn't re-baseline), look the blob up at the
+              // NEW path. If it's already there with the same content,
+              // we can still reuse the SHA — this becomes a no-op.
+              blobSha = blobByPath.get(newPath);
+            }
             if (!blobSha) {
               return json(400, {
                 error: `Cannot find original blob for ${oldPath}`,

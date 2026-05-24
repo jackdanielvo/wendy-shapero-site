@@ -25,49 +25,53 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add styles.css script.js index.html book.html pricing.html admin.html book-success.html push-now.sh
+git add admin.js admin.html netlify/functions/admin-photos-publish.js push-now.sh
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Home polish: drop category subheadings + subtitle / kerning / mobile fixes
+git commit -m "Admin Photos: re-baseline state after publish (fix 'Tree changed' on repeat edits)
 
-Several home-page typography refinements bundled into one
-commit since they're all sitting uncommitted:
+Wendy was hitting 'Tree changed since you loaded it' on
+multi-edit sessions and her changes weren't taking effect.
 
-1) CATEGORY SUBHEADINGS REMOVED
-   The per-category subtitle line under WOMEN, MEN, etc.
-   (e.g. 'Headshots — actors, executives, voiceover') was
-   repetitive across categories and added little beyond
-   what the headline + photos already say. Removed the
-   render path in script.js; the subtitle data stays in
-   pixieset.config.json for now in case it's wanted back.
+ROOT CAUSE: photosState.commitSha was set once at load
+time and never updated after a successful publish. So:
 
-2) HERO SUBTITLE TWO-TIER
-   'PHOTOGRAPHER, / PORTRAITS & MOMENTS' → drop the comma,
-   wrap PORTRAITS & MOMENTS in <span class=\"sub__tag\">.
-   New CSS .hero .sub__tag rule: ~60% size, brand teal,
-   letter-spacing reset (parent .display's -0.045em was
-   cramping at the smaller size), and word-spacing 0.12em
-   so the & has clear gaps around it.
+- First publish in a session → SHA matches → 200 OK.
+- The publish creates a new commit on GitHub, but the
+  client keeps holding the OLD commitSha.
+- Second publish → server compares manifest SHA to ref
+  HEAD → mismatch → 409 'Tree changed'.
 
-3) WENDYPIX D-Y KERNING
-   Inter Black's near-flat D right edge + Y's empty upper
-   left made the D-Y pair read with a visible typo gap.
-   Wrapped Y in <span class=\"brand-y\"> and pulled it back
-   with margin-left: -0.06em. Applies to both the hero
-   wordmark and the smaller .pricing__brand wordmark on
-   book / pricing / admin / book-success.
+Plus a deeper issue: originalFolder/originalFile pointers
+also reference load-time paths. After a publish, blobs
+on GitHub are at NEW paths, so the next publish's blob
+lookup ('find blob at originalFile path') would fail
+with 'Cannot find original blob' even if commitSha
+were fixed.
 
-4) MOBILE HERO NAV CLEARANCE
-   .hero__mid's negative top margin (-4vh) was pulling the
-   photo cards up into the RATES.CALL.BOOK. row on phones.
-   Added a mobile-only override (margin-top: clamp(12px,
-   3vh, 28px)) inside the existing @media (max-width: 640px)
-   block. Desktop unchanged.
+FIX: after a successful publish, walk photosState and
+re-baseline every pointer to match what was just
+published — commitSha, originalFolder, originalFile,
+originalCategory. Uploads get their uploadKey cleared
+since the bytes are now a real GitHub blob. photosOriginal
+is reset so recountPending() reads 0 against the new
+baseline.
 
-Cache busters: styles.css v=2026-05-24-subtag2,
-script.js v=2026-05-24-nosub."
+DISPLAY: introduced displayFolder/displayCategory/displayUrl
+pointers that snapshot the LOAD-TIME tree paths and are
+NEVER mutated mid-session. The admin grid's <img src> uses
+displayUrl so it keeps showing photos from the still-live
+Netlify deploy (the rebuild takes 1-3 min after a publish).
+Wendy refreshes manually to re-snapshot.
+
+SAFETY NET: also added a server-side fallback — if the
+blob lookup at originalFile-path fails, try the newPath.
+Covers any edge case where client pointers don't match
+server reality (e.g. session interrupted mid-publish).
+
+Cache busters: admin.js + admin.css v=2026-05-24-rebaseline."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="
