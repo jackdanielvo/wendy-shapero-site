@@ -626,6 +626,32 @@
   }
 
   // ----------------------------------------------------------
+  // DISCOVERY CALL — deep-link from the home page bio.
+  // index.html has: <a href="book.html#discovery">…</a>
+  // When the hash is present on load, open the inquiry form pre-set
+  // as a 15-min discovery call rather than waiting for the user to
+  // pick a package. Re-uses the same /api/inquiry endpoint that the
+  // Lifestyle and Event inquiry forms use — Wendy gets the email
+  // tagged as "discovery-call" so she can tell it apart.
+  // ----------------------------------------------------------
+  const DISCOVERY_CALL_PSEUDO_PACKAGE = {
+    id: "discovery-call",
+    name: "15-minute discovery call",
+    price: null,
+    duration: null,
+    includes: [],
+    description: "",
+    inquiry: true,
+  };
+  function openDiscoveryCallForm() {
+    selectPackage(DISCOVERY_CALL_PSEUDO_PACKAGE);
+    // selectPackage formats the chosen-package label as "<name> · quote-based"
+    // which doesn't fit a free discovery call. Override with cleaner copy.
+    const chosen = document.getElementById("inquiryChosenPackage");
+    if (chosen) chosen.textContent = "15-minute discovery call · free";
+  }
+
+  // ----------------------------------------------------------
   // INIT
   // ----------------------------------------------------------
   document.addEventListener("DOMContentLoaded", async () => {
@@ -633,5 +659,9 @@
     renderPackages();
     const form = document.getElementById("bookForm");
     if (form) form.addEventListener("submit", submitBooking);
+    // Deep-link: book.html#discovery opens the inquiry form pre-set as
+    // a discovery call. Done AFTER renderPackages so the package cards
+    // are in place underneath when the user closes the form.
+    if (location.hash === "#discovery") openDiscoveryCallForm();
   });
 })();
