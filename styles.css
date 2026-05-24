@@ -337,6 +337,15 @@ section { padding-left: var(--pad-x); padding-right: var(--pad-x); }
   margin-top: clamp(36px, 6vh, 80px);
 }
 .services p { line-height: 1.7; }
+/* Bump the 'Available for / Headshots · Corporate Portraits · …' block
+   from the global .caps 11px up to the same size as the bold category
+   labels under each hero card. Reads as part of the hero composition
+   rather than a tiny disclaimer at the bottom of it. Letter-spacing is
+   tightened slightly to match the hero card labels. */
+.services .caps {
+  font-size: clamp(14px, 1.4vw, 18px);
+  letter-spacing: 0.12em;
+}
 
 /* ============================================================
    Hero card stack — Spencer-style continuous floating motion.
