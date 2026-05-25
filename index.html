@@ -41,7 +41,7 @@
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
-  <link rel="stylesheet" href="styles.css?v=2026-05-24-discovery" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
 
   <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
        default to landing on the site root with a hash like
@@ -191,7 +191,7 @@
        to the first photo of the next shoot (and vice versa). -->
   <div class="shoot" id="shoot" aria-hidden="true" role="dialog">
     <header class="shoot__bar">
-      <button class="shoot__close" aria-label="Close shoot">&times;</button>
+      <button class="shoot__close" aria-label="Close shoot"><span class="shoot__close-x" aria-hidden="true">&times;</span><span class="shoot__close-label">Close</span></button>
       <p class="shoot__crumb caps"><span data-role="cat">&nbsp;</span> &nbsp;&middot;&nbsp; <span data-role="num">&nbsp;</span> <span class="shoot__counter" data-role="counter" aria-live="polite"></span></p>
       <div class="shoot__bar-spacer" aria-hidden="true"></div>
     </header>

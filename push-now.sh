@@ -25,14 +25,14 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add admin.js admin.html netlify/functions/admin-photos-publish.js push-now.sh
+git add admin.js admin.html netlify/functions/admin-photos-publish.js push-now.sh index.html styles.css
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: re-baseline state after publish + Instagram reminder email
+git commit -m "Admin Photos: re-baseline + IG reminder + prominent mobile close button
 
-Two changes:
+Three changes:
 
 A) RE-BASELINE STATE AFTER PUBLISH (fix 'Tree changed')
 
@@ -92,7 +92,21 @@ but doesn't fail the publish response. Detection signal:
 subj.originalFolder is null for a freshly-added subject
 (client convention) — renames don't trigger this. Reuses
 RESEND_API_KEY and WENDY_EMAIL env vars that the inquiry
-form already needs."
+form already needs.
+
+C) PROMINENT MOBILE CLOSE BUTTON ON SHOOT VIEW
+
+Users on phones were complaining that the X-only close
+button at the top-left of the photo-set takeover was too
+easy to miss against bright photos. The desktop circular X
+is fine, but on mobile we now morph the button into a solid
+filled pill that reads '× CLOSE' in white on accent — bigger
+(44pt min touch target), with a soft shadow for separation,
+and bold uppercase Inter so it reads as the takeover's
+clear exit. Achieved without an HTML restructure: the
+markup gained a hidden 'Close' span (desktop hides it) plus
+a wrapped X glyph so the existing rotate-on-hover stays
+intact. styles.css cache buster bumped to v=2026-05-25-closebtn."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

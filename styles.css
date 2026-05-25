@@ -1305,7 +1305,14 @@ body.shoot-open .contact { display: none; }
   place-items: center;
   transition: all 0.25s var(--ease);
 }
-.shoot__close:hover { color: var(--accent); border-color: var(--accent); transform: rotate(90deg); }
+/* The X glyph is the only thing shown on desktop. The "Close" word label
+   only appears at mobile widths (see media query below), where the button
+   morphs into a labeled solid pill so it can't be missed against varied
+   photo backgrounds. */
+.shoot__close-x { display: block; line-height: 1; }
+.shoot__close-label { display: none; }
+.shoot__close:hover { color: var(--accent); border-color: var(--accent); }
+.shoot__close:hover .shoot__close-x { transform: rotate(90deg); transition: transform 0.25s var(--ease); }
 .shoot__crumb { margin: 0; text-align: center; color: var(--muted); }
 .shoot__crumb span[data-role="num"] { color: var(--ink); }
 .shoot__nav { display: flex; gap: 6px; justify-self: end; }
@@ -1479,11 +1486,46 @@ body.shoot-open .contact { display: none; }
 }
 
 @media (max-width: 640px) {
-  /* Tight bar on phones — keep the breadcrumb visible but compact */
-  .shoot__bar { grid-template-columns: 32px 1fr 32px; gap: 10px; padding: 14px 16px; }
+  /* Tight bar on phones — keep the breadcrumb visible but compact.
+     The close button widens into a labeled solid pill (see .shoot__close
+     overrides below) so the column allowance has to grow accordingly,
+     and the spacer mirrors it so the crumb stays visually centered. */
+  .shoot__bar { grid-template-columns: auto 1fr auto; gap: 10px; padding: 12px 14px; }
   .shoot__crumb { font-size: 11px; }
   .shoot__counter { font-size: 10px; padding: 2px 8px; margin-left: 8px; }
-  .shoot__close { width: 32px; height: 32px; font-size: 18px; }
+  /* PROMINENT MOBILE CLOSE — users were missing the tiny X on phones.
+     Solid filled pill with both an X glyph AND the word "Close",
+     bright accent color, a touch shadow for separation against bright
+     photos. Sized for a generous 44pt+ touch target. */
+  .shoot__close {
+    width: auto; height: auto;
+    min-height: 44px;
+    border-radius: 999px;
+    padding: 10px 18px 10px 14px;
+    background: var(--accent);
+    border: 2px solid var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  }
+  .shoot__close-x {
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 400;
+  }
+  .shoot__close-label {
+    display: inline;
+    font-family: "Inter", system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .shoot__bar-spacer { display: none; }
   /* Same one-photo-fits-viewport behaviour on phones — touch swipe is
      the primary nav, but the side arrows stay visible (just smaller). */
   .shoot__body { padding: 12px; }
