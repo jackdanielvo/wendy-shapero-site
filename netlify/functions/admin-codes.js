@@ -8,11 +8,12 @@
 //   DELETE /api/admin-codes?code=XXX           → delete a code entirely
 //
 // Code generation is auto (see _codes.js). Wendy provides the influencer
-// name/email, percent off, optional expiry date, optional max uses. On
-// create we generate the code, save it, and email the influencer with:
-//   - the code itself (they can share the string)
-//   - a big QR code image that points to /book?promo=<code> (auto-fills)
-// so followers can scan and land on the discounted booking page in one tap.
+// name (and optional email), percent off, optional expiry date, optional
+// max uses. If an email address is supplied we send the influencer a
+// branded email with the code + a direct booking link
+// (/book?promo=<code>) that auto-fills the code. If no email is set,
+// Wendy shares the code herself via text / DM / IG bio using the Copy
+// code and Copy link buttons in admin.
 
 const { requireAuth } = require("./_auth");
 const {
@@ -71,10 +72,10 @@ async function handleCreate(event) {
   }
   const influencerName = String(body.influencerName || "").trim();
   if (!influencerName) return json(400, { error: "influencerName required." });
-  // Email is OPTIONAL — Wendy often shares codes via text/DM with just
-  // the QR image. If provided, it must be a valid format; if blank, the
-  // welcome-email step is skipped entirely and the "Resend email"
-  // action stays disabled for this code in the admin UI.
+  // Email is OPTIONAL — Wendy often shares codes via text/DM directly.
+  // If provided, it must be a valid format; if blank, the welcome-email
+  // step is skipped entirely and the "Resend email" action stays
+  // disabled for this code in the admin UI.
   const rawEmail = String(body.influencerEmail || "").trim().toLowerCase();
   let influencerEmail = null;
   if (rawEmail) {
@@ -128,8 +129,8 @@ async function handleCreate(event) {
   let emailError = null;
   let emailSkipped = false;
   if (!newRecord.influencerEmail) {
-    // No email address — Wendy is sharing the QR via text/DM. Nothing
-    // to send. She can still copy the QR / link from the admin.
+    // No email address — Wendy is sharing the code via text/DM. Nothing
+    // to send. She can Copy code / Copy link from the admin row.
     emailSkipped = true;
   } else {
     try {
@@ -218,35 +219,6 @@ async function sendInfluencerWelcome(record) {
   if (!apiKey) throw new Error("RESEND_API_KEY not set — email skipped.");
 
   const bookingUrl = `${SITE_URL}/book?promo=${encodeURIComponent(record.code)}`;
-  const qrPngUrl =
-    "https://api.qrserver.com/v1/create-qr-code/?" +
-    new URLSearchParams({
-      size: "500x500",
-      data: bookingUrl,
-      margin: "10",
-      // Dark plum foreground on white — matches the WendyPix accent so
-      // scanned codes still feel on-brand. Falls back cleanly to black
-      // if the QR service ever changes its color params.
-      color: "5A1A5E",
-      bgcolor: "FFFFFF",
-    }).toString();
-
-  // Fetch the QR as bytes so we can attach it inline and as a downloadable
-  // file. Failing gracefully if the QR service is temporarily down —
-  // the email still ships with the code text + booking URL.
-  let qrBase64 = null;
-  try {
-    const qrRes = await fetch(qrPngUrl);
-    if (qrRes.ok) {
-      const buf = await qrRes.arrayBuffer();
-      qrBase64 = Buffer.from(buf).toString("base64");
-    } else {
-      console.warn("[admin-codes] QR service returned", qrRes.status);
-    }
-  } catch (err) {
-    console.warn("[admin-codes] QR fetch failed:", err.message);
-  }
-
   const firstName = record.influencerName.split(" ")[0];
   const expiryLine = record.expiresAt
     ? `Good through <strong>${formatFriendlyDate(record.expiresAt)}</strong>.`
@@ -272,19 +244,9 @@ async function sendInfluencerWelcome(record) {
     tpl.paragraph(
       `${expiryLine}<br/>${usesLine}`
     ) +
-    (qrBase64
-      ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;">
-           <tr><td align="center" style="padding:20px;">
-             <img src="cid:wendypix-promo-qr" alt="QR code for booking" width="240" height="240"
-                  style="display:block;width:240px;height:240px;border:1px solid #eee;padding:12px;background:#fff;" />
-             <div style="margin-top:10px;font-size:12px;color:#6b6b6b;letter-spacing:0.12em;text-transform:uppercase;">
-               Scan or share this QR
-             </div>
-           </td></tr>
-         </table>`
-      : "") +
     tpl.paragraph(
-      `Or share the direct link — it auto-fills the code so your followers just pick a package and pay:`
+      `Your followers can either type the code at checkout, or tap this ` +
+      `direct link — it auto-fills the code so they just pick a package and pay:`
     ) +
     tpl.buttonRow([
       { href: bookingUrl, label: `wendypix.com/book?promo=${record.code}`, primary: true },
@@ -304,19 +266,6 @@ async function sendInfluencerWelcome(record) {
       body,
     }),
   };
-  // Attach the QR as an inline image (referenced by cid: above) so it
-  // renders in the email body. Resend supports both `attachments` and
-  // Content-ID for inline references — we set `content_id` matching the
-  // cid: URI used in the <img src>.
-  if (qrBase64) {
-    emailPayload.attachments = [
-      {
-        filename: `wendypix-${record.code}-qr.png`,
-        content: qrBase64,
-        content_id: "wendypix-promo-qr",
-      },
-    ];
-  }
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

@@ -174,16 +174,24 @@ Cache busters bumped:
 - admin.css v=2026-05-26-discounts2
 - admin.js  v=2026-05-26-discounts2
 
-Follow-up: influencer email is OPTIONAL.
-Some influencers Wendy prefers to text the QR directly
-instead of emailing. Blank email means:
-- No welcome email fires on create.
-- The QR modal opens automatically post-save so the PNG is
-  right there to long-press + save + text.
-- The row's Resend button is hidden.
-- The row shows 'no email — share QR manually'.
-Existing email flow works unchanged when an address IS
-provided."
+Follow-up 1: influencer email is OPTIONAL. Blank email means
+no welcome email fires and the Resend button is hidden on
+that row.
+
+Follow-up 2: QR CODES REMOVED. Turned out to be confusing
+for followers scanning them. Replaced with:
+- Plain-text codes (unchanged from before — Wendy shares
+  by texting/DMing/posting to IG).
+- Two row actions: Copy code (grabs 'SARAH20') and Copy
+  link (grabs 'wendypix.com/book?promo=SARAH20', which
+  auto-fills the code when tapped).
+- Welcome email simplified to just the code text + the
+  direct link — no image attachment.
+- Removed the QR modal, api.qrserver.com fetch, related
+  CSS. No new external service dependency.
+
+Cache busters bumped to v=2026-05-27-noqr on admin.css +
+admin.js."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

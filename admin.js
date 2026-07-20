@@ -1947,7 +1947,7 @@
     if (!wrap) return;
     if (!codesState.length) {
       wrap.innerHTML =
-        '<p class="admin__status">No codes yet — create one above and Wendy will get an email with the QR to share.</p>';
+        '<p class="admin__status">No codes yet — create one above. If you added an influencer email, they get a branded email with the code + link. Otherwise use Copy code / Copy link to share it yourself.</p>';
       return;
     }
     wrap.innerHTML = "";
@@ -1969,11 +1969,11 @@
       const usesTxt = max != null
         ? `${uses} / ${max} uses`
         : `${uses} uses &middot; <span class="muted">no cap</span>`;
-      // Show the email on the row, or a subtle 'no email — share the QR
+      // Show the email on the row, or a subtle 'no email — share code
       // manually' hint when there isn't one on file.
       const emailLine = c.influencerEmail
         ? escapeHtml(c.influencerEmail)
-        : '<span class="muted">no email — share QR manually</span>';
+        : '<span class="muted">no email — share code manually</span>';
       const resendBtn = c.influencerEmail
         ? `<button type="button" class="btn" data-act="resend" data-code="${escapeHtml(c.code)}">Resend email</button>`
         : "";
@@ -1988,7 +1988,8 @@
            ${usesBar}
          </div>` +
         `<div class="admin__code-actions">
-           <button type="button" class="btn" data-act="qr" data-code="${escapeHtml(c.code)}">QR / link</button>
+           <button type="button" class="btn" data-act="copy-code" data-code="${escapeHtml(c.code)}">Copy code</button>
+           <button type="button" class="btn" data-act="copy-link" data-code="${escapeHtml(c.code)}">Copy link</button>
            ${resendBtn}
            <button type="button" class="btn" data-act="toggle" data-code="${escapeHtml(c.code)}">${c.active ? "Deactivate" : "Reactivate"}</button>
            <button type="button" class="btn btn--danger" data-act="delete" data-code="${escapeHtml(c.code)}">Delete</button>
@@ -2011,7 +2012,7 @@
     const maxUsesRaw = document.getElementById("c-maxuses").value.trim();
     if (!name) return status.textContent = "Enter the influencer's name.";
     // Email is optional now — only reject if the user typed something
-    // that isn't a valid address. Blank is fine (Wendy will text the QR).
+    // that isn't a valid address. Blank is fine (Wendy will share the code manually).
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return status.textContent = "Enter a valid email, or leave it blank.";
     }
@@ -2035,9 +2036,9 @@
       if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
       status.className = "admin__status admin__status--inline admin__status--ok";
       if (data.emailed) {
-        status.textContent = `Created ${data.code.code}. Emailed ${email} the code + QR.`;
+        status.textContent = `Created ${data.code.code}. Emailed ${email} the code + link.`;
       } else if (data.emailSkipped) {
-        status.textContent = `Created ${data.code.code}. Opening the QR — long-press to save the image and text it to ${name}.`;
+        status.textContent = `Created ${data.code.code}. Link copied to clipboard — paste it into a text to ${name}.`;
       } else {
         status.textContent = `Created ${data.code.code}. Email failed (${data.emailError || "unknown"}) — hit Resend to try again.`;
       }
@@ -2048,9 +2049,16 @@
       document.getElementById("c-expires").value = "";
       document.getElementById("c-maxuses").value = "";
       await loadCodes();
-      // If there was no email, auto-open the QR modal so Wendy can save
-      // the PNG right away without hunting for the "QR / link" button.
-      if (data.emailSkipped) openQrModal(data.code.code);
+      // If there was no email, auto-copy the promo link so Wendy can
+      // paste it into a text/DM right away without hunting for the row.
+      if (data.emailSkipped) {
+        const url = `${location.origin}/book?promo=${encodeURIComponent(data.code.code)}`;
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(url);
+          }
+        } catch (_) { /* silent — the status message already tells them what to do */ }
+      }
     } catch (err) {
       status.className = "admin__status admin__status--inline admin__status--err";
       status.textContent = err.message;
@@ -2060,16 +2068,46 @@
   }
 
   async function onCodeAction(act, code) {
-    if (act === "qr") return openQrModal(code);
+    if (act === "copy-code") return copyToClipboard(code, `Code ${code} copied.`);
+    if (act === "copy-link") {
+      const url = `${location.origin}/book?promo=${encodeURIComponent(code)}`;
+      return copyToClipboard(url, `Link copied — paste it into a text, DM, or IG bio.`);
+    }
     if (act === "resend") return resendCodeEmail(code);
     if (act === "toggle") return toggleCodeActive(code);
     if (act === "delete") return deleteCode(code);
   }
 
+  // Shared clipboard helper. Uses the modern async API when available
+  // (all evergreen browsers) and falls back to a hidden textarea +
+  // execCommand for older Safari/iOS where the async API is https-only.
+  async function copyToClipboard(text, okMsg) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      // Lightweight confirmation — a native alert is intrusive but
+      // ensures Wendy actually sees the confirmation on mobile where
+      // toasts are easy to miss.
+      alert(okMsg);
+    } catch (err) {
+      alert("Couldn't copy automatically — here it is to copy manually:\n\n" + text);
+    }
+  }
+
   async function resendCodeEmail(code) {
     const rec = codesState.find((c) => c.code === code);
     if (!rec) return;
-    if (!confirm(`Re-send the welcome email + QR to ${rec.influencerEmail}?`)) return;
+    if (!confirm(`Re-send the welcome email to ${rec.influencerEmail}?`)) return;
     try {
       const res = await authFetch("/api/admin-codes?action=resend", {
         method: "POST",
@@ -2120,48 +2158,6 @@
       alert(err.message);
     }
   }
-
-  function openQrModal(code) {
-    const modal = document.getElementById("qrModal");
-    const body = document.getElementById("qrModalBody");
-    const url = `${location.origin}/book?promo=${encodeURIComponent(code)}`;
-    // We reuse the same public QR service that the email flow uses so
-    // Wendy sees the identical image the influencer will get.
-    const qrSrc =
-      "https://api.qrserver.com/v1/create-qr-code/?" +
-      new URLSearchParams({
-        size: "400x400",
-        data: url,
-        margin: "10",
-        color: "5A1A5E",
-        bgcolor: "FFFFFF",
-      }).toString();
-    body.innerHTML =
-      `<img src="${qrSrc}" alt="QR for ${escapeHtml(code)}" />` +
-      `<p style="margin:0 0 8px;font-weight:800;color:#1d5e62;">Scan or share</p>` +
-      `<p><a href="${url}" target="_blank" rel="noopener">${url}</a></p>` +
-      `<p style="margin-top:16px"><a href="${qrSrc}" download="wendypix-${code}-qr.png" class="btn btn--primary">Download PNG</a></p>`;
-    modal.hidden = false;
-  }
-
-  function closeQrModal() {
-    const modal = document.getElementById("qrModal");
-    if (modal) modal.hidden = true;
-    const body = document.getElementById("qrModalBody");
-    if (body) body.innerHTML = "";
-  }
-
-  // Modal close wiring
-  const qrClose = document.getElementById("qrModalClose");
-  const qrBackdrop = document.getElementById("qrModalBackdrop");
-  if (qrClose) qrClose.addEventListener("click", closeQrModal);
-  if (qrBackdrop) qrBackdrop.addEventListener("click", closeQrModal);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      const m = document.getElementById("qrModal");
-      if (m && !m.hidden) closeQrModal();
-    }
-  });
 
   const createBtn = document.getElementById("createCodeBtn");
   if (createBtn) createBtn.addEventListener("click", createCode);
