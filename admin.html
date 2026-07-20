@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-26-discounts" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-26-discounts2" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -185,8 +185,11 @@
       <p class="pricing__lede">
         Assign a percentage-off code to an influencer. They can share the
         code itself, or share the QR code — followers who scan land on a
-        pre-filled booking page. Each redemption sends you an email so you
-        know which influencer is driving bookings.
+        pre-filled booking page. Add their email if you want the system
+        to auto-send them a branded email with the QR attached; leave it
+        blank if you'll just text the QR image yourself (open the QR /
+        link modal after saving to grab the PNG). Each redemption sends
+        you an email so you know which influencer is driving bookings.
         <br/><br/>
         Codes can have a <strong>term limit</strong> (good until a date)
         and a <strong>usage cap</strong> (good for the first N people).
@@ -201,7 +204,7 @@
             <input type="text" id="c-name" placeholder="e.g. Sarah Doe" />
           </div>
           <div class="book__row">
-            <label for="c-email">Influencer email</label>
+            <label for="c-email">Influencer email <span class="muted">(optional — leave blank if you're texting the QR)</span></label>
             <input type="email" id="c-email" placeholder="sarah@example.com" />
           </div>
           <div class="book__row">
@@ -218,7 +221,7 @@
           </div>
         </div>
         <p class="cta__actions" style="margin-top:20px">
-          <button type="button" class="btn btn--primary" id="createCodeBtn">Create + email influencer</button>
+          <button type="button" class="btn btn--primary" id="createCodeBtn">Create code</button>
         </p>
         <p class="admin__status admin__status--inline" id="codesCreateStatus" aria-live="polite"></p>
       </div>
@@ -264,6 +267,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-26-discounts"></script>
+  <script src="admin.js?v=2026-05-26-discounts2"></script>
 </body>
 </html>

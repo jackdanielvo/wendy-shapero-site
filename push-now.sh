@@ -171,8 +171,19 @@ api.qrserver.com service (no key needed).
 Cache busters bumped:
 - book.css v=2026-05-26-promo
 - book.js  v=2026-05-26-promo
-- admin.css v=2026-05-26-discounts
-- admin.js  v=2026-05-26-discounts"
+- admin.css v=2026-05-26-discounts2
+- admin.js  v=2026-05-26-discounts2
+
+Follow-up: influencer email is OPTIONAL.
+Some influencers Wendy prefers to text the QR directly
+instead of emailing. Blank email means:
+- No welcome email fires on create.
+- The QR modal opens automatically post-save so the PNG is
+  right there to long-press + save + text.
+- The row's Resend button is hidden.
+- The row shows 'no email — share QR manually'.
+Existing email flow works unchanged when an address IS
+provided."
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

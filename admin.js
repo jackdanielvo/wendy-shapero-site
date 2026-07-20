@@ -1969,11 +1969,19 @@
       const usesTxt = max != null
         ? `${uses} / ${max} uses`
         : `${uses} uses &middot; <span class="muted">no cap</span>`;
+      // Show the email on the row, or a subtle 'no email — share the QR
+      // manually' hint when there isn't one on file.
+      const emailLine = c.influencerEmail
+        ? escapeHtml(c.influencerEmail)
+        : '<span class="muted">no email — share QR manually</span>';
+      const resendBtn = c.influencerEmail
+        ? `<button type="button" class="btn" data-act="resend" data-code="${escapeHtml(c.code)}">Resend email</button>`
+        : "";
       row.innerHTML =
         `<div class="admin__code-string">${escapeHtml(c.code)}</div>` +
         `<div class="admin__code-meta">
            <strong>${escapeHtml(c.influencerName)}</strong>
-           &middot; ${escapeHtml(c.influencerEmail)}<br/>
+           &middot; ${emailLine}<br/>
            <strong>${c.percentOff}% off</strong>
            &middot; ${usesTxt}
            &middot; Expires: ${expiry}
@@ -1981,7 +1989,7 @@
          </div>` +
         `<div class="admin__code-actions">
            <button type="button" class="btn" data-act="qr" data-code="${escapeHtml(c.code)}">QR / link</button>
-           <button type="button" class="btn" data-act="resend" data-code="${escapeHtml(c.code)}">Resend email</button>
+           ${resendBtn}
            <button type="button" class="btn" data-act="toggle" data-code="${escapeHtml(c.code)}">${c.active ? "Deactivate" : "Reactivate"}</button>
            <button type="button" class="btn btn--danger" data-act="delete" data-code="${escapeHtml(c.code)}">Delete</button>
          </div>`;
@@ -2002,7 +2010,11 @@
     const expiresRaw = document.getElementById("c-expires").value.trim();
     const maxUsesRaw = document.getElementById("c-maxuses").value.trim();
     if (!name) return status.textContent = "Enter the influencer's name.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return status.textContent = "Enter a valid email.";
+    // Email is optional now — only reject if the user typed something
+    // that isn't a valid address. Blank is fine (Wendy will text the QR).
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return status.textContent = "Enter a valid email, or leave it blank.";
+    }
     if (!(percent > 0 && percent <= 100)) return status.textContent = "Percent must be 1-100.";
     const btn = document.getElementById("createCodeBtn");
     btn.disabled = true;
@@ -2022,9 +2034,13 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
       status.className = "admin__status admin__status--inline admin__status--ok";
-      status.textContent = data.emailed
-        ? `Created ${data.code.code}. Emailed ${email} the code + QR.`
-        : `Created ${data.code.code}. Email skipped (${data.emailError || "unknown"}) — hit Resend to try again.`;
+      if (data.emailed) {
+        status.textContent = `Created ${data.code.code}. Emailed ${email} the code + QR.`;
+      } else if (data.emailSkipped) {
+        status.textContent = `Created ${data.code.code}. Opening the QR — long-press to save the image and text it to ${name}.`;
+      } else {
+        status.textContent = `Created ${data.code.code}. Email failed (${data.emailError || "unknown"}) — hit Resend to try again.`;
+      }
       // Clear form
       document.getElementById("c-name").value = "";
       document.getElementById("c-email").value = "";
@@ -2032,6 +2048,9 @@
       document.getElementById("c-expires").value = "";
       document.getElementById("c-maxuses").value = "";
       await loadCodes();
+      // If there was no email, auto-open the QR modal so Wendy can save
+      // the PNG right away without hunting for the "QR / link" button.
+      if (data.emailSkipped) openQrModal(data.code.code);
     } catch (err) {
       status.className = "admin__status admin__status--inline admin__status--err";
       status.textContent = err.message;

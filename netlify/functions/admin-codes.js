@@ -71,9 +71,17 @@ async function handleCreate(event) {
   }
   const influencerName = String(body.influencerName || "").trim();
   if (!influencerName) return json(400, { error: "influencerName required." });
-  const influencerEmail = String(body.influencerEmail || "").trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(influencerEmail)) {
-    return json(400, { error: "influencerEmail must be a valid email." });
+  // Email is OPTIONAL — Wendy often shares codes via text/DM with just
+  // the QR image. If provided, it must be a valid format; if blank, the
+  // welcome-email step is skipped entirely and the "Resend email"
+  // action stays disabled for this code in the admin UI.
+  const rawEmail = String(body.influencerEmail || "").trim().toLowerCase();
+  let influencerEmail = null;
+  if (rawEmail) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      return json(400, { error: "influencerEmail must be a valid email or blank." });
+    }
+    influencerEmail = rawEmail;
   }
   let expiresAt = null;
   if (body.expiresAt) {
@@ -115,18 +123,25 @@ async function handleCreate(event) {
 
   // Fire-and-remember the welcome email. If Resend fails or the API key
   // isn't set, the code is still created — Wendy can hit "Resend email"
-  // from the admin later.
+  // from the admin later (assuming there's an email on file at all).
   let emailed = false;
   let emailError = null;
-  try {
-    await sendInfluencerWelcome(newRecord);
-    emailed = true;
-  } catch (err) {
-    console.error("[admin-codes] welcome email failed:", err.message);
-    emailError = err.message;
+  let emailSkipped = false;
+  if (!newRecord.influencerEmail) {
+    // No email address — Wendy is sharing the QR via text/DM. Nothing
+    // to send. She can still copy the QR / link from the admin.
+    emailSkipped = true;
+  } else {
+    try {
+      await sendInfluencerWelcome(newRecord);
+      emailed = true;
+    } catch (err) {
+      console.error("[admin-codes] welcome email failed:", err.message);
+      emailError = err.message;
+    }
   }
 
-  return json(200, { code: newRecord, emailed, emailError });
+  return json(200, { code: newRecord, emailed, emailSkipped, emailError });
 }
 
 // ---------- POST ?action=resend ----------
@@ -138,6 +153,9 @@ async function handleResend(event) {
   const codes = await listCodes();
   const record = codes.find((c) => c.code === codeStr);
   if (!record) return json(404, { error: "code not found" });
+  if (!record.influencerEmail) {
+    return json(400, { error: "No email on file for this code — nothing to send." });
+  }
   try {
     await sendInfluencerWelcome(record);
     return json(200, { ok: true, emailed: true });
