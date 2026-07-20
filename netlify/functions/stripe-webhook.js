@@ -18,6 +18,7 @@ const { getBookingsStore } = require("./_blobs");
 const { sendPrepEmail } = require("./_prep");
 const { buildIcs, toBase64 } = require("./_ics");
 const tpl = require("./_email");
+const { listCodes, recordRedemption } = require("./_codes");
 
 const WENDY_EMAIL = "wendy@wendypix.com";
 
@@ -100,15 +101,29 @@ exports.handler = async (event) => {
     console.error("[stripe-webhook] blob update failed:", e.message);
   }
 
+  // Pull the full booking blob so we have access to the promo object
+  // (book.js stored the full promo record here — Stripe metadata only
+  // carries the code string and percent, not the influencer/discount
+  // details we want in the redemption alert).
+  let bookingMeta = null;
+  try {
+    const store = getBookingsStore();
+    bookingMeta = await store.get(`booking/${eventId}`, { type: "json" });
+  } catch (err) {
+    console.warn("[stripe-webhook] booking blob read failed:", err.message);
+  }
+  const promo = bookingMeta && bookingMeta.promo ? bookingMeta.promo : null;
+
   // Emails — confirmation to client, notification to Wendy, plus a
   // delayed prep-guide email to the client (Resend `scheduled_at`
   // handles the ~10-minute delay so the prep email lands AFTER the
-  // confirmation, not stapled to it).
+  // confirmation, not stapled to it). If a promo code was used, also
+  // record the redemption + fire an alert to Wendy.
   await Promise.all([
-    sendClientConfirmation(md, session).catch((e) =>
+    sendClientConfirmation(md, session, promo).catch((e) =>
       console.error("[stripe-webhook] client email failed:", e.message)
     ),
-    sendWendyNotification(md, session).catch((e) =>
+    sendWendyNotification(md, session, promo).catch((e) =>
       console.error("[stripe-webhook] Wendy email failed:", e.message)
     ),
     md.email
@@ -120,12 +135,95 @@ exports.handler = async (event) => {
           console.error("[stripe-webhook] prep email failed:", e.message)
         )
       : Promise.resolve(),
+    promo && promo.code
+      ? recordRedemption(promo.code, {
+          bookingId: eventId,
+          clientEmail: md.email,
+          clientName: md.name,
+          packageName: md.packageName,
+          packagePrice: Number(md.packagePrice) || null,
+          discountApplied: promo.discountApplied || null,
+        }).catch((e) =>
+          console.error("[stripe-webhook] recordRedemption failed:", e.message)
+        )
+      : Promise.resolve(),
+    promo && promo.code
+      ? sendRedemptionAlert({ promo, md, session }).catch((e) =>
+          console.error("[stripe-webhook] redemption alert failed:", e.message)
+        )
+      : Promise.resolve(),
   ]);
 
   return { statusCode: 200, body: "ok" };
 };
 
-async function sendClientConfirmation(md, session) {
+// ------------------------------------------------------------
+// Discount-code redemption alert (Stripe-paid bookings).
+// Mirrors the version in book.js used on the non-Stripe path.
+// ------------------------------------------------------------
+async function sendRedemptionAlert({ promo, md, session }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  // Re-read the code record so uses-remaining is fresh post-increment.
+  let usesRemainingLine = "No usage cap set.";
+  try {
+    const codes = await listCodes();
+    const rec = codes.find((c) => c.code === promo.code);
+    if (rec && rec.maxUses != null) {
+      const remaining = Math.max(0, rec.maxUses - rec.usedCount);
+      usesRemainingLine =
+        `<strong>${rec.usedCount}</strong> of ${rec.maxUses} uses claimed &middot; ` +
+        `<strong>${remaining}</strong> remaining.`;
+    } else if (rec) {
+      usesRemainingLine = `<strong>${rec.usedCount}</strong> total uses to date &middot; no cap.`;
+    }
+  } catch (err) {
+    console.warn("[stripe-webhook] redemption alert stats fetch failed:", err.message);
+  }
+  const startStr = tpl.formatDate(md.slotStart ? new Date(md.slotStart) : null);
+  const originalPrice = Number(md.packagePrice) || 0;
+  const paid = originalPrice - (promo.discountApplied || 0);
+
+  const body =
+    tpl.eyebrow("Discount code used") +
+    tpl.headline("Booking with a code.") +
+    tpl.callout(
+      `<span style="font-family:monospace;font-size:28px;letter-spacing:0.08em;">${tpl.escapeHtml(promo.code)}</span><br/>` +
+      `<span style="opacity:0.9;">${promo.percentOff}% off &middot; via ${tpl.escapeHtml(promo.influencerName || "Unknown")}</span>`
+    ) +
+    tpl.paragraph(
+      `<strong>${tpl.escapeHtml(md.name || "")}</strong> ` +
+      `(<a href="mailto:${encodeURIComponent(md.email || "")}" style="color:${tpl.COLORS.TEAL};">` +
+      tpl.escapeHtml(md.email || "") +
+      `</a>) just paid the deposit on ${tpl.escapeHtml(md.packageName || "a session")} — ${tpl.escapeHtml(startStr)}.`
+    ) +
+    tpl.paragraph(
+      `Sticker price: <s>$${originalPrice}</s> &middot; ` +
+      `They paid: <strong>$${paid}</strong> ` +
+      `(you gave up $${promo.discountApplied || 0}).`
+    ) +
+    tpl.paragraph(usesRemainingLine) +
+    tpl.fineprint(
+      `Full audit log for this code lives in Admin → Discounts.`
+    );
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "WendyPix Bookings <wendy@wendypix.com>",
+      to: [WENDY_EMAIL],
+      subject: `Code ${promo.code} used — ${promo.influencerName || "influencer"} drove a paid booking`,
+      html: tpl.wrap({
+        preheader: `${promo.percentOff}% off &middot; ${md.name} &middot; ${md.packageName}`,
+        body,
+        showHomeLink: false,
+      }),
+    }),
+  }).then((r) => { if (!r.ok) throw new Error("Resend redemption alert " + r.status); });
+}
+
+async function sendClientConfirmation(md, session, promo) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
@@ -133,6 +231,9 @@ async function sendClientConfirmation(md, session) {
   const startStr = tpl.formatDate(start);
   const firstName = (md.name || "there").split(" ")[0];
   const depositDollars = (session.amount_total / 100).toFixed(0);
+  const promoLine = promo
+    ? `<br/><span style="font-size:14px;font-weight:600;opacity:0.85;letter-spacing:0.06em;text-transform:uppercase;">Code ${tpl.escapeHtml(promo.code)} &middot; ${promo.percentOff}% off applied</span>`
+    : "";
 
   const body =
     tpl.eyebrow("Confirmed & paid") +
@@ -142,7 +243,8 @@ async function sendClientConfirmation(md, session) {
     tpl.callout(
       `${tpl.escapeHtml(md.packageName || "Session")}<br/>` +
       `<span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span><br/>` +
-      `<span style="font-size:15px;font-weight:600;opacity:0.85;letter-spacing:0.06em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>`
+      `<span style="font-size:15px;font-weight:600;opacity:0.85;letter-spacing:0.06em;text-transform:uppercase;">Deposit paid &middot; $${depositDollars}</span>` +
+      promoLine
     ) +
     tpl.paragraph(
       "I've attached a calendar invite (.ics) — open it to add the " +
@@ -212,7 +314,7 @@ function buildBookingIcs({ eventId, packageName, name, email, slotStart, duratio
   };
 }
 
-async function sendWendyNotification(md, session) {
+async function sendWendyNotification(md, session, promo) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return;
 
@@ -220,6 +322,10 @@ async function sendWendyNotification(md, session) {
   const startStr = tpl.formatDate(start);
   const depositDollars = (session.amount_total / 100).toFixed(0);
   const fullPrice = md.packagePrice ? `$${md.packagePrice}` : "—";
+  const promoLine = promo
+    ? `<br/><span style="color:#b347b9;font-weight:800;">${tpl.escapeHtml(promo.code)}</span>` +
+      ` &middot; ${promo.percentOff}% off &middot; via ${tpl.escapeHtml(promo.influencerName || "Unknown")}`
+    : "";
 
   const body =
     tpl.eyebrow("New paid booking") +
@@ -227,7 +333,8 @@ async function sendWendyNotification(md, session) {
     tpl.callout(
       `<strong>${tpl.escapeHtml(md.packageName || "Booking")}</strong>` +
       ` &middot; ${fullPrice} (deposit paid: $${depositDollars})<br/>` +
-      tpl.escapeHtml(startStr)
+      tpl.escapeHtml(startStr) +
+      promoLine
     ) +
     tpl.paragraph(
       `<strong>${tpl.escapeHtml(md.name || "")}</strong><br/>` +

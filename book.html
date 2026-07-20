@@ -33,9 +33,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-05-24-discovery" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="book.css?v=2026-05-08-lightteal" />
+  <link rel="stylesheet" href="book.css?v=2026-05-26-promo" />
 </head>
 <body class="pricing-page book-page">
 
@@ -198,6 +198,21 @@
           <textarea id="f-notes" name="notes" rows="4" placeholder="Tell me about your shoot — what's it for, what mood you're after, any references…"></textarea>
         </div>
 
+        <!-- Discount code — auto-populated from ?promo=... URL param
+             when an influencer shares a QR code or link. Otherwise the
+             field sits quietly and only shows a status message on
+             interaction. -->
+        <div class="book__row book__row--promo">
+          <label for="f-promo">Promo code <span class="muted">(optional)</span></label>
+          <div class="book__promo-line">
+            <input type="text" id="f-promo" name="promoCode" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false"
+                   placeholder="e.g. SARAH20" />
+            <button type="button" class="btn btn--ghost" id="applyPromoBtn">Apply</button>
+          </div>
+          <p class="book__promo-status" id="promoStatus" aria-live="polite"></p>
+        </div>
+
         <p class="book__deposit-note" id="depositNote">
           <!-- Filled by JS depending on whether Stripe is configured. -->
         </p>
@@ -227,7 +242,7 @@
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
   </footer>
 
-  <script src="book.js?v=2026-05-24-discovery"></script>
+  <script src="book.js?v=2026-05-26-promo"></script>
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
     (function () {

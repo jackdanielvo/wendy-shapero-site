@@ -25,14 +25,22 @@ git status --short
 echo ""
 
 echo "=== 3. Staging files ==="
-git add admin.js admin.html netlify/functions/admin-photos-publish.js push-now.sh index.html styles.css
+git add admin.js admin.html admin.css \
+        netlify/functions/admin-photos-publish.js \
+        netlify/functions/admin-codes.js \
+        netlify/functions/redeem-code.js \
+        netlify/functions/_codes.js \
+        netlify/functions/book.js \
+        netlify/functions/stripe-webhook.js \
+        push-now.sh index.html styles.css \
+        book.html book.js book.css
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos: re-baseline + IG reminder + prominent mobile close button
+git commit -m "Admin Photos + Site: re-baseline, IG reminder, mobile close, influencer codes
 
-Three changes:
+Four changes:
 
 A) RE-BASELINE STATE AFTER PUBLISH (fix 'Tree changed')
 
@@ -106,7 +114,65 @@ and bold uppercase Inter so it reads as the takeover's
 clear exit. Achieved without an HTML restructure: the
 markup gained a hidden 'Close' span (desktop hides it) plus
 a wrapped X glyph so the existing rotate-on-hover stays
-intact. styles.css cache buster bumped to v=2026-05-25-closebtn."
+intact. styles.css cache buster bumped to v=2026-05-25-closebtn.
+
+D) INFLUENCER DISCOUNT CODES
+
+Wendy can now assign percentage-off codes to specific
+influencers from Admin -> Discounts. Each code:
+
+- Is auto-generated (7 chars, unambiguous alphabet — no O/0
+  or I/1) and unique.
+- Applies to the FULL package price (not just deposit) so
+  the influencer promises a real 20% off, not a nominal one.
+  Deposit is 25% of the discounted total, balance follows.
+- Has an optional term limit (good through date) and
+  optional usage cap (good for the first N bookings).
+- On create, we auto-email the influencer via Resend with
+  the code text + an inline QR code (image via public
+  api.qrserver.com, no npm dep) that points to
+  wendypix.com/book?promo=CODE. Followers who scan the QR
+  land on the booking page with the code pre-applied.
+- Records a full audit log per code (who booked, when,
+  what package, dollar discount) — visible in admin.
+- Deactivate keeps the audit log but blocks future use;
+  Delete purges the record entirely.
+
+Client-side flow:
+- book.html gains a Promo code field in step 3 with Apply
+  button. ?promo=CODE URL param auto-fills + validates.
+- book.js calls /api/redeem-code to preview the discount
+  BEFORE submit, updates the deposit note in real time.
+- book.js (server) revalidates the code at submit time
+  (server-side source of truth is Netlify Blobs), applies
+  discount to Stripe Checkout deposit + booking metadata.
+
+Wendy notifications:
+- Every redemption fires a dedicated 'Code X used by client
+  Y' email showing sticker-vs-paid price + uses remaining +
+  which influencer drove the booking. Fires on both the
+  Stripe (webhook) and manual paths.
+
+New files:
+- netlify/functions/_codes.js      shared storage + validation
+- netlify/functions/admin-codes.js CRUD + welcome email
+- netlify/functions/redeem-code.js public price-preview endpoint
+
+Modified:
+- netlify/functions/book.js         validates + applies + logs
+- netlify/functions/stripe-webhook.js records redemption on paid
+- admin.html, admin.js, admin.css   new Discounts tab + QR modal
+- book.html, book.js, book.css      promo input + preview UI
+
+Env vars: no new secrets — reuses RESEND_API_KEY and
+NETLIFY_API_TOKEN. QR generation uses the public
+api.qrserver.com service (no key needed).
+
+Cache busters bumped:
+- book.css v=2026-05-26-promo
+- book.js  v=2026-05-26-promo
+- admin.css v=2026-05-26-discounts
+- admin.js  v=2026-05-26-discounts"
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

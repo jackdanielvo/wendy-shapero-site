@@ -24,6 +24,13 @@ const { getBookingsStore } = require("./_blobs");
 const { getSettings } = require("./_settings");
 const tpl = require("./_email");
 const { createCheckoutSession } = require("./_stripe");
+const {
+  listCodes,
+  normalizeCode,
+  validateCode,
+  applyDiscount,
+  recordRedemption,
+} = require("./_codes");
 
 const TIMEZONE_LABEL = "Pacific Standard Time"; // for Outlook event
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -58,6 +65,43 @@ exports.handler = async (event) => {
   if (Number.isNaN(start.getTime())) return jsonError(400, "Invalid slotStart");
   const durationMin = Number(payload.packageDurationMin) || 60;
   const end = new Date(start.getTime() + durationMin * 60 * 1000);
+
+  // Discount code (optional). If supplied, revalidate SERVER-SIDE — the
+  // frontend preview via /api/redeem-code is untrusted, and a stale
+  // client tab could hold a code that's since expired or hit its
+  // usage cap. The discount is applied to both the deposit AND the
+  // remaining balance calculation via the effectivePrice below.
+  let promo = null; // { code, percentOff, originalPrice, discountedPrice, discountApplied, record }
+  const rawCode = normalizeCode(payload.promoCode);
+  if (rawCode) {
+    try {
+      const codes = await listCodes();
+      const record = codes.find((c) => c.code === rawCode);
+      const check = validateCode(record);
+      if (!check.valid) {
+        return jsonError(400, `Promo code: ${check.reason}`);
+      }
+      const originalPrice = Number(payload.packagePrice) || 0;
+      const { discountedPrice, discountApplied } = applyDiscount(originalPrice, record.percentOff);
+      promo = {
+        code: record.code,
+        percentOff: record.percentOff,
+        influencerName: record.influencerName,
+        influencerEmail: record.influencerEmail,
+        originalPrice,
+        discountedPrice,
+        discountApplied,
+      };
+    } catch (err) {
+      console.warn("[book] promo lookup failed (proceeding without discount):", err.message);
+      // Don't hard-fail the booking on a Blobs hiccup — clearer to
+      // let it through at full price than to lose the booking.
+    }
+  }
+
+  // effectivePrice is what we actually charge and quote in emails.
+  // Falls back to the raw packagePrice when there's no discount.
+  const effectivePrice = promo ? promo.discountedPrice : (Number(payload.packagePrice) || 0);
 
   // Step 1a: conflict check. Prevents double-booking when two users
   // race for the same slot — e.g. user A submits and goes to Stripe,
@@ -105,6 +149,18 @@ exports.handler = async (event) => {
       phone: payload.phone || null,
       packageName: payload.packageName,
       packagePrice: payload.packagePrice || null,
+      // effectivePrice is what the client actually pays (post-discount).
+      // Keep both so admin views can show the sticker vs. paid amount.
+      effectivePrice: effectivePrice || null,
+      promo: promo
+        ? {
+            code: promo.code,
+            percentOff: promo.percentOff,
+            discountApplied: promo.discountApplied,
+            influencerName: promo.influencerName,
+            influencerEmail: promo.influencerEmail,
+          }
+        : null,
       durationMin,
       slotStart: start.toISOString(),
       slotEnd: end.toISOString(),
@@ -134,11 +190,14 @@ exports.handler = async (event) => {
   const stripeEnabled = Boolean(process.env.STRIPE_SECRET_KEY);
   if (stripeEnabled && payload.packagePrice && !payload.inquiry) {
     try {
-      // Convert package_price (USD) → deposit cents at the configured percent.
-      // e.g. $850 × 25 = 21250 cents = $212.50.
-      const depositCents = Math.round(payload.packagePrice * depositPercent);
+      // Convert effectivePrice (post-discount USD) → deposit cents at the
+      // configured percent. e.g. $850 × 25 = 21250 cents = $212.50.
+      // If a promo code was applied, the discount cascades to the deposit
+      // (25% of the DISCOUNTED total, not the sticker price) so the deal
+      // the influencer promised is the deal the client actually gets.
+      const depositCents = Math.round(effectivePrice * depositPercent);
       const session = await createCheckoutSession({
-        packageName: payload.packageName,
+        packageName: payload.packageName + (promo ? ` — ${promo.percentOff}% off` : ""),
         amountCents: depositCents,
         depositLabel: `${depositPercent}% deposit`,
         customerEmail: payload.email,
@@ -147,10 +206,13 @@ exports.handler = async (event) => {
           packageId: payload.packageId,
           packageName: payload.packageName,
           packagePrice: String(payload.packagePrice),
+          effectivePrice: String(effectivePrice),
           slotStart: start.toISOString(),
           name: payload.name,
           email: payload.email,
           phone: payload.phone || "",
+          promoCode: promo ? promo.code : "",
+          promoPercentOff: promo ? String(promo.percentOff) : "",
         },
         successUrl: `${SITE_URL}/book-success?session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: `${SITE_URL}/book?canceled=1`,
@@ -184,8 +246,31 @@ exports.handler = async (event) => {
     }
   }
 
-  // Non-Stripe path: send emails immediately
-  const emailResults = await sendEmails({ payload, start, calEventId, depositPercent });
+  // Non-Stripe path: send emails immediately + count the redemption
+  // right now (no Stripe webhook to defer it to). On the Stripe path,
+  // the webhook (stripe-webhook.js) records the redemption + notifies
+  // Wendy after payment succeeds — so an abandoned checkout doesn't
+  // burn a use.
+  if (promo) {
+    try {
+      await recordRedemption(promo.code, {
+        bookingId: calEventId,
+        clientEmail: payload.email,
+        clientName: payload.name,
+        packageName: payload.packageName,
+        packagePrice: promo.originalPrice,
+        discountApplied: promo.discountApplied,
+      });
+    } catch (err) {
+      console.warn("[book] recordRedemption failed:", err.message);
+    }
+    try {
+      await sendRedemptionAlert({ promo, payload, start });
+    } catch (err) {
+      console.warn("[book] redemption alert failed:", err.message);
+    }
+  }
+  const emailResults = await sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice });
 
   return {
     statusCode: 200,
@@ -294,13 +379,18 @@ async function createCalendarEvent({ payload, start, end }) {
 // Both gated on RESEND_API_KEY. Best-effort — booking is still
 // considered successful even if these fail.
 // ----------------------------------------------------------
-async function sendEmails({ payload, start, calEventId, depositPercent }) {
+async function sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice }) {
   const result = { client: false, wendy: false };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return result;
 
   const startStr = tpl.formatDate(start);
   const firstName = payload.name.split(" ")[0];
+
+  // Price string for the client callout — reflects the discount if any.
+  const priceStr = promo
+    ? ` <span style="opacity:0.85;"><s>$${payload.packagePrice}</s> &middot; <strong>$${effectivePrice}</strong> (${promo.percentOff}% off)</span>`
+    : (payload.packagePrice ? ` <span style="opacity:0.85;">&middot; $${payload.packagePrice}</span>` : "");
 
   // Client email — branded with WendyPix shell
   try {
@@ -311,7 +401,7 @@ async function sendEmails({ payload, start, calEventId, depositPercent }) {
       tpl.paragraph("Got your request — here's what I have:") +
       tpl.callout(
         `${tpl.escapeHtml(payload.packageName)}` +
-        (payload.packagePrice ? ` <span style="opacity:0.85;">&middot; $${payload.packagePrice}</span>` : "") +
+        priceStr +
         `<br/><span style="font-weight:600;opacity:0.95;">${tpl.escapeHtml(startStr)}</span>`
       ) +
       tpl.paragraph(
@@ -379,13 +469,24 @@ async function sendEmails({ payload, start, calEventId, depositPercent }) {
       payload.hmua ? `<strong>+ Hair &amp; makeup ($200)</strong>` : null,
     ].filter(Boolean).join("<br/>");
 
+    // Promo-code line: bold if a code was used so it can't be missed
+    // scanning the email. Includes the influencer name for context.
+    const promoLine = promo
+      ? `<br/><span style="color:#b347b9;font-weight:800;">${tpl.escapeHtml(promo.code)}</span>` +
+        ` &middot; ${promo.percentOff}% off &middot; via ${tpl.escapeHtml(promo.influencerName)}`
+      : "";
+    const priceCalloutStr = promo
+      ? ` &middot; <s>$${payload.packagePrice}</s> $${effectivePrice}`
+      : (payload.packagePrice ? ` &middot; $${payload.packagePrice}` : "");
+
     const wendyBody =
       tpl.eyebrow("New booking request") +
       tpl.headline("Inquiry.") +
       tpl.callout(
         `<strong>${tpl.escapeHtml(payload.packageName)}</strong>` +
-        (payload.packagePrice ? ` &middot; $${payload.packagePrice}` : "") +
-        `<br/>${tpl.escapeHtml(startStr)}`
+        priceCalloutStr +
+        `<br/>${tpl.escapeHtml(startStr)}` +
+        promoLine
       ) +
       tpl.paragraph(detailsLines) +
       (extras ? tpl.paragraph(extras) : "") +
@@ -411,6 +512,69 @@ async function sendEmails({ payload, start, calEventId, depositPercent }) {
   }
 
   return result;
+}
+
+// ----------------------------------------------------------
+// Redemption alert — a dedicated "your code was just used" email to
+// Wendy so she can track which influencers are driving bookings. Runs
+// AFTER recordRedemption() so the "uses remaining" figure it reports
+// is post-increment.
+// ----------------------------------------------------------
+async function sendRedemptionAlert({ promo, payload, start }) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  // Re-read the code record so uses-remaining is fresh.
+  let usesRemainingLine = "No usage cap set.";
+  try {
+    const codes = await listCodes();
+    const rec = codes.find((c) => c.code === promo.code);
+    if (rec && rec.maxUses != null) {
+      const remaining = Math.max(0, rec.maxUses - rec.usedCount);
+      usesRemainingLine =
+        `<strong>${rec.usedCount}</strong> of ${rec.maxUses} uses claimed &middot; ` +
+        `<strong>${remaining}</strong> remaining.`;
+    } else if (rec) {
+      usesRemainingLine = `<strong>${rec.usedCount}</strong> total uses to date &middot; no cap.`;
+    }
+  } catch (err) {
+    console.warn("[book] redemption alert stats fetch failed:", err.message);
+  }
+
+  const startStr = tpl.formatDate(start);
+  const body =
+    tpl.eyebrow("Discount code used") +
+    tpl.headline("Booking with a code.") +
+    tpl.callout(
+      `<span style="font-family:monospace;font-size:28px;letter-spacing:0.08em;">${tpl.escapeHtml(promo.code)}</span><br/>` +
+      `<span style="opacity:0.9;">${promo.percentOff}% off &middot; via ${tpl.escapeHtml(promo.influencerName)}</span>`
+    ) +
+    tpl.paragraph(
+      `<strong>${tpl.escapeHtml(payload.name)}</strong> ` +
+      `(<a href="mailto:${encodeURIComponent(payload.email)}" style="color:${tpl.COLORS.TEAL};">` +
+      tpl.escapeHtml(payload.email) +
+      `</a>) just booked ${tpl.escapeHtml(payload.packageName)} on ` +
+      `${tpl.escapeHtml(startStr)}.`
+    ) +
+    tpl.paragraph(
+      `Sticker price: <s>$${payload.packagePrice}</s> &middot; ` +
+      `They paid: <strong>$${promo.discountedPrice}</strong> ` +
+      `(you gave up $${promo.discountApplied}).`
+    ) +
+    tpl.paragraph(usesRemainingLine) +
+    tpl.fineprint(
+      `You can see the full audit log for this code in Admin → Discounts.`
+    );
+
+  await resendSend(apiKey, {
+    from: "WendyPix Bookings <wendy@wendypix.com>",
+    to: [WENDY_EMAIL],
+    subject: `Code ${promo.code} used — ${promo.influencerName} drove a booking`,
+    html: tpl.wrap({
+      preheader: `${promo.percentOff}% off &middot; ${payload.name} &middot; ${payload.packageName}`,
+      body,
+      showHomeLink: false,
+    }),
+  });
 }
 
 async function resendSend(apiKey, payload) {

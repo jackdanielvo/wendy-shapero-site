@@ -1922,6 +1922,245 @@
     el.textContent = msg || "";
   }
 
+  // -----------------------------------------------------------
+  // DISCOUNTS — influencer promo codes
+  // -----------------------------------------------------------
+  let codesState = [];
+
+  async function loadCodes() {
+    const wrap = document.getElementById("codesList");
+    if (!wrap) return;
+    wrap.innerHTML = '<p class="admin__status">Loading…</p>';
+    try {
+      const res = await authFetch("/api/admin-codes");
+      if (!res.ok) throw new Error(`Load failed (${res.status})`);
+      const { codes } = await res.json();
+      codesState = codes || [];
+      renderCodes();
+    } catch (err) {
+      wrap.innerHTML = `<p class="admin__status admin__status--err">${err.message}</p>`;
+    }
+  }
+
+  function renderCodes() {
+    const wrap = document.getElementById("codesList");
+    if (!wrap) return;
+    if (!codesState.length) {
+      wrap.innerHTML =
+        '<p class="admin__status">No codes yet — create one above and Wendy will get an email with the QR to share.</p>';
+      return;
+    }
+    wrap.innerHTML = "";
+    codesState.forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "admin__code-row" + (c.active ? "" : " admin__code-row--inactive");
+      const uses = c.usedCount || 0;
+      const max = c.maxUses;
+      const pctFull = max ? Math.min(100, (uses / max) * 100) : 0;
+      const usesBar =
+        max != null
+          ? `<div class="admin__code-uses-bar${uses >= max ? " admin__code-uses-bar--full" : ""}">
+               <div class="admin__code-uses-bar__fill" style="width:${pctFull}%"></div>
+             </div>`
+          : "";
+      const expiry = c.expiresAt
+        ? formatDateFriendly(c.expiresAt)
+        : '<span class="muted">no expiry</span>';
+      const usesTxt = max != null
+        ? `${uses} / ${max} uses`
+        : `${uses} uses &middot; <span class="muted">no cap</span>`;
+      row.innerHTML =
+        `<div class="admin__code-string">${escapeHtml(c.code)}</div>` +
+        `<div class="admin__code-meta">
+           <strong>${escapeHtml(c.influencerName)}</strong>
+           &middot; ${escapeHtml(c.influencerEmail)}<br/>
+           <strong>${c.percentOff}% off</strong>
+           &middot; ${usesTxt}
+           &middot; Expires: ${expiry}
+           ${usesBar}
+         </div>` +
+        `<div class="admin__code-actions">
+           <button type="button" class="btn" data-act="qr" data-code="${escapeHtml(c.code)}">QR / link</button>
+           <button type="button" class="btn" data-act="resend" data-code="${escapeHtml(c.code)}">Resend email</button>
+           <button type="button" class="btn" data-act="toggle" data-code="${escapeHtml(c.code)}">${c.active ? "Deactivate" : "Reactivate"}</button>
+           <button type="button" class="btn btn--danger" data-act="delete" data-code="${escapeHtml(c.code)}">Delete</button>
+         </div>`;
+      wrap.appendChild(row);
+    });
+    // Delegate button clicks
+    wrap.querySelectorAll("button[data-act]").forEach((btn) => {
+      btn.addEventListener("click", () => onCodeAction(btn.dataset.act, btn.dataset.code));
+    });
+  }
+
+  async function createCode() {
+    const status = document.getElementById("codesCreateStatus");
+    status.className = "admin__status admin__status--inline";
+    const name = document.getElementById("c-name").value.trim();
+    const email = document.getElementById("c-email").value.trim();
+    const percent = Number(document.getElementById("c-percent").value);
+    const expiresRaw = document.getElementById("c-expires").value.trim();
+    const maxUsesRaw = document.getElementById("c-maxuses").value.trim();
+    if (!name) return status.textContent = "Enter the influencer's name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return status.textContent = "Enter a valid email.";
+    if (!(percent > 0 && percent <= 100)) return status.textContent = "Percent must be 1-100.";
+    const btn = document.getElementById("createCodeBtn");
+    btn.disabled = true;
+    status.textContent = "Creating…";
+    try {
+      const res = await authFetch("/api/admin-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          influencerName: name,
+          influencerEmail: email,
+          percentOff: percent,
+          expiresAt: expiresRaw || null,
+          maxUses: maxUsesRaw ? Number(maxUsesRaw) : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
+      status.className = "admin__status admin__status--inline admin__status--ok";
+      status.textContent = data.emailed
+        ? `Created ${data.code.code}. Emailed ${email} the code + QR.`
+        : `Created ${data.code.code}. Email skipped (${data.emailError || "unknown"}) — hit Resend to try again.`;
+      // Clear form
+      document.getElementById("c-name").value = "";
+      document.getElementById("c-email").value = "";
+      document.getElementById("c-percent").value = "20";
+      document.getElementById("c-expires").value = "";
+      document.getElementById("c-maxuses").value = "";
+      await loadCodes();
+    } catch (err) {
+      status.className = "admin__status admin__status--inline admin__status--err";
+      status.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function onCodeAction(act, code) {
+    if (act === "qr") return openQrModal(code);
+    if (act === "resend") return resendCodeEmail(code);
+    if (act === "toggle") return toggleCodeActive(code);
+    if (act === "delete") return deleteCode(code);
+  }
+
+  async function resendCodeEmail(code) {
+    const rec = codesState.find((c) => c.code === code);
+    if (!rec) return;
+    if (!confirm(`Re-send the welcome email + QR to ${rec.influencerEmail}?`)) return;
+    try {
+      const res = await authFetch("/api/admin-codes?action=resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Resend failed (${res.status})`);
+      alert(`Email re-sent to ${rec.influencerEmail}.`);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function toggleCodeActive(code) {
+    const rec = codesState.find((c) => c.code === code);
+    if (!rec) return;
+    const next = !rec.active;
+    try {
+      const res = await authFetch("/api/admin-codes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, active: next }),
+      });
+      if (!res.ok) throw new Error(`Update failed (${res.status})`);
+      await loadCodes();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function deleteCode(code) {
+    const rec = codesState.find((c) => c.code === code);
+    if (!rec) return;
+    const msg =
+      rec.usedCount > 0
+        ? `${code} has been used ${rec.usedCount} time(s). Delete anyway? ` +
+          `(You'll lose the audit log — consider Deactivating instead.)`
+        : `Delete ${code}?`;
+    if (!confirm(msg)) return;
+    try {
+      const res = await authFetch("/api/admin-codes?code=" + encodeURIComponent(code), {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(`Delete failed (${res.status})`);
+      await loadCodes();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  function openQrModal(code) {
+    const modal = document.getElementById("qrModal");
+    const body = document.getElementById("qrModalBody");
+    const url = `${location.origin}/book?promo=${encodeURIComponent(code)}`;
+    // We reuse the same public QR service that the email flow uses so
+    // Wendy sees the identical image the influencer will get.
+    const qrSrc =
+      "https://api.qrserver.com/v1/create-qr-code/?" +
+      new URLSearchParams({
+        size: "400x400",
+        data: url,
+        margin: "10",
+        color: "5A1A5E",
+        bgcolor: "FFFFFF",
+      }).toString();
+    body.innerHTML =
+      `<img src="${qrSrc}" alt="QR for ${escapeHtml(code)}" />` +
+      `<p style="margin:0 0 8px;font-weight:800;color:#1d5e62;">Scan or share</p>` +
+      `<p><a href="${url}" target="_blank" rel="noopener">${url}</a></p>` +
+      `<p style="margin-top:16px"><a href="${qrSrc}" download="wendypix-${code}-qr.png" class="btn btn--primary">Download PNG</a></p>`;
+    modal.hidden = false;
+  }
+
+  function closeQrModal() {
+    const modal = document.getElementById("qrModal");
+    if (modal) modal.hidden = true;
+    const body = document.getElementById("qrModalBody");
+    if (body) body.innerHTML = "";
+  }
+
+  // Modal close wiring
+  const qrClose = document.getElementById("qrModalClose");
+  const qrBackdrop = document.getElementById("qrModalBackdrop");
+  if (qrClose) qrClose.addEventListener("click", closeQrModal);
+  if (qrBackdrop) qrBackdrop.addEventListener("click", closeQrModal);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const m = document.getElementById("qrModal");
+      if (m && !m.hidden) closeQrModal();
+    }
+  });
+
+  const createBtn = document.getElementById("createCodeBtn");
+  if (createBtn) createBtn.addEventListener("click", createCode);
+
+  // Hook Discounts tab into the tab switcher (added after the original
+  // tab handler so we don't touch its DOM setup).
+  document.querySelectorAll(".admin__tab[data-tab='discounts']").forEach((t) => {
+    t.addEventListener("click", () => loadCodes().catch(console.error));
+  });
+
+  function formatDateFriendly(iso) {
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  // escapeHtml is already declared earlier in this IIFE (used by the
+  // packages/settings renderers) so we reuse that binding here.
+
   // Boot — if Identity hasn't fired init yet, run an initial pass anyway
   // so the auth gate shows up.
   if (!identity) {

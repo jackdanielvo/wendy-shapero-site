@@ -74,6 +74,8 @@
     day: null,             // ISO date string YYYY-MM-DD
     time: null,            // ISO datetime string (start of slot)
     availability: null,    // {days: [...]} loaded from API
+    promoCode: null,       // uppercase A-Z0-9 string, or null
+    promo: null,           // {percentOff, discountedPrice, ...} from redeem-code, or null
   };
 
   async function loadPackages() {
@@ -499,6 +501,10 @@
       looks: Number(val("f-looks")) || null,
       hmua: !!(document.getElementById("f-hmua") || {}).checked,
       notes: val("f-notes"),
+      // Promo code: server revalidates and rejects with a friendly 400
+      // if the code has since expired or been used up. Client-side state
+      // is only a preview — the truth lives in the Blobs store.
+      promoCode: state.promoCode || null,
     };
 
     // Pre-flight validation. The form is novalidate (we handle UX here),
@@ -663,5 +669,129 @@
     // a discovery call. Done AFTER renderPackages so the package cards
     // are in place underneath when the user closes the form.
     if (location.hash === "#discovery") openDiscoveryCallForm();
+    initPromoField();
   });
+
+  // ----------------------------------------------------------
+  // PROMO CODE
+  //
+  // On page load, if the URL carries ?promo=CODE, drop that into the
+  // promo input and remember it in state. Once the user reaches the
+  // details form (step 3) we validate it against the server so we can
+  // show a discounted price BEFORE they submit. The server also
+  // revalidates at submit time — this is UI preview only.
+  // ----------------------------------------------------------
+  function initPromoField() {
+    const params = new URLSearchParams(location.search);
+    const preset = (params.get("promo") || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (preset) state.promoCode = preset;
+    // When the details form is created on package load, wire up handlers.
+    const input = document.getElementById("f-promo");
+    const btn = document.getElementById("applyPromoBtn");
+    if (input && preset) input.value = preset;
+    if (btn) btn.addEventListener("click", (e) => { e.preventDefault(); applyPromoCode(); });
+    if (input) {
+      input.addEventListener("blur", () => {
+        if ((input.value || "").trim()) applyPromoCode();
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); applyPromoCode(); }
+      });
+    }
+    // If a code was pre-populated from the URL, validate lazily — the
+    // package price isn't known until the user picks a package. So we
+    // just remember it and let goToForm() trigger validation once the
+    // price is known. See applyPromoCodeIfPresent() called from goToForm.
+  }
+
+  async function applyPromoCode() {
+    const input = document.getElementById("f-promo");
+    const status = document.getElementById("promoStatus");
+    const row = input && input.closest(".book__row");
+    if (!input || !status) return;
+    const raw = (input.value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    input.value = raw; // normalize what the user sees
+    if (!raw) {
+      state.promoCode = null;
+      state.promo = null;
+      status.textContent = "";
+      status.className = "book__promo-status";
+      if (row) row.classList.remove("is-valid");
+      updateDepositNote();
+      return;
+    }
+    status.textContent = "Checking…";
+    status.className = "book__promo-status";
+    try {
+      const packagePrice = state.package && state.package.price ? state.package.price : null;
+      const res = await fetch("/.netlify/functions/redeem-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: raw, packagePrice }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        state.promoCode = raw;
+        state.promo = data;
+        status.textContent = data.discountedPrice != null
+          ? `${data.percentOff}% off applied — package now $${data.discountedPrice} (was $${data.originalPrice}).`
+          : `${data.percentOff}% off applied.`;
+        status.className = "book__promo-status is-valid";
+        if (row) row.classList.add("is-valid");
+      } else {
+        state.promoCode = null;
+        state.promo = null;
+        status.textContent = data.message || "That code isn't valid.";
+        status.className = "book__promo-status is-invalid";
+        if (row) row.classList.remove("is-valid");
+      }
+    } catch (err) {
+      console.error("[promo] validate failed:", err);
+      status.textContent = "Couldn't check that code — try again.";
+      status.className = "book__promo-status is-invalid";
+    }
+    updateDepositNote();
+  }
+
+  // If a promo code was pre-loaded from the URL, revalidate it now that
+  // the package (and its price) is locked in. Called from goToForm.
+  function applyPromoCodeIfPresent() {
+    const input = document.getElementById("f-promo");
+    if (state.promoCode && input) {
+      input.value = state.promoCode;
+      applyPromoCode().catch(console.error);
+    }
+  }
+
+  // Re-render the deposit note with discount math when a promo is
+  // applied or cleared. The original note is built by goToForm; this
+  // just overlays a "you saved $X" line above it when relevant.
+  function updateDepositNote() {
+    const note = document.getElementById("depositNote");
+    if (!note || !state.package) return;
+    // Strip any prior promo overlay and rebuild.
+    const existing = note.querySelector(".book__deposit-promo");
+    if (existing) existing.remove();
+    if (!state.promo || state.promo.discountedPrice == null) return;
+    const overlay = document.createElement("div");
+    overlay.className = "book__deposit-promo";
+    overlay.style.marginBottom = "10px";
+    overlay.style.fontWeight = "700";
+    overlay.style.color = "#1d5e62";
+    overlay.innerHTML =
+      `Code <strong>${state.promo && state.promoCode ? state.promoCode : ""}</strong> applied &middot; ` +
+      `$${state.promo.originalPrice} → <strong>$${state.promo.discountedPrice}</strong> ` +
+      `(you save $${state.promo.discountApplied}).`;
+    note.insertBefore(overlay, note.firstChild);
+  }
+
+  // Hook applyPromoCodeIfPresent into goToForm without patching that
+  // function's original text (avoids fragile Edit). Wrap it.
+  const _origGoToForm = goToForm;
+  goToForm = function () {
+    const r = _origGoToForm.apply(this, arguments);
+    // Fire on the next tick so depositNote HTML is in the DOM first.
+    setTimeout(() => applyPromoCodeIfPresent(), 0);
+    return r;
+  };
 })();

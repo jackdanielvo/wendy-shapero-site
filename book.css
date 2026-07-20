@@ -211,6 +211,44 @@
 }
 .book__deposit-note strong { font-weight: 700; }
 
+/* Promo code row — input + Apply button on one line, status message
+   underneath. When a code is valid, the whole row gets a green outline
+   and the status text turns green; when invalid, red. */
+.book__row--promo .book__promo-line {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.book__row--promo .book__promo-line input {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: "Inter", monospace;
+  font-weight: 700;
+}
+.book__row--promo .book__promo-line .btn {
+  flex: 0 0 auto;
+  padding: 12px 18px;
+}
+.book__promo-status {
+  margin: 8px 0 0;
+  font-size: 13px;
+  min-height: 20px;
+  color: var(--muted);
+}
+.book__promo-status.is-valid {
+  color: #1d5e62;
+  font-weight: 700;
+}
+.book__promo-status.is-invalid {
+  color: #b0322f;
+  font-weight: 600;
+}
+.book__row--promo.is-valid input {
+  border-color: #1d5e62;
+  background: #f0f7f7;
+}
+
 .book__nav {
   margin: clamp(20px, 3vw, 32px) 0 0;
 }

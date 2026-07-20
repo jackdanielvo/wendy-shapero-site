@@ -16,9 +16,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-05-24-discovery" />
+  <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-24-rebaseline" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-26-discounts" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -64,6 +64,7 @@
       <button type="button" class="admin__tab" data-tab="settings">Settings</button>
       <button type="button" class="admin__tab" data-tab="photos">Photos</button>
       <button type="button" class="admin__tab" data-tab="hero">Hero</button>
+      <button type="button" class="admin__tab" data-tab="discounts">Discounts</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -177,6 +178,71 @@
       <p class="admin__status admin__status--inline" id="heroStatus" aria-live="polite"></p>
     </section>
 
+    <!-- DISCOUNTS TAB — influencer discount codes -->
+    <section class="block admin__pane" data-tab="discounts" hidden>
+      <p class="block__num">06.</p>
+      <h2 class="block__title">Discounts.</h2>
+      <p class="pricing__lede">
+        Assign a percentage-off code to an influencer. They can share the
+        code itself, or share the QR code — followers who scan land on a
+        pre-filled booking page. Each redemption sends you an email so you
+        know which influencer is driving bookings.
+        <br/><br/>
+        Codes can have a <strong>term limit</strong> (good until a date)
+        and a <strong>usage cap</strong> (good for the first N people).
+      </p>
+
+      <!-- New-code form -->
+      <div class="admin__codes-new">
+        <h3 class="admin__codes-subhead">Create a new code</h3>
+        <div class="admin__codes-form" id="codesForm">
+          <div class="book__row">
+            <label for="c-name">Influencer name</label>
+            <input type="text" id="c-name" placeholder="e.g. Sarah Doe" />
+          </div>
+          <div class="book__row">
+            <label for="c-email">Influencer email</label>
+            <input type="email" id="c-email" placeholder="sarah@example.com" />
+          </div>
+          <div class="book__row">
+            <label for="c-percent">Percent off</label>
+            <input type="number" id="c-percent" min="1" max="100" step="1" value="20" />
+          </div>
+          <div class="book__row">
+            <label for="c-expires">Good until <span class="muted">(optional)</span></label>
+            <input type="date" id="c-expires" />
+          </div>
+          <div class="book__row">
+            <label for="c-maxuses">Max uses <span class="muted">(blank = unlimited)</span></label>
+            <input type="number" id="c-maxuses" min="1" step="1" placeholder="e.g. 30" />
+          </div>
+        </div>
+        <p class="cta__actions" style="margin-top:20px">
+          <button type="button" class="btn btn--primary" id="createCodeBtn">Create + email influencer</button>
+        </p>
+        <p class="admin__status admin__status--inline" id="codesCreateStatus" aria-live="polite"></p>
+      </div>
+
+      <h3 class="admin__codes-subhead admin__codes-subhead--table">Active codes</h3>
+      <div class="admin__codes-list" id="codesList">
+        <p class="admin__status">Loading…</p>
+      </div>
+    </section>
+
+    <!-- QR modal (shown when Wendy clicks "QR" on a code row) -->
+    <div class="admin__qr-modal" id="qrModal" hidden>
+      <div class="admin__qr-modal__backdrop" id="qrModalBackdrop"></div>
+      <div class="admin__qr-modal__panel" role="dialog" aria-labelledby="qrModalTitle">
+        <header class="admin__qr-modal__head">
+          <h3 id="qrModalTitle">QR code</h3>
+          <button type="button" class="admin__qr-modal__close" id="qrModalClose" aria-label="Close">&times;</button>
+        </header>
+        <div class="admin__qr-modal__body" id="qrModalBody">
+          <!-- QR image + copy links injected by JS -->
+        </div>
+      </div>
+    </div>
+
     <!-- Hero picker modal (lives outside any pane, controlled by JS) -->
     <div class="admin__hero-picker" id="heroPickerModal" hidden>
       <div class="admin__hero-picker__backdrop" id="heroPickerBackdrop"></div>
@@ -198,6 +264,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-24-rebaseline"></script>
+  <script src="admin.js?v=2026-05-26-discounts"></script>
 </body>
 </html>
