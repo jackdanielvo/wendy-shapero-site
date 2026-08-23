@@ -32,13 +32,22 @@ git add admin.js admin.html admin.css \
         netlify/functions/_codes.js \
         netlify/functions/book.js \
         netlify/functions/stripe-webhook.js \
+        netlify/functions/packages.js \
         push-now.sh index.html styles.css \
-        book.html book.js book.css
+        book.html book.js book.css \
+        pricing.html
 echo "    staged"
 echo ""
 
 echo "=== 4. Committing ==="
-git commit -m "Admin Photos + Site: re-baseline, IG reminder, mobile close, influencer codes
+# Heredoc with SINGLE-QUOTED delimiter ('EOF') disables ALL bash
+# expansion inside the message. Without this, dollar-sign prices like
+# "$4,800" get interpreted as positional param $4 and error out under
+# `set -u` with "$4: unbound variable". Piped into `git commit -F -`
+# so git reads the message straight from stdin — no shell escaping
+# needed for apostrophes, backticks, quotes, dollars, or anything else.
+git commit -F - <<'EOF'
+Admin Photos + Site: re-baseline, IG reminder, mobile close, influencer codes
 
 Four changes:
 
@@ -191,7 +200,55 @@ for followers scanning them. Replaced with:
   CSS. No new external service dependency.
 
 Cache busters bumped to v=2026-05-27-noqr on admin.css +
-admin.js."
+admin.js.
+
+Follow-up 3: /pricing PAGE NOW HONORS ADMIN EDITS.
+
+Bug report: 'Wendy is trying to update prices on Admin,
+hits save, gets a confirmation, but nothing changes on
+the actual website.' Root cause: the three headshot rate
+cards on /pricing were hardcoded HTML. Admin writes to
+/api/packages (used by /book) but /pricing never read
+that endpoint — so admin edits updated /book correctly
+but /pricing kept showing the old numbers.
+
+Fix:
+- pricing.html: wrapped the three headshot rate cards in
+  an id'd container. Static markup stays as a fallback
+  so the page always shows prices even if JS/network is
+  down. An inline script at the bottom fetches
+  /api/packages?t=<ms> with cache: no-store and rebuilds
+  the cards from admin data. Filters on id starting with
+  'headshot-' and inquiry:false so lifestyle/event
+  packages don't try to render here.
+- netlify/functions/packages.js: cache TTL dropped from
+  60s to 10s so admin verification loops are snappier.
+- book.js: matching ?t=<ms> cache-buster on its
+  /api/packages fetch so /book reflects edits on the
+  very next reload too.
+
+STILL HARDCODED on /pricing (not managed by admin):
+- Add-ons ledger under Headshots (retouched image $45,
+  additional half-hour $150, HMUA $200, usage license
+  $250-$750).
+- Lifestyle & commercial ledger ($1,500 / $2,800 /
+  $4,800+).
+- Event coverage ledger ($350/hr / $400/hr / half-day
+  $1,800 / full day $3,800).
+- Travel ledger (mileage $0.85/mi, travel time $175/hr,
+  same-day previews $250).
+
+These sections aren't in the admin data model (only the
+5 top-level packages are). Editing them requires opening
+pricing.html directly. If Wendy needs an admin form for
+them too, that's a separate follow-up.
+
+Cache busters bumped:
+- book.js  v=2026-05-27-pkgcache
+- book.css v=2026-05-27-pkgcache
+- (pricing.html isn't fingerprinted — served fresh by
+  Netlify's default HTML cache headers)
+EOF
 echo ""
 
 echo "=== 5. Pulling latest from origin ==="

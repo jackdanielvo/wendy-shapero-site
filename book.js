@@ -80,7 +80,10 @@
 
   async function loadPackages() {
     try {
-      const res = await fetch("/api/packages", { cache: "no-store" });
+      // ?t=<timestamp> to bypass CDN cache too, so a fresh admin edit
+      // is reflected on the next book-page reload even if the CDN
+      // hasn't yet expired the cached response.
+      const res = await fetch("/api/packages?t=" + Date.now(), { cache: "no-store" });
       if (!res.ok) throw new Error("packages " + res.status);
       const data = await res.json();
       if (Array.isArray(data.packages) && data.packages.length) {

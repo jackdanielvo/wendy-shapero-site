@@ -85,7 +85,14 @@
         </p>
       </div>
 
-      <div class="rate-cards">
+      <!-- Headshot rate cards. The static markup below is a fallback
+           that shows immediately (and if JS/network fails, stays put).
+           The script at the bottom of the page fetches /api/packages
+           and re-renders this container so admin edits (name, price,
+           duration, includes list) show up here without touching the
+           HTML. Only headshot tiers (id starts with headshot-) render;
+           inquiry-only packages are filtered out. -->
+      <div class="rate-cards" id="pricingHeadshotCards" data-source="static">
         <article class="rate-card">
           <p class="rate-card__name">Essential</p>
           <p class="rate-card__price">$600</p>
@@ -261,6 +268,87 @@
         else root.removeAttribute("data-theme");
         localStorage.setItem("wendypix-theme", next);
       });
+    })();
+
+    // Live headshot cards. Pulls the current package list from
+    // /api/packages (same endpoint /book uses) and replaces the
+    // hardcoded fallback cards above. Runs after the page is
+    // interactive so first paint isn't blocked. If the fetch fails,
+    // the static cards stay visible — pricing page never breaks.
+    (async function refreshHeadshotCards() {
+      const wrap = document.getElementById("pricingHeadshotCards");
+      if (!wrap) return;
+      try {
+        // Bypass browser + CDN caches on Wendy's own visits so she
+        // sees admin edits reflected immediately after saving. The
+        // Netlify function itself sets a short max-age (10s) which is
+        // fine for client visitors but frustrating for a "did my edit
+        // take?" check from admin. cache: "no-store" handles browser
+        // cache; the ?t=<timestamp> handles CDN cache.
+        const bust = "?t=" + Date.now();
+        const res = await fetch("/api/packages" + bust, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = Array.isArray(data.packages) ? data.packages : [];
+        // Only render fixed-price headshot packages here. Lifestyle
+        // and event tiers have their own hardcoded sections below
+        // (with hourly rates and add-ons that aren't in the admin).
+        const headshots = all.filter((p) =>
+          p && !p.inquiry && typeof p.price === "number" &&
+          /^headshot-/.test(p.id || "")
+        );
+        if (!headshots.length) return; // keep fallback
+        wrap.innerHTML = "";
+        wrap.setAttribute("data-source", "live");
+        for (const p of headshots) {
+          const card = document.createElement("article");
+          card.className = "rate-card" + (p.featured ? " rate-card--featured" : "");
+          const priceStr = "$" + Number(p.price).toLocaleString();
+          const durationStr = p.duration
+            ? formatDuration(Number(p.duration))
+            : "";
+          // Strip the "Essential/Standard/Premium" prefix so the card
+          // heading stays short — the original static cards used the
+          // tier word only. Matches "Essential Headshot" → "Essential",
+          // "Standard Headshot" → "Standard", etc. Falls back to the
+          // full name if no space to split on.
+          const shortName = (p.name || "")
+            .replace(/\s+Headshot\s*$/i, "")
+            .trim() || p.name;
+          const includes = Array.isArray(p.includes) ? p.includes : [];
+          card.innerHTML =
+            (p.featured ? '<p class="rate-card__flag">Most popular</p>' : "") +
+            '<p class="rate-card__name">' + escapeHtml(shortName) + '</p>' +
+            '<p class="rate-card__price">' + escapeHtml(priceStr) + '</p>' +
+            (durationStr ? '<p class="rate-card__tag">' + escapeHtml(durationStr) + '</p>' : "") +
+            '<ul class="rate-card__list">' +
+              includes.map(function (line) {
+                return '<li>' + escapeHtml(String(line)) + '</li>';
+              }).join("") +
+            '</ul>';
+          wrap.appendChild(card);
+        }
+      } catch (err) {
+        // Silent fail — the static fallback cards stay on screen so
+        // visitors always see prices, even if the API is down.
+        console.warn("[pricing] live packages fetch failed:", err.message);
+      }
+      function formatDuration(min) {
+        if (!min) return "";
+        if (min < 60) return min + "-min session";
+        const hours = min / 60;
+        // 60 → "1-hour session", 90 → "1.5-hour session", 120 → "2-hour session"
+        const nice = hours % 1 === 0 ? String(hours) : hours.toFixed(1);
+        return nice + "-hour session";
+      }
+      function escapeHtml(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
     })();
   </script>
 </body>

@@ -23,9 +23,12 @@ exports.handler = async () => {
     statusCode: 200,
     headers: {
       "Content-Type": "application/json",
-      // Short cache so booking page doesn't hammer this on every load
-      // but admin edits propagate within a minute.
-      "Cache-Control": "public, max-age=60",
+      // Short cache so booking + pricing pages don't hammer this on
+      // every load, but admin edits propagate almost immediately. 10s
+      // is a good balance: repeat page loads in the same session skip
+      // the function invocation, but "did my edit take?" checks after
+      // saving in admin succeed on the next page reload.
+      "Cache-Control": "public, max-age=10",
     },
     body: JSON.stringify({ packages }),
   };
