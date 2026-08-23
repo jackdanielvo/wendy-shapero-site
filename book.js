@@ -94,6 +94,59 @@
     }
   }
 
+  // Bookable add-ons — pulled from /api/addons and rendered as
+  // checkboxes inside the details form. Only rows flagged bookable:true
+  // show up here (display-only ledger items on /pricing don't). If the
+  // fetch fails or nothing's bookable, the checkbox area stays empty
+  // (safer than rendering a stale checkbox with a wrong price).
+  let ADDONS = [];
+  async function loadAddons() {
+    try {
+      const res = await fetch("/api/addons?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("addons " + res.status);
+      const data = await res.json();
+      ADDONS = (Array.isArray(data.addons) ? data.addons : []).filter((a) => a.bookable);
+    } catch (err) {
+      console.warn("[book] /api/addons fetch failed:", err.message);
+      ADDONS = [];
+    }
+  }
+  function populateBookableAddons() {
+    const row = document.getElementById("addonsRow");
+    if (!row) return;
+    if (!ADDONS.length) {
+      row.innerHTML = "";
+      return;
+    }
+    // Render a label with heading + one checkbox per bookable add-on.
+    // Kept in a single .book__row so the form spacing matches the
+    // other rows.
+    row.innerHTML = ADDONS.map((a) => {
+      const price = Number(a.price) || 0;
+      return (
+        `<label for="f-addon-${a.id}" style="display:block;padding:6px 0;">` +
+          `<input type="checkbox" id="f-addon-${a.id}" data-addon-id="${a.id}" data-addon-price="${price}" />` +
+          `${escapeHtmlLocal(a.label)} <span class="muted">(+$${price.toLocaleString()})</span>` +
+        `</label>`
+      );
+    }).join("");
+  }
+  function getSelectedAddonIds() {
+    return Array.from(
+      document.querySelectorAll("#addonsRow input[type='checkbox']:checked")
+    ).map((el) => el.dataset.addonId);
+  }
+  function isAddonChecked(id) {
+    const el = document.getElementById("f-addon-" + id);
+    return !!(el && el.checked);
+  }
+  function escapeHtmlLocal(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
   // ----------------------------------------------------------
   // STEP NAVIGATION. Sections in DOM with [data-step="N"] are
   // hidden by default; show only the active one.
@@ -502,7 +555,13 @@
       email: val("f-email"),
       phone: val("f-phone"),
       looks: Number(val("f-looks")) || null,
-      hmua: !!(document.getElementById("f-hmua") || {}).checked,
+      // Which bookable add-ons the client ticked. Server revalidates
+      // (looks up each id in the addon store and sums the real
+      // prices) — this array is just the picks. The legacy 'hmua'
+      // boolean is preserved for backward compatibility with the
+      // calendar-event body + prep emails that already expect it.
+      addons: getSelectedAddonIds(),
+      hmua: isAddonChecked("hmua"),
       notes: val("f-notes"),
       // Promo code: server revalidates and rejects with a friendly 400
       // if the code has since expired or been used up. Client-side state
@@ -664,7 +723,7 @@
   // INIT
   // ----------------------------------------------------------
   document.addEventListener("DOMContentLoaded", async () => {
-    await loadPackages();
+    await Promise.all([loadPackages(), loadAddons()]);
     renderPackages();
     const form = document.getElementById("bookForm");
     if (form) form.addEventListener("submit", submitBooking);
@@ -794,7 +853,14 @@
   goToForm = function () {
     const r = _origGoToForm.apply(this, arguments);
     // Fire on the next tick so depositNote HTML is in the DOM first.
-    setTimeout(() => applyPromoCodeIfPresent(), 0);
+    // Also render the bookable-add-ons checkboxes now — the details
+    // form is only reachable via this function so this is the right
+    // hook. If ADDONS was fetched successfully, the checkboxes appear;
+    // if not, the container just stays empty.
+    setTimeout(() => {
+      applyPromoCodeIfPresent();
+      populateBookableAddons();
+    }, 0);
     return r;
   };
 })();

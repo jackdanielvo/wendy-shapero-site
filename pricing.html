@@ -130,7 +130,12 @@
       </div>
 
       <p class="addons__head">Add-ons</p>
-      <ul class="ledger">
+      <!-- Add-ons ledger. Static rows below are the immediate-render
+           fallback; the script at the bottom of the page fetches
+           /api/addons and replaces them with the admin-edited list.
+           Same progressive-enhancement pattern as the headshot cards
+           above. -->
+      <ul class="ledger" id="pricingAddonsList" data-source="static">
         <li><span>Additional retouched image</span><span class="amt">$45</span></li>
         <li><span>Additional half-hour on set</span><span class="amt">$150</span></li>
         <li><span>Hair &amp; makeup artist on set</span><span class="amt">$200</span></li>
@@ -342,6 +347,46 @@
         return nice + "-hour session";
       }
       function escapeHtml(s) {
+        return String(s == null ? "" : s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+    })();
+
+    // Live add-ons ledger. Same pattern as the headshot cards —
+    // fetch /api/addons and replace the static <li>s. Falls back to
+    // the hardcoded ledger if fetch fails or returns an empty list.
+    (async function refreshAddonsLedger() {
+      const list = document.getElementById("pricingAddonsList");
+      if (!list) return;
+      try {
+        const res = await fetch("/api/addons?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const rows = Array.isArray(data.addons) ? data.addons : [];
+        if (!rows.length) return; // keep fallback
+        list.innerHTML = "";
+        list.setAttribute("data-source", "live");
+        for (const a of rows) {
+          const li = document.createElement("li");
+          // priceDisplay overrides numeric price (for ranges like
+          // "$250-$750" or non-numeric like "Included"). Otherwise
+          // format the numeric price as USD.
+          const amt = a.priceDisplay
+            ? a.priceDisplay
+            : "$" + Number(a.price || 0).toLocaleString();
+          li.innerHTML =
+            '<span>' + escapeHtmlA(a.label || "") + '</span>' +
+            '<span class="amt">' + escapeHtmlA(amt) + '</span>';
+          list.appendChild(li);
+        }
+      } catch (err) {
+        console.warn("[pricing] live add-ons fetch failed:", err.message);
+      }
+      function escapeHtmlA(s) {
         return String(s == null ? "" : s)
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")

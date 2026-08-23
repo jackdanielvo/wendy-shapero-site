@@ -35,7 +35,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="book.css?v=2026-05-27-pkgcache" />
+  <link rel="stylesheet" href="book.css?v=2026-05-28-addons" />
 </head>
 <body class="pricing-page book-page">
 
@@ -187,11 +187,12 @@
           <label for="f-looks">Number of looks <span class="muted">(outfits / backgrounds)</span></label>
           <input type="number" id="f-looks" name="looks" min="1" max="10" />
         </div>
-        <div class="book__row">
-          <label for="f-hmua">
-            <input type="checkbox" id="f-hmua" name="hmua" />
-            Add hair &amp; makeup artist on set <span class="muted">(+$200)</span>
-          </label>
+        <!-- Bookable add-ons — one checkbox per add-on flagged
+             bookable:true in admin. Rendered by JS; the container is
+             empty by default so if the /api/addons fetch fails, we
+             just show no checkboxes rather than a wrong price. -->
+        <div class="book__row book__row--addons" id="addonsRow">
+          <!-- Populated by book.js populateBookableAddons() -->
         </div>
         <div class="book__row">
           <label for="f-notes">Anything else?</label>
@@ -242,7 +243,7 @@
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
   </footer>
 
-  <script src="book.js?v=2026-05-27-pkgcache"></script>
+  <script src="book.js?v=2026-05-28-addons"></script>
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
     (function () {

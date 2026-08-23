@@ -2176,6 +2176,147 @@
   // escapeHtml is already declared earlier in this IIFE (used by the
   // packages/settings renderers) so we reuse that binding here.
 
+  // -----------------------------------------------------------
+  // ADD-ONS — the "Add-ons" ledger on /pricing + bookable checkboxes on /book
+  // -----------------------------------------------------------
+  let addonsState = []; // working copy the form is currently editing
+
+  async function loadAddons() {
+    addonsStatus("", "Loading…");
+    try {
+      const res = await authFetch("/api/admin-addons");
+      if (!res.ok) throw new Error(`Load failed (${res.status})`);
+      const { addons } = await res.json();
+      addonsState = Array.isArray(addons) ? addons : [];
+      renderAddons();
+      addonsStatus("", "");
+    } catch (err) {
+      addonsStatus("err", err.message);
+    }
+  }
+
+  function renderAddons() {
+    const wrap = document.getElementById("addonsList");
+    if (!wrap) return;
+    if (!addonsState.length) {
+      wrap.innerHTML =
+        '<p class="admin__status">No add-ons — hit "+ Add row" to create one.</p>';
+      return;
+    }
+    wrap.innerHTML = "";
+    addonsState.forEach((row, i) => {
+      const el = document.createElement("div");
+      el.className = "admin__addon-row";
+      el.dataset.idx = String(i);
+      el.innerHTML =
+        `<input type="text" data-field="label" value="${escapeHtml(row.label || "")}" placeholder="Label (e.g. Additional retouched image)" />` +
+        `<div class="admin__addon-row__price-wrap">
+           <input type="number" data-field="price" value="${row.price != null ? row.price : ""}" min="0" step="1" placeholder="0" />
+         </div>` +
+        `<input type="text" data-field="priceDisplay" value="${escapeHtml(row.priceDisplay || "")}" placeholder="Display override (e.g. $250–$750)" />` +
+        `<label class="admin__addon-row__bookable">
+           <input type="checkbox" data-field="bookable" ${row.bookable ? "checked" : ""} />
+           Bookable
+         </label>` +
+        `<button type="button" class="admin__addon-row__delete" data-act="delete">Delete</button>`;
+      // Wire inputs → state
+      el.querySelectorAll("[data-field]").forEach((input) => {
+        input.addEventListener("input", () => {
+          const field = input.dataset.field;
+          if (field === "bookable") {
+            addonsState[i][field] = input.checked;
+          } else if (field === "price") {
+            addonsState[i][field] = Number(input.value) || 0;
+          } else {
+            addonsState[i][field] = input.value;
+          }
+        });
+      });
+      el.querySelector('[data-act="delete"]').addEventListener("click", () => {
+        if (!confirm(`Delete "${row.label || "this row"}"?`)) return;
+        addonsState.splice(i, 1);
+        renderAddons();
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  function addAddonRow() {
+    // Generate a placeholder id from the current row count; the user
+    // can rename in edit mode if we ever add per-field id editing.
+    // For now the id is used only server-side for lookups (booking math).
+    const nextIdx = addonsState.length + 1;
+    addonsState.push({
+      id: "addon-" + Date.now().toString(36),
+      label: "",
+      price: 0,
+      priceDisplay: null,
+      bookable: false,
+      description: "",
+      order: nextIdx,
+    });
+    renderAddons();
+  }
+
+  async function saveAddons() {
+    // Clean up empty labels + coerce priceDisplay="" to null. Server
+    // will re-validate but this makes the payload cleaner.
+    const cleaned = addonsState
+      .filter((a) => (a.label || "").trim().length > 0)
+      .map((a) => ({
+        ...a,
+        label: a.label.trim(),
+        priceDisplay: (a.priceDisplay || "").trim() || null,
+      }));
+    addonsStatus("", "Saving…");
+    try {
+      const res = await authFetch("/api/admin-addons", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ addons: cleaned }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Save failed (${res.status})`);
+      addonsState = data.addons || cleaned;
+      renderAddons();
+      addonsStatus("ok", `Saved. Changes are live on /pricing and /book.`);
+    } catch (err) {
+      addonsStatus("err", err.message);
+    }
+  }
+
+  async function resetAddonsToDefaults() {
+    if (!confirm("Reset the add-ons list to the built-in defaults? Your customizations will be wiped.")) return;
+    try {
+      const res = await authFetch("/api/admin-addons", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Reset failed (${res.status})`);
+      addonsState = data.addons || [];
+      renderAddons();
+      addonsStatus("ok", "Reset to defaults.");
+    } catch (err) {
+      addonsStatus("err", err.message);
+    }
+  }
+
+  function addonsStatus(kind, msg) {
+    const el = document.getElementById("addonsStatus");
+    if (!el) return;
+    el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
+  }
+
+  const saveAddonsBtn = document.getElementById("saveAddonsBtn");
+  const addAddonBtn = document.getElementById("addAddonBtn");
+  const resetAddonsBtn = document.getElementById("resetAddonsBtn");
+  if (saveAddonsBtn) saveAddonsBtn.addEventListener("click", saveAddons);
+  if (addAddonBtn) addAddonBtn.addEventListener("click", addAddonRow);
+  if (resetAddonsBtn) resetAddonsBtn.addEventListener("click", resetAddonsToDefaults);
+
+  document.querySelectorAll(".admin__tab[data-tab='addons']").forEach((t) => {
+    t.addEventListener("click", () => loadAddons().catch(console.error));
+  });
+
   // Boot — if Identity hasn't fired init yet, run an initial pass anyway
   // so the auth gate shows up.
   if (!identity) {

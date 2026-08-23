@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-27-noqr" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-28-addons" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -65,6 +65,7 @@
       <button type="button" class="admin__tab" data-tab="photos">Photos</button>
       <button type="button" class="admin__tab" data-tab="hero">Hero</button>
       <button type="button" class="admin__tab" data-tab="discounts">Discounts</button>
+      <button type="button" class="admin__tab" data-tab="addons">Add-ons</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -233,6 +234,32 @@
       </div>
     </section>
 
+    <!-- ADD-ONS TAB -->
+    <section class="block admin__pane" data-tab="addons" hidden>
+      <p class="block__num">07.</p>
+      <h2 class="block__title">Add-ons.</h2>
+      <p class="pricing__lede">
+        These are the line items in the "Add-ons" ledger on
+        <a href="/pricing" style="color:#b347b9;border-bottom-color:#b347b9">wendypix.com/pricing</a>.
+        Any row marked <strong>Bookable</strong> also appears as a
+        checkbox on the /book page — the price gets added to the
+        client's deposit and total automatically. Use the
+        <strong>Display override</strong> for range prices like
+        "$250–$750" or non-numeric values like "Included".
+      </p>
+
+      <div class="admin__addons" id="addonsList">
+        <p class="admin__status">Loading…</p>
+      </div>
+
+      <p class="cta__actions" style="margin-top:32px">
+        <button type="button" class="btn btn--primary" id="saveAddonsBtn">Save changes</button>
+        <button type="button" class="btn" id="addAddonBtn">+ Add row</button>
+        <button type="button" class="btn btn--ghost" id="resetAddonsBtn">Reset to defaults</button>
+      </p>
+      <p class="admin__status admin__status--inline" id="addonsStatus" aria-live="polite"></p>
+    </section>
+
     <!-- Hero picker modal (lives outside any pane, controlled by JS) -->
     <div class="admin__hero-picker" id="heroPickerModal" hidden>
       <div class="admin__hero-picker__backdrop" id="heroPickerBackdrop"></div>
@@ -254,6 +281,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-27-noqr"></script>
+  <script src="admin.js?v=2026-05-28-addons"></script>
 </body>
 </html>

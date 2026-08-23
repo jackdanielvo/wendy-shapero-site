@@ -992,3 +992,92 @@
   background: #b0322f;
 }
 
+/* ============================================================
+   ADD-ONS TAB
+   ============================================================ */
+
+.admin__addons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin__addon-row {
+  display: grid;
+  /* Label (flex) | Price ($) | Display override | Bookable toggle | Delete */
+  grid-template-columns: 2.4fr 90px 1.4fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid var(--rule, #ececec);
+}
+.admin__addon-row input[type="text"],
+.admin__addon-row input[type="number"] {
+  font-family: var(--body-font);
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule, #ececec);
+  background: var(--bg, #fff);
+  color: var(--ink);
+  width: 100%;
+}
+.admin__addon-row input:focus {
+  outline: none;
+  border-color: #b347b9;
+}
+.admin__addon-row__price-wrap {
+  position: relative;
+}
+.admin__addon-row__price-wrap::before {
+  content: "$";
+  position: absolute;
+  left: 8px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 14px;
+}
+.admin__addon-row__price-wrap input {
+  padding-left: 20px;
+}
+.admin__addon-row__bookable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.admin__addon-row__bookable input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.admin__addon-row__delete {
+  background: transparent;
+  border: 1px solid var(--rule, #ececec);
+  color: #b0322f;
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-weight: 700;
+}
+.admin__addon-row__delete:hover {
+  background: #b0322f;
+  color: #fff;
+  border-color: #b0322f;
+}
+
+@media (max-width: 900px) {
+  .admin__addon-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .admin__addon-row input[type="text"]:first-child {
+    grid-column: 1 / -1;
+  }
+}
+

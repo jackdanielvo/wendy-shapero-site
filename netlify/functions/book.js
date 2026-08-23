@@ -31,6 +31,7 @@ const {
   applyDiscount,
   recordRedemption,
 } = require("./_codes");
+const { listAddons } = require("./_addons");
 
 const TIMEZONE_LABEL = "Pacific Standard Time"; // for Outlook event
 const WENDY_EMAIL = "wendy@wendypix.com";
@@ -99,9 +100,45 @@ exports.handler = async (event) => {
     }
   }
 
+  // Server-side add-ons resolution. The client sends an array of
+  // add-on ids (e.g. ["hmua"]) — we look each one up in the addon
+  // store to get the authoritative price. This closes the door on a
+  // client sending a fake price via a manipulated payload.
+  const addonsCharged = []; // [{ id, label, price }]
+  let addonsTotal = 0;
+  const requestedAddonIds = Array.isArray(payload.addons)
+    ? payload.addons.map(String)
+    : [];
+  // Legacy: the old client sent `hmua: true` instead of addons array.
+  // Honor that flag so existing bookings in flight don't lose HMUA.
+  if (payload.hmua && !requestedAddonIds.includes("hmua")) {
+    requestedAddonIds.push("hmua");
+  }
+  if (requestedAddonIds.length) {
+    try {
+      const allAddons = await listAddons();
+      for (const id of requestedAddonIds) {
+        const rec = allAddons.find((a) => a.id === id && a.bookable);
+        if (rec) {
+          const price = Number(rec.price) || 0;
+          addonsCharged.push({ id: rec.id, label: rec.label, price });
+          addonsTotal += price;
+        } else {
+          console.warn("[book] client requested unknown/non-bookable addon:", id);
+        }
+      }
+    } catch (err) {
+      console.warn("[book] addon lookup failed (ignoring addons):", err.message);
+    }
+  }
+
   // effectivePrice is what we actually charge and quote in emails.
   // Falls back to the raw packagePrice when there's no discount.
-  const effectivePrice = promo ? promo.discountedPrice : (Number(payload.packagePrice) || 0);
+  // Add-ons are added AFTER the discount so the promo percentage applies
+  // to the package only, not the add-ons. If Wendy wants add-ons to
+  // also be discounted, flip these two lines around.
+  const basePrice = promo ? promo.discountedPrice : (Number(payload.packagePrice) || 0);
+  const effectivePrice = basePrice + addonsTotal;
 
   // Step 1a: conflict check. Prevents double-booking when two users
   // race for the same slot — e.g. user A submits and goes to Stripe,
@@ -127,7 +164,7 @@ exports.handler = async (event) => {
   // Step 1b: create the calendar event
   let calEventId = null;
   try {
-    calEventId = await createCalendarEvent({ payload, start, end });
+    calEventId = await createCalendarEvent({ payload, start, end, addonsCharged });
   } catch (err) {
     console.error("[book] calendar event create failed:", err);
     return jsonError(
@@ -165,7 +202,11 @@ exports.handler = async (event) => {
       slotStart: start.toISOString(),
       slotEnd: end.toISOString(),
       looks: payload.looks || null,
-      hmua: Boolean(payload.hmua),
+      // hmua kept for backward compat (older confirmation emails read it)
+      hmua: addonsCharged.some((a) => a.id === "hmua"),
+      // New: full list of ticked add-ons with server-resolved prices
+      addons: addonsCharged,
+      addonsTotal,
       notes: payload.notes || null,
       createdAt: new Date().toISOString(),
     });
@@ -270,7 +311,7 @@ exports.handler = async (event) => {
       console.warn("[book] redemption alert failed:", err.message);
     }
   }
-  const emailResults = await sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice });
+  const emailResults = await sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice, addonsCharged });
 
   return {
     statusCode: 200,
@@ -326,8 +367,14 @@ async function findConflicts(start, end) {
 // ----------------------------------------------------------
 // Microsoft Graph: create a tentative event in Wendy's calendar.
 // ----------------------------------------------------------
-async function createCalendarEvent({ payload, start, end }) {
+async function createCalendarEvent({ payload, start, end, addonsCharged }) {
   const subject = `WendyPix: ${payload.packageName} — ${payload.name}`;
+  // Render each add-on on its own line with its authoritative price
+  // (looked up server-side). If nothing was ticked, addonsLines is
+  // empty and gets filtered out below.
+  const addonsLines = (addonsCharged || []).map(
+    (a) => `Add-on: ${a.label} (+$${a.price})`
+  );
   const body = [
     `BOOKING REQUEST (tentative — confirm or decline)`,
     ``,
@@ -338,7 +385,7 @@ async function createCalendarEvent({ payload, start, end }) {
     `Email:  ${payload.email}`,
     payload.phone ? `Phone:  ${payload.phone}` : null,
     payload.looks ? `Looks:  ${payload.looks}` : null,
-    payload.hmua ? `Hair & makeup: yes (+$200)` : null,
+    ...addonsLines,
     payload.notes ? `\nNotes:\n${payload.notes}` : null,
   ]
     .filter(Boolean)
@@ -379,7 +426,7 @@ async function createCalendarEvent({ payload, start, end }) {
 // Both gated on RESEND_API_KEY. Best-effort — booking is still
 // considered successful even if these fail.
 // ----------------------------------------------------------
-async function sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice }) {
+async function sendEmails({ payload, start, calEventId, depositPercent, promo, effectivePrice, addonsCharged }) {
   const result = { client: false, wendy: false };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return result;
@@ -464,9 +511,17 @@ async function sendEmails({ payload, start, calEventId, depositPercent, promo, e
       payload.phone ? tpl.escapeHtml(payload.phone) : null,
     ].filter(Boolean).join("<br/>");
 
+    // Dynamic add-on lines (one per ticked add-on). Falls back to
+    // empty when nothing's ticked so the extras block just shows Looks.
+    // Uses the server-authoritative price from addonsCharged, not the
+    // untrusted client payload.
+    const addonLines = (addonsCharged || []).map(
+      (a) =>
+        `<strong>+ ${tpl.escapeHtml(a.label)} ($${a.price})</strong>`
+    );
     const extras = [
       payload.looks ? `Looks: <strong>${tpl.escapeHtml(String(payload.looks))}</strong>` : null,
-      payload.hmua ? `<strong>+ Hair &amp; makeup ($200)</strong>` : null,
+      ...addonLines,
     ].filter(Boolean).join("<br/>");
 
     // Promo-code line: bold if a code was used so it can't be missed

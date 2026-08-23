@@ -33,6 +33,9 @@ git add admin.js admin.html admin.css \
         netlify/functions/book.js \
         netlify/functions/stripe-webhook.js \
         netlify/functions/packages.js \
+        netlify/functions/_addons.js \
+        netlify/functions/addons.js \
+        netlify/functions/admin-addons.js \
         push-now.sh index.html styles.css \
         book.html book.js book.css \
         pricing.html
@@ -248,6 +251,52 @@ Cache busters bumped:
 - book.css v=2026-05-27-pkgcache
 - (pricing.html isn't fingerprinted — served fresh by
   Netlify's default HTML cache headers)
+
+Follow-up 4: ADD-ONS ARE NOW ADMIN-EDITABLE.
+
+The Add-ons ledger under Headshots on /pricing was
+hardcoded HTML (4 rows: extra image, half-hour, HMUA,
+usage license) and the HMUA checkbox on /book was
+hardcoded with a fixed $200 price. Any edit required
+touching the HTML directly.
+
+New: Admin -> Add-ons tab lists every add-on with
+editable label, price, optional display override (for
+ranges like $250-$750 or non-numeric like "Included"),
+and a Bookable toggle. Rows can be added, edited,
+deleted; a Reset-to-defaults button restores the original
+four. All changes go live on /pricing and /book within
+seconds of saving.
+
+Any row with Bookable ticked becomes a checkbox on the
+/book details form. Client sends the ticked add-on ids;
+server looks up each id in the addon store to get the
+authoritative price (client-supplied prices are ignored,
+so a manipulated payload can't lie about how much HMUA
+costs). Prices sum into the effectivePrice used for the
+Stripe deposit + all confirmation emails + the calendar
+event body. Add-ons are added AFTER any promo-code
+discount, so influencer codes discount the package only
+(not the add-ons) - matches typical influencer-marketing
+intent.
+
+New files:
+- netlify/functions/_addons.js         data model + helpers
+- netlify/functions/addons.js          public GET
+- netlify/functions/admin-addons.js    auth CRUD
+
+Modified:
+- admin.html, admin.js, admin.css      new Add-ons tab
+- pricing.html                         live ledger fetch
+- book.html                            generic addons row
+- book.js                              fetch + render checkboxes
+- netlify/functions/book.js            resolve prices + emails
+
+Cache busters bumped:
+- admin.css v=2026-05-28-addons
+- admin.js  v=2026-05-28-addons
+- book.js   v=2026-05-28-addons
+- book.css  v=2026-05-28-addons
 EOF
 echo ""
 
