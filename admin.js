@@ -2317,6 +2317,140 @@
     t.addEventListener("click", () => loadAddons().catch(console.error));
   });
 
+  // -----------------------------------------------------------
+  // RATES — Lifestyle / Events / Travel ledgers on /pricing
+  // -----------------------------------------------------------
+  const RATES_SECTIONS = [
+    { key: "lifestyle", title: "02. Lifestyle & Commercial" },
+    { key: "events",    title: "03. Events" },
+    { key: "travel",    title: "04. Travel" },
+  ];
+  let ratesState = { lifestyle: [], events: [], travel: [] };
+
+  async function loadRates() {
+    ratesStatus("", "Loading…");
+    try {
+      const res = await authFetch("/api/admin-rates");
+      if (!res.ok) throw new Error(`Load failed (${res.status})`);
+      const { rates } = await res.json();
+      ratesState = {
+        lifestyle: (rates && rates.lifestyle) || [],
+        events:    (rates && rates.events)    || [],
+        travel:    (rates && rates.travel)    || [],
+      };
+      renderRates();
+      ratesStatus("", "");
+    } catch (err) {
+      ratesStatus("err", err.message);
+    }
+  }
+
+  function renderRates() {
+    const wrap = document.getElementById("ratesForm");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    for (const section of RATES_SECTIONS) {
+      const box = document.createElement("div");
+      box.className = "admin__rates-section";
+      box.dataset.section = section.key;
+      box.innerHTML =
+        `<div class="admin__rates-section__head">
+           <h3 class="admin__rates-section__title">${escapeHtml(section.title)}</h3>
+         </div>
+         <div class="admin__rates-section__rows" data-role="rows"></div>
+         <button type="button" class="admin__rates-section__addbtn" data-act="add">+ Add row to ${escapeHtml(section.title.replace(/^\d+\.\s*/, ""))}</button>`;
+      const rowsWrap = box.querySelector("[data-role='rows']");
+      (ratesState[section.key] || []).forEach((row, i) => {
+        const el = document.createElement("div");
+        el.className = "admin__rates-row";
+        el.innerHTML =
+          `<input type="text" data-field="label" value="${escapeHtml(row.label || "")}" placeholder="Label (e.g. Full day commercial)" />` +
+          `<input type="text" data-field="priceText" value="${escapeHtml(row.priceText || "")}" placeholder="Price (e.g. $4,800+ or $350 / hr or Included)" />` +
+          `<button type="button" class="admin__rates-row__delete" data-act="delete">Delete</button>`;
+        el.querySelectorAll("[data-field]").forEach((input) => {
+          input.addEventListener("input", () => {
+            ratesState[section.key][i][input.dataset.field] = input.value;
+          });
+        });
+        el.querySelector('[data-act="delete"]').addEventListener("click", () => {
+          if (!confirm(`Delete "${row.label || "this row"}"?`)) return;
+          ratesState[section.key].splice(i, 1);
+          renderRates();
+        });
+        rowsWrap.appendChild(el);
+      });
+      box.querySelector('[data-act="add"]').addEventListener("click", () => {
+        ratesState[section.key].push({
+          id: "row-" + Date.now().toString(36),
+          label: "",
+          priceText: "",
+        });
+        renderRates();
+      });
+      wrap.appendChild(box);
+    }
+  }
+
+  async function saveRates() {
+    // Trim + drop rows with empty labels or priceText — those are
+    // half-added rows the user forgot to fill in.
+    const cleaned = {};
+    for (const key of ["lifestyle", "events", "travel"]) {
+      cleaned[key] = (ratesState[key] || [])
+        .map((r) => ({
+          id: r.id,
+          label: (r.label || "").trim(),
+          priceText: (r.priceText || "").trim(),
+        }))
+        .filter((r) => r.label && r.priceText);
+    }
+    ratesStatus("", "Saving…");
+    try {
+      const res = await authFetch("/api/admin-rates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rates: cleaned }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Save failed (${res.status})`);
+      ratesState = data.rates || cleaned;
+      renderRates();
+      ratesStatus("ok", "Saved. Changes are live on /pricing.");
+    } catch (err) {
+      ratesStatus("err", err.message);
+    }
+  }
+
+  async function resetRatesToDefaults() {
+    if (!confirm("Reset all three sections (Lifestyle, Events, Travel) to defaults? Your customizations will be wiped.")) return;
+    try {
+      const res = await authFetch("/api/admin-rates", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Reset failed (${res.status})`);
+      ratesState = data.rates || { lifestyle: [], events: [], travel: [] };
+      renderRates();
+      ratesStatus("ok", "Reset to defaults.");
+    } catch (err) {
+      ratesStatus("err", err.message);
+    }
+  }
+
+  function ratesStatus(kind, msg) {
+    const el = document.getElementById("ratesStatus");
+    if (!el) return;
+    el.className = "admin__status admin__status--inline" + (kind ? " admin__status--" + kind : "");
+    el.textContent = msg || "";
+  }
+
+  const saveRatesBtn = document.getElementById("saveRatesBtn");
+  const resetRatesBtn = document.getElementById("resetRatesBtn");
+  if (saveRatesBtn) saveRatesBtn.addEventListener("click", saveRates);
+  if (resetRatesBtn) resetRatesBtn.addEventListener("click", resetRatesToDefaults);
+
+  document.querySelectorAll(".admin__tab[data-tab='rates']").forEach((t) => {
+    t.addEventListener("click", () => loadRates().catch(console.error));
+  });
+
   // Boot — if Identity hasn't fired init yet, run an initial pass anyway
   // so the auth gate shows up.
   if (!identity) {

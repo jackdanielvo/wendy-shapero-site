@@ -36,6 +36,9 @@ git add admin.js admin.html admin.css \
         netlify/functions/_addons.js \
         netlify/functions/addons.js \
         netlify/functions/admin-addons.js \
+        netlify/functions/_rates.js \
+        netlify/functions/rates.js \
+        netlify/functions/admin-rates.js \
         push-now.sh index.html styles.css \
         book.html book.js book.css \
         pricing.html
@@ -297,6 +300,46 @@ Cache busters bumped:
 - admin.js  v=2026-05-28-addons
 - book.js   v=2026-05-28-addons
 - book.css  v=2026-05-28-addons
+
+Follow-up 5: LIFESTYLE / EVENTS / TRAVEL EDITABLE FROM ADMIN.
+
+Sections 02 (Lifestyle & Commercial), 03 (Events), and
+04 (Travel) on /pricing had hardcoded ledgers. Now
+Admin -> Rates lets Wendy edit them.
+
+Data model kept intentionally simpler than packages/addons:
+these rows don't feed booking math (they're display-only
+on /pricing), so each row is just { label, priceText }
+with priceText as freeform text. That accommodates all
+the shapes in use: dollar amounts ($1,500), hourly rates
+($350 / hr), ranges ($4,800+), and non-numeric values
+("Included", "Cost + 10%") without wrestling with a
+numeric field.
+
+Per section: add rows, edit rows, delete rows. One save
+button commits all three sections. Reset-to-defaults
+restores the original 11 rows across all three sections.
+
+New files:
+- netlify/functions/_rates.js       data model + defaults
+- netlify/functions/rates.js        public GET
+- netlify/functions/admin-rates.js  auth CRUD
+
+Modified:
+- admin.html, admin.js, admin.css   new Rates tab
+- pricing.html                      three live ledgers
+
+Cache busters bumped to v=2026-05-29-rates on admin.
+STILL HARDCODED on /pricing (not editable):
+- Section callout copy ("Who this is for", "How this works")
+- Footer notes ("Includes lighting...", "Galleries in 7
+  business days", "Out-of-state pricing covers...")
+- Section 05 Scheduling (all prose, no prices)
+- Same-day preview $250 mention inside the Events note
+
+These are prose paragraphs not line items. If Wendy needs
+them editable too, that's a separate follow-up requiring
+a richer content editor.
 EOF
 echo ""
 

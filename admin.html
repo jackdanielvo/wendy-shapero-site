@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-28-addons" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-29-rates" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -66,6 +66,7 @@
       <button type="button" class="admin__tab" data-tab="hero">Hero</button>
       <button type="button" class="admin__tab" data-tab="discounts">Discounts</button>
       <button type="button" class="admin__tab" data-tab="addons">Add-ons</button>
+      <button type="button" class="admin__tab" data-tab="rates">Rates</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -260,6 +261,31 @@
       <p class="admin__status admin__status--inline" id="addonsStatus" aria-live="polite"></p>
     </section>
 
+    <!-- RATES TAB — Lifestyle / Events / Travel ledgers on /pricing -->
+    <section class="block admin__pane" data-tab="rates" hidden>
+      <p class="block__num">08.</p>
+      <h2 class="block__title">Rates.</h2>
+      <p class="pricing__lede">
+        The ledgers under sections 02 (Lifestyle &amp; Commercial), 03
+        (Events), and 04 (Travel) on
+        <a href="/pricing" style="color:#b347b9;border-bottom-color:#b347b9">wendypix.com/pricing</a>.
+        These rows are display-only (they don't feed the /book flow),
+        so the Price field is free text — write anything: <code>$1,500</code>,
+        <code>$350 / hr</code>, <code>$4,800+</code>, <code>Included</code>,
+        <code>Cost + 10%</code>. Save updates the live site within seconds.
+      </p>
+
+      <div class="admin__rates" id="ratesForm">
+        <p class="admin__status">Loading…</p>
+      </div>
+
+      <p class="cta__actions" style="margin-top:32px">
+        <button type="button" class="btn btn--primary" id="saveRatesBtn">Save changes</button>
+        <button type="button" class="btn btn--ghost" id="resetRatesBtn">Reset to defaults</button>
+      </p>
+      <p class="admin__status admin__status--inline" id="ratesStatus" aria-live="polite"></p>
+    </section>
+
     <!-- Hero picker modal (lives outside any pane, controlled by JS) -->
     <div class="admin__hero-picker" id="heroPickerModal" hidden>
       <div class="admin__hero-picker__backdrop" id="heroPickerBackdrop"></div>
@@ -281,6 +307,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-28-addons"></script>
+  <script src="admin.js?v=2026-05-29-rates"></script>
 </body>
 </html>

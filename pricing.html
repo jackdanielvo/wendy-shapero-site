@@ -157,7 +157,9 @@
         </p>
       </div>
 
-      <ul class="ledger ledger--lg">
+      <!-- Live ledger — populated by script at bottom from /api/rates.
+           Static rows below are the immediate-render fallback. -->
+      <ul class="ledger ledger--lg" id="pricingLifestyleList" data-source="static">
         <li><span>2-hour solo / brand portrait</span><span class="amt">$1,500</span></li>
         <li><span>Half-day (4 hours) lifestyle</span><span class="amt">$2,800</span></li>
         <li><span>Full day (8 hours) commercial</span><span class="amt">$4,800+</span></li>
@@ -183,7 +185,7 @@
         </p>
       </div>
 
-      <ul class="ledger ledger--lg">
+      <ul class="ledger ledger--lg" id="pricingEventsList" data-source="static">
         <li><span>Standard event coverage</span><span class="amt">$350 / hr</span></li>
         <li><span>Corporate, conference, fundraiser</span><span class="amt">$400 / hr</span></li>
         <li><span>Half-day (4 hrs · with assistant)</span><span class="amt">$1,800</span></li>
@@ -201,7 +203,7 @@
       <p class="block__num">04.</p>
       <h2 class="block__title">Travel.</h2>
 
-      <ul class="ledger ledger--lg">
+      <ul class="ledger ledger--lg" id="pricingTravelList" data-source="static">
         <li><span>Within 30 miles of Los Angeles</span><span class="amt">Included</span></li>
         <li><span>Beyond 30 miles</span><span class="amt">$0.85 / mile</span></li>
         <li><span>Travel time on round-trips over 90 minutes</span><span class="amt">$175 / hr</span></li>
@@ -353,6 +355,51 @@
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#039;");
+      }
+    })();
+
+    // Shared helper for rebuilding a ledger from admin data. Accepts
+    // an array of {label, priceText} rows and replaces the given <ul>
+    // in place. Silent no-op if the fetch failed or rows is empty
+    // (fallback static markup stays visible).
+    function fillLedger(listId, rows) {
+      const list = document.getElementById(listId);
+      if (!list || !Array.isArray(rows) || !rows.length) return;
+      list.innerHTML = "";
+      list.setAttribute("data-source", "live");
+      for (const r of rows) {
+        const li = document.createElement("li");
+        li.innerHTML =
+          '<span>' + escLedger(r.label || "") + '</span>' +
+          '<span class="amt">' + escLedger(r.priceText || "") + '</span>';
+        list.appendChild(li);
+      }
+    }
+    function escLedger(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Live Lifestyle / Events / Travel ledgers — pull from /api/rates
+    // and rebuild each list. One fetch, three targets.
+    (async function refreshRatesLedgers() {
+      try {
+        const res = await fetch("/api/rates?t=" + Date.now(), { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const r = data && data.rates ? data.rates : {};
+        // The addons ledger, which the /pricing add-ons section
+        // (numeric ledger with priceDisplay overrides) uses, has its
+        // own shape — this helper only maps {label, priceText} rows.
+        fillLedger("pricingLifestyleList", r.lifestyle);
+        fillLedger("pricingEventsList",    r.events);
+        fillLedger("pricingTravelList",    r.travel);
+      } catch (err) {
+        console.warn("[pricing] live rates fetch failed:", err.message);
       }
     })();
 

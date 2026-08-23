@@ -1081,3 +1081,97 @@
   }
 }
 
+/* ============================================================
+   RATES TAB — Lifestyle / Events / Travel ledgers
+   ============================================================ */
+
+.admin__rates-section {
+  margin-bottom: 40px;
+}
+.admin__rates-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule, #ececec);
+}
+.admin__rates-section__title {
+  font-family: var(--body-font);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d5e62;
+  margin: 0;
+}
+.admin__rates-section__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin__rates-row {
+  display: grid;
+  /* Label (flex) | Price text | Delete */
+  grid-template-columns: 2.4fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--rule, #ececec);
+}
+.admin__rates-row input[type="text"] {
+  font-family: var(--body-font);
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule, #ececec);
+  background: var(--bg, #fff);
+  color: var(--ink);
+  width: 100%;
+}
+.admin__rates-row input:focus {
+  outline: none;
+  border-color: #b347b9;
+}
+.admin__rates-row__delete {
+  background: transparent;
+  border: 1px solid var(--rule, #ececec);
+  color: #b0322f;
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin__rates-row__delete:hover {
+  background: #b0322f;
+  color: #fff;
+  border-color: #b0322f;
+}
+.admin__rates-section__addbtn {
+  margin-top: 12px;
+  background: transparent;
+  border: 1px dashed var(--rule, #ccc);
+  padding: 10px 16px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--muted, #6b6b6b);
+  cursor: pointer;
+  width: 100%;
+}
+.admin__rates-section__addbtn:hover {
+  color: #1d5e62;
+  border-color: #1d5e62;
+}
+@media (max-width: 700px) {
+  .admin__rates-row {
+    grid-template-columns: 1fr auto;
+  }
+  .admin__rates-row input[type="text"]:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
