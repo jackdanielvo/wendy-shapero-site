@@ -340,6 +340,32 @@ STILL HARDCODED on /pricing (not editable):
 These are prose paragraphs not line items. If Wendy needs
 them editable too, that's a separate follow-up requiring
 a richer content editor.
+
+Follow-up 6: MAILTO CTAS REPLACED WITH /book LINKS.
+
+Bug report: 'On Rates page, why aren't the "email wendy"
+or "15 min discovery call" links doing anything?'
+Root cause: they were mailto: links, which silently fail
+for the growing majority of visitors who use webmail
+(Gmail, Outlook Web) and have no default mail client
+configured on their OS. The browser opens nothing and
+gives no feedback.
+
+Fix: point every action-oriented mailto: at /book, which
+delivers submissions through the same tested pipeline as
+regular bookings.
+- pricing.html CTA row:
+  - 'Email Wendy'      → 'Book a session' → /book
+  - '15-min discovery' → /book#discovery (opens the inline
+    discovery-call form we built earlier)
+- index.html shoot-view foot:
+  - 'Book a session with Wendy' → /book
+
+Left alone (still mailto):
+- index.html hero: bare 'wendy@wendypix.com' display in
+  the top-right meta. This is showing the address, not
+  acting as a CTA — users who copy/paste to their preferred
+  webmail still get value from seeing the string.
 EOF
 echo ""
 

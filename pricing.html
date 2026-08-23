@@ -244,9 +244,15 @@
         Tell me about your project and your timeline. Quotes within one
         business day.
       </p>
+      <!-- Both CTAs route into /book instead of using mailto: links.
+           mailto: is unreliable in 2026 — most visitors use webmail
+           and have no default mail client set up, so clicking would
+           silently do nothing. /book has an inline inquiry form and
+           delivers submissions through the same tested pipeline as
+           regular bookings, so every click reaches Wendy's inbox. -->
       <p class="cta__actions">
-        <a class="btn btn--primary" href="mailto:wendy@wendypix.com?subject=Booking%20inquiry">Email Wendy</a>
-        <a class="btn" href="mailto:wendy@wendypix.com?subject=15-minute%20discovery%20call">15-min discovery call</a>
+        <a class="btn btn--primary" href="book.html">Book a session</a>
+        <a class="btn" href="book.html#discovery">15-min discovery call</a>
       </p>
       <p class="cta__small">
         wendy@wendypix.com &nbsp;&middot;&nbsp; (818) 383-0102
