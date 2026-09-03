@@ -95,6 +95,134 @@ async function createCheckoutSession({
   });
 }
 
+// GET helper — used by the invoice list endpoint. Query params are
+// flattened the same way POST bodies are (Stripe uses the same
+// bracket syntax for nested query params, e.g. expand[]=data.customer).
+async function stripeGet(path, query) {
+  const qs = query ? "?" + new URLSearchParams(flatten(query)).toString() : "";
+  const res = await fetch(STRIPE_API + path + qs, {
+    method: "GET",
+    headers: { Authorization: "Bearer " + getKey() },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = (data && data.error && data.error.message) || `Stripe ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+// ------------------------------------------------------------
+// INVOICES
+//
+// Stripe's invoice flow is multi-step and order-sensitive:
+//   1. Find or create a Customer (invoices attach to customers, not
+//      to bare email addresses).
+//   2. Create a DRAFT invoice for that customer with
+//      collection_method: "send_invoice" (as opposed to
+//      "charge_automatically", which would try to charge a saved card).
+//   3. Create one InvoiceItem per line, each explicitly bound to the
+//      draft invoice via the `invoice` param. Without that param the
+//      item floats on the customer and lands on their *next* invoice,
+//      which is a classic footgun.
+//   4. Finalize — turns the draft into an issued invoice, assigns the
+//      invoice number, and generates the PDF + hosted page.
+//   5. Send — emails the client the hosted invoice link.
+// ------------------------------------------------------------
+
+// Look up a customer by email; create one if none exists. Stripe
+// permits duplicate emails, so we reuse the first match to keep a
+// client's invoice history under a single customer record.
+async function findOrCreateCustomer({ name, email }) {
+  const existing = await stripeGet("/customers", { email, limit: 1 });
+  if (existing && Array.isArray(existing.data) && existing.data.length) {
+    const cust = existing.data[0];
+    // Backfill the name if the customer was auto-created by Checkout
+    // (which only captures email) and we now have a real name.
+    if (name && !cust.name) {
+      try { await stripePost(`/customers/${cust.id}`, { name }); }
+      catch (e) { console.warn("[stripe] customer name backfill failed:", e.message); }
+    }
+    return cust;
+  }
+  return stripePost("/customers", { name: name || undefined, email });
+}
+
+// Create, finalize, and send an invoice in one call.
+// lineItems: [{ description, amountCents, quantity }]
+// Returns the finalized invoice object (has hosted_invoice_url, invoice_pdf,
+// number, status, amount_due).
+async function createAndSendInvoice({
+  customerName,
+  customerEmail,
+  lineItems,
+  daysUntilDue = 14,
+  memo,             // shown near the top of the invoice ("description")
+  footer,           // small print at the bottom
+  metadata = {},
+}) {
+  if (!Array.isArray(lineItems) || !lineItems.length) {
+    throw new Error("At least one line item is required.");
+  }
+  const customer = await findOrCreateCustomer({ name: customerName, email: customerEmail });
+
+  // Step 2 — draft invoice. auto_advance:false keeps Stripe from
+  // finalizing on its own schedule; we finalize explicitly below so
+  // we can surface errors synchronously to the admin UI.
+  const draft = await stripePost("/invoices", {
+    customer: customer.id,
+    collection_method: "send_invoice",
+    days_until_due: daysUntilDue,
+    auto_advance: false,
+    description: memo || undefined,
+    footer: footer || undefined,
+    metadata,
+    // Stripe emails payment reminders on its own cadence for
+    // send_invoice collection. Nothing to configure here — it's
+    // controlled per-account in Dashboard → Settings → Invoicing.
+  });
+
+  // Step 3 — line items bound to this specific draft.
+  for (const item of lineItems) {
+    await stripePost("/invoiceitems", {
+      customer: customer.id,
+      invoice: draft.id,
+      currency: "usd",
+      description: item.description,
+      // Stripe wants either `amount` (total for the line) or
+      // unit_amount + quantity. We use unit_amount + quantity so the
+      // invoice shows "3 × $45.00" rather than a flattened $135.
+      unit_amount: item.amountCents,
+      quantity: item.quantity || 1,
+    });
+  }
+
+  // Step 4 — finalize (assigns number, generates PDF + hosted page)
+  const finalized = await stripePost(`/invoices/${draft.id}/finalize`, {});
+
+  // Step 5 — send the email
+  const sent = await stripePost(`/invoices/${finalized.id}/send`, {});
+  return sent;
+}
+
+async function listInvoices({ limit = 50 } = {}) {
+  // expand customer so the admin list can show the client name without
+  // an N+1 lookup per row.
+  return stripeGet("/invoices", {
+    limit,
+    expand: ["data.customer"],
+  });
+}
+
+async function voidInvoice(invoiceId) {
+  return stripePost(`/invoices/${invoiceId}/void`, {});
+}
+
+// Re-send the invoice email for an already-finalized invoice.
+async function resendInvoice(invoiceId) {
+  return stripePost(`/invoices/${invoiceId}/send`, {});
+}
+
 // Verify a webhook signature. Stripe signs the raw request body with
 // the webhook secret; we recompute the HMAC and constant-time compare.
 const crypto = require("crypto");
@@ -118,4 +246,10 @@ function verifyWebhookSignature(rawBody, sigHeader, secret) {
 module.exports = {
   createCheckoutSession,
   verifyWebhookSignature,
+  // Invoices
+  createAndSendInvoice,
+  listInvoices,
+  voidInvoice,
+  resendInvoice,
+  findOrCreateCustomer,
 };

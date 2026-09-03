@@ -2451,6 +2451,229 @@
     t.addEventListener("click", () => loadRates().catch(console.error));
   });
 
+  // -----------------------------------------------------------
+  // INVOICES — Stripe-backed. Stripe is the system of record; we
+  // never persist invoices in Blobs, so there's nothing to keep in
+  // sync and Wendy can also work from the Stripe Dashboard directly.
+  // -----------------------------------------------------------
+  let invoiceLines = [{ description: "", quantity: 1, amount: "" }];
+
+  function renderInvoiceLines() {
+    const wrap = document.getElementById("invoiceLines");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    invoiceLines.forEach((line, i) => {
+      const el = document.createElement("div");
+      el.className = "admin__invoice-line";
+      el.innerHTML =
+        `<input type="text" data-field="description" value="${escapeHtml(line.description || "")}" placeholder="Description (e.g. Balance — Standard Headshot session)" />` +
+        `<input type="number" data-field="quantity" value="${line.quantity || 1}" min="1" step="1" title="Quantity" />` +
+        `<div class="admin__invoice-line__amt-wrap">
+           <input type="number" data-field="amount" value="${line.amount}" min="0" step="0.01" placeholder="0.00" title="Unit amount" />
+         </div>` +
+        `<button type="button" class="admin__invoice-line__delete" data-act="delete">×</button>`;
+      el.querySelectorAll("[data-field]").forEach((input) => {
+        input.addEventListener("input", () => {
+          const f = input.dataset.field;
+          invoiceLines[i][f] = f === "description" ? input.value : input.value;
+          updateInvoiceTotal();
+        });
+      });
+      el.querySelector('[data-act="delete"]').addEventListener("click", () => {
+        // Always keep at least one row so the form is never empty.
+        if (invoiceLines.length === 1) {
+          invoiceLines[0] = { description: "", quantity: 1, amount: "" };
+        } else {
+          invoiceLines.splice(i, 1);
+        }
+        renderInvoiceLines();
+        updateInvoiceTotal();
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  function updateInvoiceTotal() {
+    const el = document.getElementById("invoiceTotal");
+    if (!el) return;
+    const total = invoiceLines.reduce((sum, l) => {
+      const amt = Number(l.amount) || 0;
+      const qty = Number(l.quantity) || 1;
+      return sum + amt * qty;
+    }, 0);
+    el.textContent = "Total: $" + total.toFixed(2);
+  }
+
+  async function createInvoice() {
+    const status = document.getElementById("invoiceCreateStatus");
+    status.className = "admin__status admin__status--inline";
+    const name = document.getElementById("inv-name").value.trim();
+    const email = document.getElementById("inv-email").value.trim();
+    const due = document.getElementById("inv-due").value.trim();
+    const memo = document.getElementById("inv-memo").value.trim();
+
+    if (!name) return (status.textContent = "Enter the client's name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return (status.textContent = "Enter a valid client email.");
+    }
+    const cleanLines = invoiceLines
+      .map((l) => ({
+        description: (l.description || "").trim(),
+        quantity: Number(l.quantity) || 1,
+        amount: Number(l.amount) || 0,
+      }))
+      .filter((l) => l.description && l.amount > 0);
+    if (!cleanLines.length) {
+      return (status.textContent = "Add at least one line item with a description and an amount.");
+    }
+
+    const total = cleanLines.reduce((s, l) => s + l.amount * l.quantity, 0);
+    if (!confirm(
+      `Send an invoice for $${total.toFixed(2)} to ${name} (${email})?\n\n` +
+      `Stripe will email them a payment page immediately.`
+    )) return;
+
+    const btn = document.getElementById("createInvoiceBtn");
+    btn.disabled = true;
+    status.textContent = "Creating and sending…";
+    try {
+      const res = await authFetch("/api/admin-invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: name,
+          customerEmail: email,
+          daysUntilDue: due === "" ? null : Number(due),
+          memo: memo || null,
+          lineItems: cleanLines,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
+      status.className = "admin__status admin__status--inline admin__status--ok";
+      status.textContent =
+        `Invoice ${data.invoice.number || ""} sent to ${email} for $${data.invoice.amountDue.toFixed(2)}.`;
+      // Reset the form
+      document.getElementById("inv-name").value = "";
+      document.getElementById("inv-email").value = "";
+      document.getElementById("inv-due").value = "14";
+      document.getElementById("inv-memo").value = "";
+      invoiceLines = [{ description: "", quantity: 1, amount: "" }];
+      renderInvoiceLines();
+      updateInvoiceTotal();
+      await loadInvoices();
+    } catch (err) {
+      status.className = "admin__status admin__status--inline admin__status--err";
+      status.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadInvoices() {
+    const wrap = document.getElementById("invoicesList");
+    if (!wrap) return;
+    wrap.innerHTML = '<p class="admin__status">Loading…</p>';
+    try {
+      const res = await authFetch("/api/admin-invoices");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Load failed (${res.status})`);
+      renderInvoices(data.invoices || []);
+    } catch (err) {
+      wrap.innerHTML = `<p class="admin__status admin__status--err">${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  function renderInvoices(invoices) {
+    const wrap = document.getElementById("invoicesList");
+    if (!wrap) return;
+    if (!invoices.length) {
+      wrap.innerHTML = '<p class="admin__status">No invoices yet — create one above.</p>';
+      return;
+    }
+    wrap.innerHTML = "";
+    invoices.forEach((inv) => {
+      // An "open" invoice past its due date reads as overdue, which
+      // Stripe doesn't model as a distinct status — derive it here.
+      let status = inv.status;
+      if (status === "open" && inv.dueDate && inv.dueDate < Date.now()) {
+        status = "overdue";
+      }
+      const row = document.createElement("div");
+      row.className = "admin__invoice-row";
+      const dueTxt = inv.dueDate
+        ? new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "—";
+      const createdTxt = inv.created
+        ? new Date(inv.created).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "";
+      const canVoid = inv.status === "open" || inv.status === "draft";
+      const canResend = inv.status === "open";
+      row.innerHTML =
+        `<div class="admin__invoice-row__num">${escapeHtml(inv.number || inv.id.slice(-8))}</div>` +
+        `<div class="admin__invoice-row__meta">
+           <strong>${escapeHtml(inv.customerName || "—")}</strong>
+           ${inv.customerEmail ? "&middot; " + escapeHtml(inv.customerEmail) : ""}<br/>
+           <span class="admin__invoice-status admin__invoice-status--${status}">${escapeHtml(status)}</span>
+           <span class="muted">&middot; sent ${escapeHtml(createdTxt)} &middot; due ${escapeHtml(dueTxt)}</span>
+           ${inv.description ? '<br/><span class="muted">' + escapeHtml(inv.description) + "</span>" : ""}
+         </div>` +
+        `<div class="admin__invoice-row__amt">$${(inv.amountDue || 0).toFixed(2)}</div>` +
+        `<div class="admin__invoice-row__actions">
+           ${inv.hostedInvoiceUrl ? `<a class="btn" href="${inv.hostedInvoiceUrl}" target="_blank" rel="noopener">View</a>` : ""}
+           ${inv.invoicePdf ? `<a class="btn" href="${inv.invoicePdf}" target="_blank" rel="noopener">PDF</a>` : ""}
+           ${canResend ? `<button type="button" class="btn" data-act="resend" data-id="${inv.id}">Resend</button>` : ""}
+           ${canVoid ? `<button type="button" class="btn btn--danger" data-act="void" data-id="${inv.id}">Void</button>` : ""}
+         </div>`;
+      row.querySelectorAll("button[data-act]").forEach((btn) => {
+        btn.addEventListener("click", () => onInvoiceAction(btn.dataset.act, btn.dataset.id));
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  async function onInvoiceAction(act, id) {
+    if (act === "resend") {
+      if (!confirm("Re-send this invoice email to the client?")) return;
+    }
+    if (act === "void") {
+      if (!confirm(
+        "Void this invoice?\n\nVoiding is permanent — the client can no longer pay it. " +
+        "Use this for invoices sent in error. (If they already paid, refund from the Stripe Dashboard instead.)"
+      )) return;
+    }
+    try {
+      const res = await authFetch(`/api/admin-invoices?action=${act}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `${act} failed (${res.status})`);
+      await loadInvoices();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  const createInvoiceBtn = document.getElementById("createInvoiceBtn");
+  const addInvoiceLineBtn = document.getElementById("addInvoiceLineBtn");
+  const refreshInvoicesBtn = document.getElementById("refreshInvoicesBtn");
+  if (createInvoiceBtn) createInvoiceBtn.addEventListener("click", createInvoice);
+  if (addInvoiceLineBtn) addInvoiceLineBtn.addEventListener("click", () => {
+    invoiceLines.push({ description: "", quantity: 1, amount: "" });
+    renderInvoiceLines();
+  });
+  if (refreshInvoicesBtn) refreshInvoicesBtn.addEventListener("click", () => loadInvoices().catch(console.error));
+
+  document.querySelectorAll(".admin__tab[data-tab='invoices']").forEach((t) => {
+    t.addEventListener("click", () => {
+      renderInvoiceLines();
+      updateInvoiceTotal();
+      loadInvoices().catch(console.error);
+    });
+  });
+
   // Boot — if Identity hasn't fired init yet, run an initial pass anyway
   // so the auth gate shows up.
   if (!identity) {

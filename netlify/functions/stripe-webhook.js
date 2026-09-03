@@ -51,6 +51,22 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: "Invalid JSON" };
   }
 
+  // Invoice lifecycle events (from the Admin → Invoices tab). These
+  // are separate from the booking-deposit flow below, so handle and
+  // return early.
+  if (stripeEvent.type === "invoice.paid") {
+    await notifyInvoicePaid(stripeEvent.data.object).catch((e) =>
+      console.error("[stripe-webhook] invoice.paid notify failed:", e.message)
+    );
+    return { statusCode: 200, body: "ok" };
+  }
+  if (stripeEvent.type === "invoice.payment_failed") {
+    await notifyInvoiceFailed(stripeEvent.data.object).catch((e) =>
+      console.error("[stripe-webhook] invoice.payment_failed notify failed:", e.message)
+    );
+    return { statusCode: 200, body: "ok" };
+  }
+
   // We care about completed checkouts. Stripe also sends related events
   // (checkout.session.expired, payment_intent.succeeded, etc.) but for
   // this flow only checkout.session.completed needs action.
@@ -156,6 +172,105 @@ exports.handler = async (event) => {
 
   return { statusCode: 200, body: "ok" };
 };
+
+// ------------------------------------------------------------
+// INVOICE NOTIFICATIONS
+//
+// Fired by the invoice.paid / invoice.payment_failed webhook events
+// for invoices Wendy sends from Admin → Invoices. Stripe already
+// emails the client directly (receipt on success, retry notice on
+// failure) — these are the internal heads-up for Wendy.
+// ------------------------------------------------------------
+async function notifyInvoicePaid(invoice) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const amount = ((invoice.amount_paid || 0) / 100).toFixed(2);
+  const who = invoice.customer_name || invoice.customer_email || "A client";
+  const num = invoice.number || invoice.id;
+
+  const body =
+    tpl.eyebrow("Invoice paid") +
+    tpl.headline("Money in.") +
+    tpl.callout(
+      `<strong>Invoice ${tpl.escapeHtml(num)}</strong><br/>` +
+      `<span style="font-size:26px;font-weight:800;">$${amount}</span>`
+    ) +
+    tpl.paragraph(
+      `${tpl.escapeHtml(who)} just paid` +
+      (invoice.customer_email
+        ? ` (<a href="mailto:${encodeURIComponent(invoice.customer_email)}" style="color:${tpl.COLORS.TEAL};">${tpl.escapeHtml(invoice.customer_email)}</a>)`
+        : "") +
+      `.`
+    ) +
+    (invoice.hosted_invoice_url
+      ? tpl.buttonRow([{ href: invoice.hosted_invoice_url, label: "View invoice", primary: true }])
+      : "") +
+    tpl.fineprint(
+      "Funds settle to your bank on Stripe's normal payout schedule. " +
+      "Full history lives in Admin → Invoices and in the Stripe Dashboard."
+    );
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "WendyPix Billing <wendy@wendypix.com>",
+      to: [WENDY_EMAIL],
+      subject: `Paid: invoice ${num} — $${amount}`,
+      html: tpl.wrap({
+        preheader: `${who} paid $${amount}`,
+        body,
+        showHomeLink: false,
+      }),
+    }),
+  }).then((r) => { if (!r.ok) throw new Error("Resend invoice-paid " + r.status); });
+}
+
+async function notifyInvoiceFailed(invoice) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const amount = ((invoice.amount_due || 0) / 100).toFixed(2);
+  const who = invoice.customer_name || invoice.customer_email || "A client";
+  const num = invoice.number || invoice.id;
+
+  const body =
+    tpl.eyebrow("Invoice payment failed") +
+    tpl.headline("Payment bounced.") +
+    tpl.callout(
+      `<strong>Invoice ${tpl.escapeHtml(num)}</strong><br/>` +
+      `<span style="font-size:26px;font-weight:800;">$${amount}</span> still outstanding`
+    ) +
+    tpl.paragraph(
+      `${tpl.escapeHtml(who)}'s payment attempt didn't go through` +
+      (invoice.customer_email
+        ? ` (<a href="mailto:${encodeURIComponent(invoice.customer_email)}" style="color:${tpl.COLORS.TEAL};">${tpl.escapeHtml(invoice.customer_email)}</a>)`
+        : "") +
+      `. Stripe will retry on its own schedule and email them automatically — ` +
+      `no action needed from you unless it keeps failing.`
+    ) +
+    (invoice.hosted_invoice_url
+      ? tpl.buttonRow([{ href: invoice.hosted_invoice_url, label: "View invoice", primary: true }])
+      : "") +
+    tpl.fineprint(
+      "If it fails repeatedly, reach out directly — the card may be expired " +
+      "or the charge flagged by their bank."
+    );
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "WendyPix Billing <wendy@wendypix.com>",
+      to: [WENDY_EMAIL],
+      subject: `Payment failed: invoice ${num} — $${amount}`,
+      html: tpl.wrap({
+        preheader: `${who}'s payment didn't go through`,
+        body,
+        showHomeLink: false,
+      }),
+    }),
+  }).then((r) => { if (!r.ok) throw new Error("Resend invoice-failed " + r.status); });
+}
 
 // ------------------------------------------------------------
 // Discount-code redemption alert (Stripe-paid bookings).

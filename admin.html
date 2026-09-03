@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-29-rates" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-30-invoices" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -67,6 +67,7 @@
       <button type="button" class="admin__tab" data-tab="discounts">Discounts</button>
       <button type="button" class="admin__tab" data-tab="addons">Add-ons</button>
       <button type="button" class="admin__tab" data-tab="rates">Rates</button>
+      <button type="button" class="admin__tab" data-tab="invoices">Invoices</button>
       <button type="button" class="admin__tab admin__tab--right" id="logoutBtn">Sign out</button>
     </nav>
 
@@ -286,6 +287,65 @@
       <p class="admin__status admin__status--inline" id="ratesStatus" aria-live="polite"></p>
     </section>
 
+    <!-- INVOICES TAB -->
+    <section class="block admin__pane" data-tab="invoices" hidden>
+      <p class="block__num">09.</p>
+      <h2 class="block__title">Invoices.</h2>
+      <p class="pricing__lede">
+        Build an invoice, hit send, and Stripe emails your client a
+        payment page with a Pay button. They can pay by card, Apple Pay,
+        or bank transfer. Stripe chases unpaid invoices with automatic
+        reminders, and you get an email the moment one is paid.
+        <br/><br/>
+        Use this for shoot balances, quote-based lifestyle and event
+        jobs, extra retouching, or licensing fees.
+      </p>
+
+      <!-- New invoice form -->
+      <div class="admin__codes-new">
+        <h3 class="admin__codes-subhead">Create a new invoice</h3>
+        <div class="admin__codes-form">
+          <div class="book__row">
+            <label for="inv-name">Client name</label>
+            <input type="text" id="inv-name" placeholder="e.g. Jane Doe" />
+          </div>
+          <div class="book__row">
+            <label for="inv-email">Client email</label>
+            <input type="email" id="inv-email" placeholder="jane@example.com" />
+          </div>
+          <div class="book__row">
+            <label for="inv-due">Due in (days)</label>
+            <input type="number" id="inv-due" min="0" max="365" step="1" value="14" />
+          </div>
+          <div class="book__row">
+            <label for="inv-memo">Memo <span class="muted">(optional — shows at the top)</span></label>
+            <input type="text" id="inv-memo" placeholder="e.g. Balance for May 14 headshot session" />
+          </div>
+        </div>
+
+        <h4 class="admin__invoice-lines-head">Line items</h4>
+        <div class="admin__invoice-lines" id="invoiceLines">
+          <!-- Rows rendered by JS -->
+        </div>
+        <button type="button" class="admin__rates-section__addbtn" id="addInvoiceLineBtn">+ Add line item</button>
+
+        <p class="admin__invoice-total" id="invoiceTotal">Total: $0.00</p>
+
+        <p class="cta__actions" style="margin-top:20px">
+          <button type="button" class="btn btn--primary" id="createInvoiceBtn">Create &amp; send invoice</button>
+        </p>
+        <p class="admin__status admin__status--inline" id="invoiceCreateStatus" aria-live="polite"></p>
+      </div>
+
+      <h3 class="admin__codes-subhead admin__codes-subhead--table">Recent invoices</h3>
+      <div class="admin__invoices-list" id="invoicesList">
+        <p class="admin__status">Loading…</p>
+      </div>
+      <p class="cta__actions" style="margin-top:20px">
+        <button type="button" class="btn" id="refreshInvoicesBtn">Refresh</button>
+      </p>
+    </section>
+
     <!-- Hero picker modal (lives outside any pane, controlled by JS) -->
     <div class="admin__hero-picker" id="heroPickerModal" hidden>
       <div class="admin__hero-picker__backdrop" id="heroPickerBackdrop"></div>
@@ -307,6 +367,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-29-rates"></script>
+  <script src="admin.js?v=2026-05-30-invoices"></script>
 </body>
 </html>

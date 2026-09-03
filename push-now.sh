@@ -39,6 +39,8 @@ git add admin.js admin.html admin.css \
         netlify/functions/_rates.js \
         netlify/functions/rates.js \
         netlify/functions/admin-rates.js \
+        netlify/functions/_stripe.js \
+        netlify/functions/admin-invoices.js \
         push-now.sh index.html styles.css \
         book.html book.js book.css \
         pricing.html
@@ -366,6 +368,68 @@ Left alone (still mailto):
   the top-right meta. This is showing the address, not
   acting as a CTA — users who copy/paste to their preferred
   webmail still get value from seeing the string.
+
+Follow-up 7: INVOICING (Admin -> Invoices).
+
+Wendy can now build and send invoices without leaving the
+admin. Backed by Stripe Invoicing on the same account
+already handling booking deposits, so no new service, no
+new secret, no extra monthly fee — just the standard
+per-transaction rate she already pays.
+
+Why Stripe rather than rolling our own: their invoicing
+product already handles PDF generation, a hosted payment
+page, multiple payment methods (card / Apple Pay / ACH),
+automatic dunning emails for unpaid invoices, and payment
+reconciliation. Reimplementing that would be weeks of work
+and worse.
+
+FLOW
+1. Admin -> Invoices -> fill client name + email, add one
+   or more line items (description / qty / unit amount),
+   set 'due in N days', optional memo.
+2. Create & send. Server: finds-or-creates the Stripe
+   customer by email, opens a draft invoice with
+   collection_method=send_invoice, attaches each line item
+   explicitly to that draft (the `invoice` param matters —
+   without it items float to the customer's NEXT invoice),
+   finalizes, then sends.
+3. Client gets a Stripe-hosted invoice page + PDF.
+4. On payment, the invoice.paid webhook fires and Wendy
+   gets a 'Money in' email. On a failed attempt,
+   invoice.payment_failed sends a heads-up instead (no
+   action needed — Stripe retries on its own).
+5. Admin list shows number, client, amount, status badge
+   (paid / open / overdue / draft / void), due date, plus
+   View / PDF / Resend / Void actions per row.
+
+Overdue is derived client-side (status=open AND dueDate in
+the past) since Stripe doesn't model it as a distinct
+status.
+
+Stripe is the system of record — we never persist invoices
+in Blobs, so there is nothing to keep in sync and Wendy can
+work from the Stripe Dashboard interchangeably.
+
+New files:
+- netlify/functions/admin-invoices.js   auth CRUD
+
+Modified:
+- netlify/functions/_stripe.js          stripeGet + invoice helpers
+- netlify/functions/stripe-webhook.js   invoice.paid / payment_failed
+- admin.html, admin.js, admin.css       new Invoices tab
+
+SETUP REQUIRED BEFORE FIRST USE:
+1. Stripe Dashboard -> confirm Invoicing is enabled.
+2. Stripe Dashboard -> Settings -> Public details: upload
+   logo + set business address (this is what prints on the
+   invoice, not anything from our code).
+3. Stripe Dashboard -> Webhooks: add invoice.paid and
+   invoice.payment_failed to the existing endpoint's
+   subscribed events (it currently only listens for
+   checkout.session.completed).
+
+Cache busters bumped to v=2026-05-30-invoices on admin.
 EOF
 echo ""
 
