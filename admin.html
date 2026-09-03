@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-31-invdiscount" />
+  <link rel="stylesheet" href="admin.css?v=2026-06-01-invsplit" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -344,6 +344,23 @@
           <input type="text" id="inv-discount-label" placeholder="Reason shown to client (e.g. Returning client)" disabled />
         </div>
 
+        <!-- Split into a deposit invoice (sent now) + a balance invoice
+             (saved as a draft, sent after the shoot). Stripe can't let
+             a client choose to part-pay a single invoice, so two linked
+             invoices is the reliable pattern. -->
+        <h4 class="admin__invoice-lines-head">Payment schedule</h4>
+        <div class="admin__invoice-split">
+          <label for="inv-split">
+            <input type="checkbox" id="inv-split" />
+            Split into deposit + balance
+          </label>
+          <div class="admin__invoice-split__pct" id="invSplitPctWrap" hidden>
+            <label for="inv-split-pct">Deposit</label>
+            <input type="number" id="inv-split-pct" min="1" max="99" step="1" value="25" />
+            <span class="muted">% now, remainder after the shoot</span>
+          </div>
+        </div>
+
         <p class="admin__invoice-total" id="invoiceTotal">Total: $0.00</p>
 
         <p class="cta__actions" style="margin-top:20px">
@@ -382,6 +399,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-31-invdiscount"></script>
+  <script src="admin.js?v=2026-06-01-invsplit"></script>
 </body>
 </html>

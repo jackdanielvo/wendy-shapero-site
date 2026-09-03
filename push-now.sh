@@ -477,6 +477,63 @@ Modified:
 - admin.html, admin.js, admin.css     discount UI + live total math
 
 Cache busters bumped to v=2026-05-31-invdiscount on admin.
+
+Follow-up 9: SPLIT DEPOSIT / BALANCE INVOICES.
+
+Wendy wanted clients to pay a deposit before the shoot and
+the rest afterwards.
+
+Why two invoices rather than one: Stripe's hosted invoice
+page has no 'pay part of this' affordance for the client.
+Their partial-payments feature is merchant-side only (Wendy
+charging a partial amount from the Dashboard), and their
+native payment-plans feature is still in private preview.
+Two linked invoices is the pattern that actually works
+today and is what most photographers use anyway.
+
+FLOW
+1. Build the invoice as normal (line items, optional
+   discount), then tick 'Split into deposit + balance' and
+   set a deposit percent (defaults to 25% to match the
+   /book flow).
+2. The running total breaks out Subtotal, discount,
+   'Deposit now', and 'Balance after shoot'. The confirm
+   dialog restates all of it before anything sends.
+3. On submit the server creates TWO invoices:
+   - Deposit: finalized + emailed immediately
+   - Balance: left as a DRAFT, nothing emailed
+4. After the shoot Wendy hits 'Send now' on the balance
+   row. It finalizes (assigning its invoice number then)
+   and emails.
+
+Amount math: the deposit is rounded to cents and the
+balance derived by subtraction, so the pair always sums
+to the total exactly — no stray cent from rounding both
+independently. Any discount is applied to the total first
+and baked into both figures rather than attaching the
+coupon to both invoices, which would double-apply it. The
+full itemization plus the discount line is repeated in each
+invoice's memo so the client can see what they're paying
+toward on either one.
+
+Pairing: both invoices carry a shared splitGroup id in
+metadata plus a splitRole of deposit/balance. The admin
+list renders 'Deposit 1 of 2' / 'Balance 2 of 2' badges so
+they read as a pair rather than two unrelated bills.
+
+Draft handling: drafts have no Stripe invoice number until
+finalized, so the list shows '(draft)' and 'not sent yet'
+rather than a blank number and a misleading sent date.
+finalizeAndSendInvoice tolerates an already-finalized
+invoice so the button is also safe on an open invoice
+whose email failed the first time.
+
+Modified:
+- netlify/functions/_stripe.js         send flag + finalizeAndSendInvoice
+- netlify/functions/admin-invoices.js  split path + ?action=send
+- admin.html, admin.js, admin.css      split UI, badges, Send now
+
+Cache busters bumped to v=2026-06-01-invsplit on admin.
 EOF
 echo ""
 

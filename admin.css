@@ -1271,6 +1271,62 @@
   .admin__invoice-discount input:last-child { grid-column: 1 / -1; }
 }
 
+.admin__invoice-split label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+}
+.admin__invoice-split input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.admin__invoice-split__pct {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0 26px;
+  font-size: 14px;
+}
+.admin__invoice-split__pct[hidden] { display: none; }
+.admin__invoice-split__pct label {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.admin__invoice-split__pct input {
+  width: 80px;
+  font-family: var(--body-font);
+  font-size: 14px;
+  padding: 7px 9px;
+  border: 1px solid var(--rule, #ececec);
+  background: var(--bg, #fff);
+  color: var(--ink);
+}
+.admin__invoice-split__pct input:focus {
+  outline: none;
+  border-color: #b347b9;
+}
+
+/* Split pairing badge on invoice rows */
+.admin__invoice-split-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: #efe3f0;
+  color: #8e2c94;
+  margin-left: 6px;
+}
+
 .admin__invoice-total {
   margin: 18px 0 0;
   text-align: right;

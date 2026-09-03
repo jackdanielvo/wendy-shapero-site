@@ -14,6 +14,7 @@
 const { requireAuth } = require("./_auth");
 const {
   createAndSendInvoice,
+  finalizeAndSendInvoice,
   listInvoices,
   voidInvoice,
   resendInvoice,
@@ -46,6 +47,7 @@ exports.handler = async (event, context) => {
     if (event.httpMethod === "POST") {
       if (params.action === "void") return await handleVoid(event);
       if (params.action === "resend") return await handleResend(event);
+      if (params.action === "send") return await handleSendDraft(event);
       return await handleCreate(event);
     }
 
@@ -141,16 +143,131 @@ async function handleCreate(event) {
     };
   }
 
+  const memo = String(body.memo || "").trim() || undefined;
+  const footer =
+    String(body.footer || "").trim() ||
+    "Thank you! — Wendy Shapero · wendy@wendypix.com · (818) 383-0102";
+
+  // ---- Split deposit / balance path ----
+  //
+  // Rather than one invoice for the full amount, issue two:
+  //   1. Deposit  — finalized + sent now, due before the shoot
+  //   2. Balance  — created as a DRAFT; Wendy sends it after delivery
+  //     via the "Send now" button in the admin list.
+  //
+  // Both carry a shared splitGroup id in metadata so the admin list can
+  // pair them visually. Amounts are computed from the post-discount
+  // total and the discount is baked into those figures (rather than
+  // attaching the coupon to both invoices, which would double-apply
+  // it). The memo spells out the breakdown so the client can see it.
+  if (body.split && body.split.enabled) {
+    const pct = Number(body.split.depositPercent);
+    if (!Number.isFinite(pct) || pct <= 0 || pct >= 100) {
+      return json(400, { error: "Deposit percent must be between 1 and 99." });
+    }
+
+    const subtotal = lineItems.reduce(
+      (sum, l) => sum + (l.amountCents * l.quantity) / 100,
+      0
+    );
+    let discountAmount = 0;
+    if (discount) {
+      discountAmount =
+        discount.type === "percent"
+          ? (subtotal * discount.value) / 100
+          : discount.value;
+    }
+    const total = subtotal - discountAmount;
+    if (total <= 0) {
+      return json(400, { error: "Invoice total must be greater than zero." });
+    }
+    // Round the deposit to cents, then derive the balance by
+    // subtraction so the two always sum exactly to the total — never
+    // a stray cent from rounding both independently.
+    const depositCents = Math.round(total * 100 * (pct / 100));
+    const balanceCents = Math.round(total * 100) - depositCents;
+    if (depositCents <= 0 || balanceCents <= 0) {
+      return json(400, {
+        error: "That deposit percentage leaves nothing for one of the two invoices. Adjust it.",
+      });
+    }
+
+    const splitGroup = `split_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const jobLabel = memo || lineItems[0].description;
+    // Itemization repeated on both invoices so the client can see what
+    // they're paying toward on either one.
+    const breakdown =
+      lineItems
+        .map((l) => `${l.description} — $${((l.amountCents * l.quantity) / 100).toFixed(2)}`)
+        .join(" · ") +
+      (discountAmount > 0
+        ? ` · ${discount.label}: −$${discountAmount.toFixed(2)}`
+        : "") +
+      ` · Total $${total.toFixed(2)}`;
+
+    // 1. Deposit — sent immediately
+    const depositInvoice = await createAndSendInvoice({
+      customerName,
+      customerEmail,
+      daysUntilDue,
+      send: true,
+      lineItems: [
+        {
+          description: `Deposit (${pct}%) — ${jobLabel}`,
+          amountCents: depositCents,
+          quantity: 1,
+        },
+      ],
+      memo: `Deposit invoice 1 of 2. ${breakdown}`,
+      footer,
+      metadata: {
+        source: "wendypix-admin",
+        splitGroup,
+        splitRole: "deposit",
+        splitTotal: total.toFixed(2),
+      },
+    });
+
+    // 2. Balance — draft, sent after the shoot
+    const balanceInvoice = await createAndSendInvoice({
+      customerName,
+      customerEmail,
+      daysUntilDue,
+      send: false,
+      lineItems: [
+        {
+          description: `Balance (${100 - pct}%) — ${jobLabel}`,
+          amountCents: balanceCents,
+          quantity: 1,
+        },
+      ],
+      memo: `Balance invoice 2 of 2. ${breakdown}`,
+      footer,
+      metadata: {
+        source: "wendypix-admin",
+        splitGroup,
+        splitRole: "balance",
+        splitTotal: total.toFixed(2),
+      },
+    });
+
+    return json(200, {
+      ok: true,
+      split: true,
+      invoice: summarize(depositInvoice),
+      balanceInvoice: summarize(balanceInvoice),
+    });
+  }
+
+  // ---- Single-invoice path ----
   const invoice = await createAndSendInvoice({
     customerName,
     customerEmail,
     lineItems,
     daysUntilDue,
     discount,
-    memo: String(body.memo || "").trim() || undefined,
-    footer:
-      String(body.footer || "").trim() ||
-      "Thank you! — Wendy Shapero · wendy@wendypix.com · (818) 383-0102",
+    memo,
+    footer,
     metadata: {
       source: "wendypix-admin",
       createdBy: "admin",
@@ -158,6 +275,16 @@ async function handleCreate(event) {
   });
 
   return json(200, { ok: true, invoice: summarize(invoice) });
+}
+
+// ---------- POST ?action=send (finalize + send a draft) ----------
+async function handleSendDraft(event) {
+  let body;
+  try { body = JSON.parse(event.body || "{}"); } catch { body = {}; }
+  const id = String(body.invoiceId || "").trim();
+  if (!id) return json(400, { error: "invoiceId required" });
+  const sent = await finalizeAndSendInvoice(id);
+  return json(200, { ok: true, invoice: summarize(sent) });
 }
 
 // ---------- POST ?action=void ----------
@@ -184,6 +311,7 @@ async function handleResend(event) {
 function summarize(inv) {
   if (!inv) return null;
   const cust = inv.customer && typeof inv.customer === "object" ? inv.customer : null;
+  const md = inv.metadata || {};
   return {
     id: inv.id,
     number: inv.number || null,
@@ -198,6 +326,10 @@ function summarize(inv) {
     hostedInvoiceUrl: inv.hosted_invoice_url || null,
     invoicePdf: inv.invoice_pdf || null,
     description: inv.description || null,
+    // Split deposit/balance pairing — null on ordinary single invoices.
+    splitGroup: md.splitGroup || null,
+    splitRole: md.splitRole || null,   // "deposit" | "balance"
+    splitTotal: md.splitTotal ? Number(md.splitTotal) : null,
   };
 }
 

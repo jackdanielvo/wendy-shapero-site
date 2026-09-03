@@ -189,6 +189,7 @@ async function createAndSendInvoice({
   memo,             // shown near the top of the invoice ("description")
   footer,           // small print at the bottom
   discount,         // optional { type, value, label }
+  send = true,      // false → leave as a draft for sending later
   metadata = {},
 }) {
   if (!Array.isArray(lineItems) || !lineItems.length) {
@@ -262,12 +263,35 @@ async function createAndSendInvoice({
     });
   }
 
+  // Caller asked for a draft (used by the split deposit/balance flow —
+  // the balance invoice sits as a draft until after the shoot). Skip
+  // finalize + send; Wendy sends it later from the admin list.
+  if (send === false) return draft;
+
   // Step 4 — finalize (assigns number, generates PDF + hosted page)
   const finalized = await stripePost(`/invoices/${draft.id}/finalize`, {});
 
   // Step 5 — send the email
   const sent = await stripePost(`/invoices/${finalized.id}/send`, {});
   return sent;
+}
+
+// Finalize (if needed) and send an existing draft invoice. Used by the
+// "Send now" button on a balance invoice after the shoot is delivered.
+//
+// Finalizing an already-finalized invoice is an error, so we tolerate
+// that specific failure and fall through to send — which makes this
+// safe to call on a draft OR on an open invoice that failed to email
+// the first time.
+async function finalizeAndSendInvoice(invoiceId) {
+  try {
+    await stripePost(`/invoices/${invoiceId}/finalize`, {});
+  } catch (err) {
+    const msg = String(err.message || "");
+    const alreadyFinal = /already.*finalized|not.*draft|cannot.*finalize/i.test(msg);
+    if (!alreadyFinal) throw err;
+  }
+  return stripePost(`/invoices/${invoiceId}/send`, {});
 }
 
 async function listInvoices({ limit = 50 } = {}) {
@@ -313,6 +337,7 @@ module.exports = {
   verifyWebhookSignature,
   // Invoices
   createAndSendInvoice,
+  finalizeAndSendInvoice,
   listInvoices,
   voidInvoice,
   resendInvoice,

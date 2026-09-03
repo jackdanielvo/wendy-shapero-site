@@ -2531,17 +2531,50 @@
     }
     const total = subtotal - discountAmount;
 
+    const lines = [];
     if (discount && discountAmount > 0) {
       const label = discount.type === "percent"
         ? `${escapeHtml(discount.label)} (${discount.value}% off)`
         : escapeHtml(discount.label);
-      el.innerHTML =
-        `<small>Subtotal: $${subtotal.toFixed(2)}</small>` +
-        `<small class="is-discount">${label}: −$${discountAmount.toFixed(2)}</small>` +
-        `Total: $${total.toFixed(2)}`;
-    } else {
-      el.textContent = "Total: $" + total.toFixed(2);
+      lines.push(`<small>Subtotal: $${subtotal.toFixed(2)}</small>`);
+      lines.push(`<small class="is-discount">${label}: −$${discountAmount.toFixed(2)}</small>`);
     }
+
+    // If the invoice is being split, show what each of the two
+    // invoices will be for. Deposit is rounded to cents and the
+    // balance derived by subtraction so they always sum to the total.
+    const split = readInvoiceSplit();
+    if (split && total > 0) {
+      const depositAmt = Math.round(total * 100 * (split.depositPercent / 100)) / 100;
+      const balanceAmt = Math.round(total * 100 - depositAmt * 100) / 100;
+      if (!lines.length) lines.push(`<small>Subtotal: $${subtotal.toFixed(2)}</small>`);
+      lines.push(`<small>Deposit now (${split.depositPercent}%): $${depositAmt.toFixed(2)}</small>`);
+      lines.push(`<small>Balance after shoot: $${balanceAmt.toFixed(2)}</small>`);
+    }
+
+    el.innerHTML = lines.join("") + `Total: $${total.toFixed(2)}`;
+  }
+
+  // Read the split checkbox + percent. Returns null when off.
+  function readInvoiceSplit() {
+    const cb = document.getElementById("inv-split");
+    if (!cb || !cb.checked) return null;
+    const pctEl = document.getElementById("inv-split-pct");
+    const pct = Number(pctEl && pctEl.value);
+    if (!Number.isFinite(pct) || pct <= 0 || pct >= 100) return null;
+    return { depositPercent: pct };
+  }
+
+  function wireInvoiceSplitControls() {
+    const cb = document.getElementById("inv-split");
+    const wrap = document.getElementById("invSplitPctWrap");
+    const pct = document.getElementById("inv-split-pct");
+    if (!cb || !wrap || !pct) return;
+    cb.addEventListener("change", () => {
+      wrap.hidden = !cb.checked;
+      updateInvoiceTotal();
+    });
+    pct.addEventListener("input", updateInvoiceTotal);
   }
 
   // Enable/disable the discount value + label inputs based on the
@@ -2607,12 +2640,27 @@
     const discountLine = discount
       ? `\nDiscount: −$${discountAmount.toFixed(2)} (${discount.label})`
       : "";
-    if (!confirm(
-      `Send an invoice to ${name} (${email})?\n\n` +
-      `Subtotal: $${subtotal.toFixed(2)}${discountLine}\n` +
-      `Total due: $${total.toFixed(2)}\n\n` +
-      `Stripe will email them a payment page immediately.`
-    )) return;
+    const split = readInvoiceSplit();
+
+    let confirmMsg;
+    if (split) {
+      const depositAmt = Math.round(total * 100 * (split.depositPercent / 100)) / 100;
+      const balanceAmt = Math.round(total * 100 - depositAmt * 100) / 100;
+      confirmMsg =
+        `Create TWO invoices for ${name} (${email})?\n\n` +
+        `Subtotal: $${subtotal.toFixed(2)}${discountLine}\n` +
+        `Job total: $${total.toFixed(2)}\n\n` +
+        `1. Deposit $${depositAmt.toFixed(2)} (${split.depositPercent}%) — emailed NOW\n` +
+        `2. Balance $${balanceAmt.toFixed(2)} — saved as a draft\n\n` +
+        `Send the balance yourself after the shoot using the "Send now" button on that row.`;
+    } else {
+      confirmMsg =
+        `Send an invoice to ${name} (${email})?\n\n` +
+        `Subtotal: $${subtotal.toFixed(2)}${discountLine}\n` +
+        `Total due: $${total.toFixed(2)}\n\n` +
+        `Stripe will email them a payment page immediately.`;
+    }
+    if (!confirm(confirmMsg)) return;
 
     const btn = document.getElementById("createInvoiceBtn");
     btn.disabled = true;
@@ -2630,13 +2678,24 @@
           discountType: discount ? discount.type : "none",
           discountValue: discount ? discount.value : null,
           discountLabel: discount ? discount.label : null,
+          split: split
+            ? { enabled: true, depositPercent: split.depositPercent }
+            : { enabled: false },
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
       status.className = "admin__status admin__status--inline admin__status--ok";
-      status.textContent =
-        `Invoice ${data.invoice.number || ""} sent to ${email} for $${data.invoice.amountDue.toFixed(2)}.`;
+      if (data.split && data.balanceInvoice) {
+        status.textContent =
+          `Deposit invoice ${data.invoice.number || ""} sent to ${email} for ` +
+          `$${data.invoice.amountDue.toFixed(2)}. Balance of ` +
+          `$${data.balanceInvoice.amountDue.toFixed(2)} is saved as a draft — ` +
+          `hit "Send now" on that row after the shoot.`;
+      } else {
+        status.textContent =
+          `Invoice ${data.invoice.number || ""} sent to ${email} for $${data.invoice.amountDue.toFixed(2)}.`;
+      }
       // Reset the form
       document.getElementById("inv-name").value = "";
       document.getElementById("inv-email").value = "";
@@ -2648,6 +2707,12 @@
       if (dType) dType.value = "none";
       if (dVal) { dVal.value = ""; dVal.disabled = true; }
       if (dLbl) { dLbl.value = ""; dLbl.disabled = true; }
+      const splitCb = document.getElementById("inv-split");
+      const splitWrap = document.getElementById("invSplitPctWrap");
+      const splitPct = document.getElementById("inv-split-pct");
+      if (splitCb) splitCb.checked = false;
+      if (splitWrap) splitWrap.hidden = true;
+      if (splitPct) splitPct.value = "25";
       invoiceLines = [{ description: "", quantity: 1, amount: "" }];
       renderInvoiceLines();
       updateInvoiceTotal();
@@ -2699,17 +2764,31 @@
         : "";
       const canVoid = inv.status === "open" || inv.status === "draft";
       const canResend = inv.status === "open";
+      // A draft that's the balance half of a split is the one Wendy
+      // sends after the shoot — give it a prominent Send now button.
+      const canSendDraft = inv.status === "draft";
+      const splitBadge = inv.splitRole
+        ? `<span class="admin__invoice-split-badge">${
+            inv.splitRole === "deposit" ? "Deposit 1 of 2" : "Balance 2 of 2"
+          }</span>`
+        : "";
+      // Drafts have no number assigned yet (Stripe assigns it at
+      // finalize), so fall back to a readable id fragment.
+      const displayNum = inv.number || (inv.status === "draft" ? "(draft)" : inv.id.slice(-8));
+      const sentTxt = inv.status === "draft" ? "not sent yet" : `sent ${createdTxt}`;
       row.innerHTML =
-        `<div class="admin__invoice-row__num">${escapeHtml(inv.number || inv.id.slice(-8))}</div>` +
+        `<div class="admin__invoice-row__num">${escapeHtml(displayNum)}</div>` +
         `<div class="admin__invoice-row__meta">
            <strong>${escapeHtml(inv.customerName || "—")}</strong>
            ${inv.customerEmail ? "&middot; " + escapeHtml(inv.customerEmail) : ""}<br/>
            <span class="admin__invoice-status admin__invoice-status--${status}">${escapeHtml(status)}</span>
-           <span class="muted">&middot; sent ${escapeHtml(createdTxt)} &middot; due ${escapeHtml(dueTxt)}</span>
+           ${splitBadge}
+           <span class="muted">&middot; ${escapeHtml(sentTxt)} &middot; due ${escapeHtml(dueTxt)}</span>
            ${inv.description ? '<br/><span class="muted">' + escapeHtml(inv.description) + "</span>" : ""}
          </div>` +
         `<div class="admin__invoice-row__amt">$${(inv.amountDue || 0).toFixed(2)}</div>` +
         `<div class="admin__invoice-row__actions">
+           ${canSendDraft ? `<button type="button" class="btn btn--primary" data-act="send" data-id="${inv.id}">Send now</button>` : ""}
            ${inv.hostedInvoiceUrl ? `<a class="btn" href="${inv.hostedInvoiceUrl}" target="_blank" rel="noopener">View</a>` : ""}
            ${inv.invoicePdf ? `<a class="btn" href="${inv.invoicePdf}" target="_blank" rel="noopener">PDF</a>` : ""}
            ${canResend ? `<button type="button" class="btn" data-act="resend" data-id="${inv.id}">Resend</button>` : ""}
@@ -2723,6 +2802,12 @@
   }
 
   async function onInvoiceAction(act, id) {
+    if (act === "send") {
+      if (!confirm(
+        "Send this invoice to the client now?\n\n" +
+        "It'll be finalized (assigning an invoice number) and emailed immediately."
+      )) return;
+    }
     if (act === "resend") {
       if (!confirm("Re-send this invoice email to the client?")) return;
     }
@@ -2756,9 +2841,10 @@
   });
   if (refreshInvoicesBtn) refreshInvoicesBtn.addEventListener("click", () => loadInvoices().catch(console.error));
 
-  // Wire the discount controls once at load (the elements exist in the
-  // DOM even while the tab is hidden).
+  // Wire the discount + split controls once at load (the elements exist
+  // in the DOM even while the tab is hidden).
   wireInvoiceDiscountControls();
+  wireInvoiceSplitControls();
 
   document.querySelectorAll(".admin__tab[data-tab='invoices']").forEach((t) => {
     t.addEventListener("click", () => {
