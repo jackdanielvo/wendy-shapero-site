@@ -148,8 +148,37 @@ async function findOrCreateCustomer({ name, email }) {
   return stripePost("/customers", { name: name || undefined, email });
 }
 
+// Create a single-use coupon for an invoice-level discount.
+//
+// Stripe models invoice discounts as coupons, so a one-off "10% off for
+// this invoice" still needs a coupon object. duration:"once" plus
+// max_redemptions:1 keeps it from leaking onto other invoices or being
+// reused. The `name` is what the client sees on the invoice next to the
+// discount amount, so it should read as a reason ("Returning client").
+//
+// Exactly one of percentOff / amountOffCents must be supplied.
+async function createCoupon({ percentOff, amountOffCents, name }) {
+  const body = {
+    duration: "once",
+    max_redemptions: 1,
+    name: name || "Discount",
+  };
+  if (percentOff != null) {
+    body.percent_off = percentOff;
+  } else if (amountOffCents != null) {
+    body.amount_off = amountOffCents;
+    body.currency = "usd";
+  } else {
+    throw new Error("createCoupon needs percentOff or amountOffCents");
+  }
+  return stripePost("/coupons", body);
+}
+
 // Create, finalize, and send an invoice in one call.
 // lineItems: [{ description, amountCents, quantity }]
+// discount (optional): { type: "percent"|"amount", value, label }
+//   - type "percent": value is 1-100
+//   - type "amount":  value is DOLLARS (converted to cents here)
 // Returns the finalized invoice object (has hosted_invoice_url, invoice_pdf,
 // number, status, amount_due).
 async function createAndSendInvoice({
@@ -159,12 +188,44 @@ async function createAndSendInvoice({
   daysUntilDue = 14,
   memo,             // shown near the top of the invoice ("description")
   footer,           // small print at the bottom
+  discount,         // optional { type, value, label }
   metadata = {},
 }) {
   if (!Array.isArray(lineItems) || !lineItems.length) {
     throw new Error("At least one line item is required.");
   }
   const customer = await findOrCreateCustomer({ name: customerName, email: customerEmail });
+
+  // Build the coupon first (if a discount was requested) so we can pass
+  // it into the draft invoice at creation time. Doing it up front means
+  // a bad discount fails before we've created a half-built invoice.
+  let couponId = null;
+  if (discount && discount.type && discount.value != null) {
+    const label = String(discount.label || "").trim() || "Discount";
+    if (discount.type === "percent") {
+      const pct = Number(discount.value);
+      if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+        throw new Error("Discount percent must be between 1 and 100.");
+      }
+      const coupon = await createCoupon({
+        percentOff: pct,
+        name: `${label} (${pct}% off)`,
+      });
+      couponId = coupon.id;
+    } else if (discount.type === "amount") {
+      const dollars = Number(discount.value);
+      if (!Number.isFinite(dollars) || dollars <= 0) {
+        throw new Error("Discount amount must be greater than zero.");
+      }
+      const coupon = await createCoupon({
+        amountOffCents: Math.round(dollars * 100),
+        name: label,
+      });
+      couponId = coupon.id;
+    } else {
+      throw new Error(`Unknown discount type "${discount.type}".`);
+    }
+  }
 
   // Step 2 — draft invoice. auto_advance:false keeps Stripe from
   // finalizing on its own schedule; we finalize explicitly below so
@@ -177,6 +238,10 @@ async function createAndSendInvoice({
     description: memo || undefined,
     footer: footer || undefined,
     metadata,
+    // Invoice-level discount. Stripe applies this to the subtotal and
+    // renders it as its own "Discount" row above the total on both the
+    // hosted page and the PDF.
+    discounts: couponId ? [{ coupon: couponId }] : undefined,
     // Stripe emails payment reminders on its own cadence for
     // send_invoice collection. Nothing to configure here — it's
     // controlled per-account in Dashboard → Settings → Invoicing.
@@ -252,4 +317,5 @@ module.exports = {
   voidInvoice,
   resendInvoice,
   findOrCreateCustomer,
+  createCoupon,
 };

@@ -1240,6 +1240,37 @@
   color: #fff;
   border-color: #b0322f;
 }
+.admin__invoice-discount {
+  display: grid;
+  grid-template-columns: 150px 130px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.admin__invoice-discount select,
+.admin__invoice-discount input {
+  font-family: var(--body-font);
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule, #ececec);
+  background: var(--bg, #fff);
+  color: var(--ink);
+  width: 100%;
+}
+.admin__invoice-discount select:focus,
+.admin__invoice-discount input:focus {
+  outline: none;
+  border-color: #b347b9;
+}
+.admin__invoice-discount input:disabled {
+  background: #f2f2f2;
+  color: #aaa;
+  cursor: not-allowed;
+}
+@media (max-width: 800px) {
+  .admin__invoice-discount { grid-template-columns: 1fr 1fr; }
+  .admin__invoice-discount input:last-child { grid-column: 1 / -1; }
+}
+
 .admin__invoice-total {
   margin: 18px 0 0;
   text-align: right;
@@ -1248,6 +1279,15 @@
   font-size: 20px;
   color: #1d5e62;
 }
+/* Subtotal + discount breakdown lines above the bold total */
+.admin__invoice-total small {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted, #6b6b6b);
+  margin-bottom: 4px;
+}
+.admin__invoice-total small.is-discount { color: #b347b9; font-weight: 700; }
 
 .admin__invoices-list {
   display: flex;

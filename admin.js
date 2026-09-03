@@ -2493,15 +2493,77 @@
     });
   }
 
+  // Read the discount form controls into a normalized shape.
+  // Returns null when no discount is selected.
+  function readInvoiceDiscount() {
+    const typeEl = document.getElementById("inv-discount-type");
+    const valEl = document.getElementById("inv-discount-value");
+    const labelEl = document.getElementById("inv-discount-label");
+    if (!typeEl || typeEl.value === "none") return null;
+    const value = Number(valEl && valEl.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return {
+      type: typeEl.value,
+      value,
+      label: (labelEl && labelEl.value.trim()) || "Discount",
+    };
+  }
+
   function updateInvoiceTotal() {
     const el = document.getElementById("invoiceTotal");
     if (!el) return;
-    const total = invoiceLines.reduce((sum, l) => {
+    const subtotal = invoiceLines.reduce((sum, l) => {
       const amt = Number(l.amount) || 0;
       const qty = Number(l.quantity) || 1;
       return sum + amt * qty;
     }, 0);
-    el.textContent = "Total: $" + total.toFixed(2);
+
+    const discount = readInvoiceDiscount();
+    let discountAmount = 0;
+    if (discount) {
+      discountAmount = discount.type === "percent"
+        ? (subtotal * discount.value) / 100
+        : discount.value;
+      // Never let the preview show a negative total — the server
+      // rejects an over-large flat discount anyway, but the preview
+      // shouldn't display nonsense while she's mid-typing.
+      discountAmount = Math.min(discountAmount, subtotal);
+    }
+    const total = subtotal - discountAmount;
+
+    if (discount && discountAmount > 0) {
+      const label = discount.type === "percent"
+        ? `${escapeHtml(discount.label)} (${discount.value}% off)`
+        : escapeHtml(discount.label);
+      el.innerHTML =
+        `<small>Subtotal: $${subtotal.toFixed(2)}</small>` +
+        `<small class="is-discount">${label}: −$${discountAmount.toFixed(2)}</small>` +
+        `Total: $${total.toFixed(2)}`;
+    } else {
+      el.textContent = "Total: $" + total.toFixed(2);
+    }
+  }
+
+  // Enable/disable the discount value + label inputs based on the
+  // type selector, and recompute the total on any change.
+  function wireInvoiceDiscountControls() {
+    const typeEl = document.getElementById("inv-discount-type");
+    const valEl = document.getElementById("inv-discount-value");
+    const labelEl = document.getElementById("inv-discount-label");
+    if (!typeEl || !valEl || !labelEl) return;
+    function syncEnabled() {
+      const off = typeEl.value === "none";
+      valEl.disabled = off;
+      labelEl.disabled = off;
+      if (off) { valEl.value = ""; labelEl.value = ""; }
+      // Swap the placeholder so the unit is obvious at a glance.
+      valEl.placeholder = typeEl.value === "percent" ? "10" : "0.00";
+      updateInvoiceTotal();
+    }
+    typeEl.addEventListener("change", syncEnabled);
+    valEl.addEventListener("input", updateInvoiceTotal);
+    labelEl.addEventListener("input", updateInvoiceTotal);
+    syncEnabled();
   }
 
   async function createInvoice() {
@@ -2527,9 +2589,28 @@
       return (status.textContent = "Add at least one line item with a description and an amount.");
     }
 
-    const total = cleanLines.reduce((s, l) => s + l.amount * l.quantity, 0);
+    const subtotal = cleanLines.reduce((s, l) => s + l.amount * l.quantity, 0);
+    const discount = readInvoiceDiscount();
+    let discountAmount = 0;
+    if (discount) {
+      discountAmount = discount.type === "percent"
+        ? (subtotal * discount.value) / 100
+        : discount.value;
+      if (discountAmount > subtotal) {
+        return (status.textContent =
+          `The $${discountAmount.toFixed(2)} discount is larger than the ` +
+          `$${subtotal.toFixed(2)} subtotal.`);
+      }
+    }
+    const total = subtotal - discountAmount;
+
+    const discountLine = discount
+      ? `\nDiscount: −$${discountAmount.toFixed(2)} (${discount.label})`
+      : "";
     if (!confirm(
-      `Send an invoice for $${total.toFixed(2)} to ${name} (${email})?\n\n` +
+      `Send an invoice to ${name} (${email})?\n\n` +
+      `Subtotal: $${subtotal.toFixed(2)}${discountLine}\n` +
+      `Total due: $${total.toFixed(2)}\n\n` +
       `Stripe will email them a payment page immediately.`
     )) return;
 
@@ -2546,6 +2627,9 @@
           daysUntilDue: due === "" ? null : Number(due),
           memo: memo || null,
           lineItems: cleanLines,
+          discountType: discount ? discount.type : "none",
+          discountValue: discount ? discount.value : null,
+          discountLabel: discount ? discount.label : null,
         }),
       });
       const data = await res.json();
@@ -2558,6 +2642,12 @@
       document.getElementById("inv-email").value = "";
       document.getElementById("inv-due").value = "14";
       document.getElementById("inv-memo").value = "";
+      const dType = document.getElementById("inv-discount-type");
+      const dVal = document.getElementById("inv-discount-value");
+      const dLbl = document.getElementById("inv-discount-label");
+      if (dType) dType.value = "none";
+      if (dVal) { dVal.value = ""; dVal.disabled = true; }
+      if (dLbl) { dLbl.value = ""; dLbl.disabled = true; }
       invoiceLines = [{ description: "", quantity: 1, amount: "" }];
       renderInvoiceLines();
       updateInvoiceTotal();
@@ -2665,6 +2755,10 @@
     renderInvoiceLines();
   });
   if (refreshInvoicesBtn) refreshInvoicesBtn.addEventListener("click", () => loadInvoices().catch(console.error));
+
+  // Wire the discount controls once at load (the elements exist in the
+  // DOM even while the tab is hidden).
+  wireInvoiceDiscountControls();
 
   document.querySelectorAll(".admin__tab[data-tab='invoices']").forEach((t) => {
     t.addEventListener("click", () => {

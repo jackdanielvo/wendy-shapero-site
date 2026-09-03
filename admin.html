@@ -18,7 +18,7 @@
 
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
-  <link rel="stylesheet" href="admin.css?v=2026-05-30-invoices" />
+  <link rel="stylesheet" href="admin.css?v=2026-05-31-invdiscount" />
 
   <!-- Netlify Identity widget — provides login modal + a JWT we attach
        to every admin function call as Bearer auth. -->
@@ -329,6 +329,21 @@
         </div>
         <button type="button" class="admin__rates-section__addbtn" id="addInvoiceLineBtn">+ Add line item</button>
 
+        <!-- Optional whole-invoice discount. Applied to the subtotal and
+             shown to the client as its own "Discount" row on the invoice.
+             Separate from the influencer promo codes in the Discounts
+             tab — those only work in the /book checkout flow. -->
+        <h4 class="admin__invoice-lines-head">Discount <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></h4>
+        <div class="admin__invoice-discount">
+          <select id="inv-discount-type">
+            <option value="none">No discount</option>
+            <option value="percent">Percent off</option>
+            <option value="amount">Dollars off</option>
+          </select>
+          <input type="number" id="inv-discount-value" min="0" step="0.01" placeholder="0" disabled />
+          <input type="text" id="inv-discount-label" placeholder="Reason shown to client (e.g. Returning client)" disabled />
+        </div>
+
         <p class="admin__invoice-total" id="invoiceTotal">Total: $0.00</p>
 
         <p class="cta__actions" style="margin-top:20px">
@@ -367,6 +382,6 @@
 
   <!-- SortableJS for drag-drop reordering in the Photos tab -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-  <script src="admin.js?v=2026-05-30-invoices"></script>
+  <script src="admin.js?v=2026-05-31-invdiscount"></script>
 </body>
 </html>

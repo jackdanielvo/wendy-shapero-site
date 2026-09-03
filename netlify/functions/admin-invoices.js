@@ -102,11 +102,51 @@ async function handleCreate(event) {
     daysUntilDue = n;
   }
 
+  // Optional invoice-level discount. Validated here as well as in
+  // _stripe.js so the admin gets a clean message rather than a raw
+  // Stripe API error.
+  let discount;
+  const dType = String(body.discountType || "").trim();
+  if (dType && dType !== "none") {
+    const dValue = Number(body.discountValue);
+    if (!Number.isFinite(dValue) || dValue <= 0) {
+      return json(400, { error: "Enter a discount amount greater than zero, or set the discount to None." });
+    }
+    if (dType === "percent") {
+      if (dValue > 100) {
+        return json(400, { error: "A percentage discount can't exceed 100%." });
+      }
+    } else if (dType === "amount") {
+      // A flat discount larger than the subtotal would make the invoice
+      // total negative, which Stripe rejects. Catch it here with a
+      // message that tells Wendy the actual subtotal.
+      const subtotal = lineItems.reduce(
+        (sum, l) => sum + (l.amountCents * l.quantity) / 100,
+        0
+      );
+      if (dValue > subtotal) {
+        return json(400, {
+          error:
+            `The $${dValue.toFixed(2)} discount is larger than the ` +
+            `$${subtotal.toFixed(2)} subtotal. Lower the discount or add more line items.`,
+        });
+      }
+    } else {
+      return json(400, { error: `Unknown discount type "${dType}".` });
+    }
+    discount = {
+      type: dType,
+      value: dValue,
+      label: String(body.discountLabel || "").trim() || "Discount",
+    };
+  }
+
   const invoice = await createAndSendInvoice({
     customerName,
     customerEmail,
     lineItems,
     daysUntilDue,
+    discount,
     memo: String(body.memo || "").trim() || undefined,
     footer:
       String(body.footer || "").trim() ||

@@ -430,6 +430,53 @@ SETUP REQUIRED BEFORE FIRST USE:
    checkout.session.completed).
 
 Cache busters bumped to v=2026-05-30-invoices on admin.
+
+Follow-up 8: INVOICE-LEVEL DISCOUNTS.
+
+Feedback after the first live invoice: no obvious way to
+discount anything. There genuinely wasn't one — the form
+had no discount field and the server rejected negative
+line amounts, so even the negative-line-item workaround
+was blocked.
+
+Added an optional whole-invoice discount to the create
+form: a type selector (None / Percent off / Dollars off),
+a value, and a free-text reason that the client sees.
+The running total now breaks out Subtotal, the discount
+line, and the final Total, and the confirm dialog repeats
+that breakdown before anything sends.
+
+Implemented via Stripe coupons — that's how Stripe models
+invoice discounts, so a one-off '10% off this invoice'
+still needs a coupon object. Created with duration:once
+and max_redemptions:1 so it can't leak onto another
+invoice or be reused. Attached at draft-creation time via
+discounts[0][coupon]. Renders on the hosted invoice + PDF
+as a proper Discount row above the total, not as a weird
+negative line item.
+
+Validation, both client and server:
+- Percent must be 1-100.
+- A flat dollar discount can't exceed the subtotal (that
+  would make the total negative, which Stripe rejects).
+  The error message quotes the actual subtotal so Wendy
+  knows what to fix.
+- The coupon is built BEFORE the draft invoice so a bad
+  discount fails cleanly instead of leaving a half-built
+  invoice behind.
+
+Deliberately NOT wired to the influencer promo codes in
+the Discounts tab. Those remain /book-checkout only.
+Keeping them separate avoids burning an influencer's
+usage cap on a manually-issued invoice, and avoids
+implying to Wendy that the two systems share state.
+
+Modified:
+- netlify/functions/_stripe.js        createCoupon + discount param
+- netlify/functions/admin-invoices.js discount validation
+- admin.html, admin.js, admin.css     discount UI + live total math
+
+Cache busters bumped to v=2026-05-31-invdiscount on admin.
 EOF
 echo ""
 
