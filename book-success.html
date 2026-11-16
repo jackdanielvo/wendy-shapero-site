@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Booked — WendyPix</title>
-  <meta name="theme-color" content="#1d5e62" />
+  <title>Booked · WendyPix</title>
+  <meta name="theme-color" content="#FBF5E6" />
   <meta name="robots" content="noindex" />
 
   <!-- Favicons -->
@@ -14,30 +14,46 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css?v=2026-05-24-discovery" />
   <link rel="stylesheet" href="pricing.css?v=2026-05-05-wordmark" />
   <link rel="stylesheet" href="book.css?v=2026-05-05-v1" />
+  <link rel="stylesheet" href="softblock.css?v=2026-11-16-phonetop" />
 </head>
-<body class="pricing-page book-page">
+<body class="pricing-page book-page sb">
+
+  <!-- NAV PILL (Soft Block); same markup on every public page. -->
+  <header class="sb-nav sb-wrap">
+    <a class="sb-wm" href="index.html" aria-label="WendyPix home"><span class="sb-wm__mk" aria-hidden="true"></span><span class="sb-wm__word">WENDY<span class="sb-wm__pix">PIX</span></span></a>
+    <nav class="sb-tabs" aria-label="Main">
+      <a class="sb-tab" href="index.html#galleries">Work</a>
+      <a class="sb-tab" href="index.html#about">About</a>
+      <a class="sb-tab" href="pricing.html">Rates</a>
+    </nav>
+    <div class="sb-nav__r">
+      <a class="sb-btn sb-btn--sm sb-nav__call" href="tel:+18183830102" aria-label="Call (818) 383-0102"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span class="sb-nav__num">(818) 383-0102</span></a>
+      <a class="sb-ibtn sb-nav__mail" href="mailto:wendy@wendypix.com" aria-label="Email wendy@wendypix.com"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></a>
+      <button class="theme-toggle sb-ibtn" id="themeToggle" type="button" aria-label="Switch between light and dark">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <a class="sb-btn sb-btn--sm sb-btn--ink sb-nav__book" href="book.html">Book</a>
+    </div>
+  </header>
+
 
   <main class="pricing">
 
-    <header class="pricing__top">
-      <a class="pricing__back caps" href="index.html">&larr; <span>Back to site</span></a>
-      <a class="pricing__brand" href="index.html">
-        <span class="brand-wendy">WEND<span class="brand-y">Y</span></span><span class="brand-pix">PIX</span>
-      </a>
-      <p class="pricing__year caps muted">Booked</p>
-    </header>
 
     <section class="pricing__hero">
       <p class="eyebrow">Confirmed &amp; paid</p>
-      <h1 class="display headline">YOU'RE IN.</h1>
+      <h1 class="display headline">You're in.</h1>
       <p class="pricing__lede">
         Deposit received and your session is locked in. A confirmation
-        email is on its way with the details — Wendy will follow up
+        email is on its way with the details. Wendy will follow up
         before the shoot with what to bring and where to meet.
       </p>
     </section>
@@ -47,7 +63,7 @@
         <strong>What happens next:</strong>
       </p>
       <ul class="rate-card__list" style="margin-top:16px;font-size:16px">
-        <li>You'll get an email confirmation within a minute or two — check spam if it doesn't arrive</li>
+        <li>You'll get an email confirmation within a minute or two. Check spam if it doesn't arrive</li>
         <li>The session is on Wendy's calendar and your slot is locked</li>
         <li>Wendy will reach out a few days before the shoot with prep details</li>
         <li>The remaining 75% balance is due 24 hours before the session</li>
@@ -72,6 +88,30 @@
     <p class="caps muted"><a href="index.html">wendypix.com</a></p>
   </footer>
 
-  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+  <!-- PHONE TAB PILL -->
+  <nav class="sb-dock" aria-label="Main">
+    <div class="sb-dock__bar">
+      <a class="sb-dtab" href="index.html"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
+      <a class="sb-dtab" href="pricing.html"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>Rates</a>
+      <a class="sb-dtab" href="book.html"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Book</a>
+      <a class="sb-dtab" href="tel:+18183830102"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Call</a>
+    </div>
+  </nav>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+    (function () {
+      const root = document.documentElement;
+      const saved = localStorage.getItem("wendypix-theme");
+      if (saved) root.setAttribute("data-theme", saved);
+      const btn = document.getElementById("themeToggle");
+      if (btn) btn.addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "" : "dark";
+        if (next) root.setAttribute("data-theme", next);
+        else root.removeAttribute("data-theme");
+        localStorage.setItem("wendypix-theme", next);
+      });
+    })();
+  </script>
 </body>
 </html>

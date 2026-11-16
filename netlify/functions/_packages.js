@@ -67,7 +67,7 @@ const DEFAULT_PACKAGES = [
     description: "Hourly — pick a duration on the call.",
     includes: [
       "Hourly, 2-hour minimum",
-      "Galleries in 7 business days",
+      "Galleries in 3-5 business days",
       "Same-day previews available",
     ],
     featured: false,
