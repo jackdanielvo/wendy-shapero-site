@@ -493,6 +493,20 @@ body.sb {
   border-radius: 22px;
   padding: 8px;
   box-shadow: none;
+  object-position: 50% 30%;  /* faces sit high in a portrait; keep heads in */
+}
+/* Gallery tiles stay PORTRAIT on any window shape. styles.css sizes a
+   tile's height from the window height (50vh) and its width from the
+   window width (28vw), so a short, wide window, which is what most
+   Windows laptops have at 125-150% display scaling (about 1536x695),
+   made every tile landscape and cut off foreheads (Wendy, 2026-11-16).
+   Above 1024px the width now follows the height at 4:5. Tablet and
+   phone sizes in styles.css are width-based and already portrait. */
+@media (min-width: 1025px) {
+  .sb .featured-carousel {
+    --tile-h: clamp(340px, 58vh, 540px);
+    --tile-w: min(clamp(240px, 28vw, 420px), calc(var(--tile-h) * 0.8));
+  }
 }
 .sb .ftile__label {
   bottom: -22px;
