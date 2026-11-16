@@ -12,44 +12,37 @@
   // via /api/packages (with the array below as a fallback if the
   // network call fails — keeps the page working even mid-incident).
   // ----------------------------------------------------------
+  // Kept in step with the live admin data (2026-11-15). If /api/packages
+  // fails, visitors still see today's prices, not last year's.
   const FALLBACK_PACKAGES = [
-    {
-      id: "headshot-essential",
-      name: "Essential Headshot",
-      price: 600,
-      duration: 60,                // minutes
-      includes: ["1-hour session", "Up to 2 looks", "3 retouched final images"],
-      description: "Quick, polished, ready for your roster.",
-    },
     {
       id: "headshot-standard",
       name: "Standard Headshot",
-      price: 850,
-      duration: 90,
-      includes: ["1.5-hour session", "Up to 4 looks", "6 retouched final images"],
-      description: "Most popular — actor & exec sweet spot.",
+      price: 450,
+      duration: 60,                // minutes
+      includes: ["1-hour session", "Up to 2 looks", "3 retouched final images"],
+    },
+    {
+      id: "headshot-essential",
+      name: "Essential Looks",
+      price: 650,
+      duration: 150,
+      includes: ["2.5-hour session", "Up to 4 looks", "Processed & Edited Online Gallery"],
       featured: true,
     },
     {
       id: "headshot-premium",
       name: "Premium Headshot",
-      price: 1400,
-      duration: 120,
-      includes: [
-        "2-hour session",
-        "Unlimited looks",
-        "10 retouched final images",
-        "Hair & makeup included",
-      ],
-      description: "Full-service — looks, retouching, glam.",
+      price: 850,
+      duration: 210,
+      includes: ["Pinterest Board", "Up to a 3.5-hour session", "Unlimited looks", "Processed & Edited Online Gallery"],
     },
     {
       id: "lifestyle-inquiry",
-      name: "Lifestyle / Commercial",
+      name: "Corporate / Lifestyle / Branding",
       price: null,                  // quote-based
       duration: null,
-      includes: ["Brand portraits", "Editorial / on-location", "Commercial usage"],
-      description: "Quote-based — let's scope it on a 15-min call.",
+      includes: ["Pinterest Board", "Branding Portraits", "Editorial / On-location", "Commercial Usage", "Processed & Edited Online Gallery", "Hair & Makeup (included)"],
       inquiry: true,
     },
     {
@@ -57,8 +50,7 @@
       name: "Event Coverage",
       price: null,
       duration: null,
-      includes: ["Hourly, 2-hour minimum", "Galleries in 7 business days", "Same-day previews available"],
-      description: "Hourly — pick a duration on the call.",
+      includes: ["Hourly; 2-hour minimum", "Galleries in 3-5 business days", "One-day previews available"],
       inquiry: true,
     },
   ];
