@@ -98,6 +98,34 @@
   color: #c53939;
   border-color: #c53939;
 }
+.admin__pkg__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.admin__pkg__move {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font-family: var(--body-font);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 6px 12px;
+  min-height: 32px;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.admin__pkg__move:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+.admin__pkg__move:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 .admin__pkg__row {
   display: flex;
   flex-direction: column;
