@@ -224,7 +224,7 @@ body.sb {
 /* ---------- Wordmark ---------- */
 .sb-wm { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--sb-ink); }
 .sb-wm__mk { width: 22px; height: 22px; flex: none; border-radius: 7px; border: 2px solid var(--sb-edge); background: var(--sb-lilac); }
-.sb-wm__word { font-family: var(--sb-display); font-size: 26px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.sb-wm__word { font-family: var(--sb-display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
 .sb-wm__pix { color: var(--sb-brand); }
 
 /* ---------- Nav pill (desktop) ---------- */
@@ -279,8 +279,16 @@ body.sb {
     border: 0;
     border-radius: 0;
   }
-  .sb-tabs, .sb-nav__call, .sb-nav__book { display: none; }
-  .sb-wm__word { font-size: 23px; }
+  .sb-tabs, .sb-nav__book { display: none; }
+  /* The phone number stays at the top on phones (Wendy, 2026-11-16):
+     a pill with the number written out, beside the light/dark switch. */
+  .sb-nav__r { gap: 6px; }
+  .sb-nav__call { width: auto; height: 40px; padding: 0 12px; gap: 6px; border-radius: 20px; font-size: 14px; }
+  .sb-nav__call .sb-ico { width: 16px; height: 16px; }
+  .sb-nav__num { display: inline; }
+  .sb-nav__r .sb-ibtn { width: 40px; height: 40px; border-radius: 20px; }
+  .sb-wm { gap: 8px; }
+  .sb-wm__word { font-size: 21px; }
   .sb-wm__mk { width: 20px; height: 20px; border-radius: 6px; }
   .sb-dock {
     display: block;
@@ -304,6 +312,14 @@ body.sb {
   .sb-dtab[aria-current="page"] { background: var(--sb-ink); color: var(--sb-page); font-weight: 700; }
   body.sb { padding-bottom: 104px; }
   body.sb.shoot-open .sb-dock { display: none; }
+}
+/* Narrow phones: the number wins the room, so the email button steps
+   out of the top bar (the address is still in every page's footer). */
+@media (max-width: 430px) {
+  .sb-nav__mail { display: none; }
+}
+@media (max-width: 380px) {
+  .sb-wm__mk { display: none; }
 }
 
 /* ---------- Chips and the orange sticker ---------- */
