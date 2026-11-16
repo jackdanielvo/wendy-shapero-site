@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WendyPix — Wendy Shapero Photography, Los Angeles</title>
+  <title>WendyPix · Wendy Shapero Photography, Los Angeles</title>
   <meta name="description" content="Wendy Shapero is a Los Angeles photographer making headshots, corporate portraits, lifestyle, and event photography that feels playful, lively, and journalistic. Book online." />
-  <meta name="theme-color" content="#1d5e62" />
+  <meta name="theme-color" content="#FBF5E6" />
   <link rel="canonical" href="https://wendypix.netlify.app/" />
 
   <!-- Favicons -->
@@ -19,29 +19,29 @@
        subdomain — when wendypix.com goes live, find-and-replace
        wendypix.netlify.app → wendypix.com across the HTML. -->
   <meta property="og:site_name" content="WendyPix" />
-  <meta property="og:title" content="WendyPix — Wendy Shapero · Headshots &amp; Portraits in LA" />
-  <meta property="og:description" content="Los Angeles photographer Wendy Shapero — headshots, corporate portraits, lifestyle, and event photography that's playful, lively, and journalistic. Book online." />
+  <meta property="og:title" content="WendyPix · Wendy Shapero · Headshots &amp; Portraits in LA" />
+  <meta property="og:description" content="Los Angeles photographer Wendy Shapero: headshots, corporate portraits, lifestyle, and event photography that's playful, lively, and journalistic. Book online." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://wendypix.netlify.app/" />
   <meta property="og:image" content="https://wendypix.netlify.app/og-image.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="WendyPix — Wendy Shapero Photography, Los Angeles" />
+  <meta property="og:image:alt" content="WendyPix · Wendy Shapero Photography, Los Angeles" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="WendyPix — Wendy Shapero · Headshots &amp; Portraits in LA" />
-  <meta name="twitter:description" content="Los Angeles photographer Wendy Shapero — headshots, corporate portraits, lifestyle, and event photography that's playful, lively, and journalistic. Book online." />
+  <meta name="twitter:title" content="WendyPix · Wendy Shapero · Headshots &amp; Portraits in LA" />
+  <meta name="twitter:description" content="Los Angeles photographer Wendy Shapero: headshots, corporate portraits, lifestyle, and event photography that's playful, lively, and journalistic. Book online." />
   <meta name="twitter:image" content="https://wendypix.netlify.app/og-image.jpg" />
 
-  <!-- Fonts. The display headers use Helvetica (system font, no fetch
-       needed). Inter handles body copy; Instrument Serif handles the
-       italic bio passages. -->
+  <!-- Fonts (Soft Block look): Bricolage Grotesque for the big words,
+       Figtree for everything else. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Bump the ?v= each time you change styles.css to force a fresh fetch
        past visitors' browser cache. Same for script.js below. -->
   <link rel="stylesheet" href="styles.css?v=2026-05-25-closebtn" />
+  <link rel="stylesheet" href="softblock.css?v=2026-11-15-softblock" />
 
   <!-- Netlify Identity auth-token forwarder. Magic-link / invite emails
        default to landing on the site root with a hash like
@@ -57,131 +57,145 @@
     })();
   </script>
 </head>
-<body>
+<body class="sb">
 
-  <!-- Theme toggle -->
-  <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="9"/>
-      <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>
-    </svg>
-  </button>
+  <!-- NAV PILL (Soft Block). The same markup sits at the top of index,
+       pricing, book and book-success; only aria-current changes. On
+       phones the tabs hide and the floating tab pill (.sb-dock) at the
+       bottom of <body> takes over. The theme switch keeps its id so the
+       existing theme script still finds it. -->
+  <header class="sb-nav sb-wrap">
+    <a class="sb-wm" href="index.html" aria-label="WendyPix home"><span class="sb-wm__mk" aria-hidden="true"></span><span class="sb-wm__word">wendy<span class="sb-wm__pix">pix</span></span></a>
+    <nav class="sb-tabs" aria-label="Main">
+      <a class="sb-tab" href="index.html#galleries" aria-current="page">Work</a>
+      <a class="sb-tab" href="index.html#about">About</a>
+      <a class="sb-tab" href="pricing.html">Rates</a>
+    </nav>
+    <div class="sb-nav__r">
+      <a class="sb-btn sb-btn--sm sb-nav__call" href="tel:+18183830102" aria-label="Call (818) 383-0102"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><span class="sb-nav__num">(818) 383-0102</span></a>
+      <a class="sb-ibtn" href="mailto:wendy@wendypix.com" aria-label="Email wendy@wendypix.com"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></a>
+      <button class="theme-toggle sb-ibtn" id="themeToggle" type="button" aria-label="Switch between light and dark">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <a class="sb-btn sb-btn--sm sb-btn--ink sb-nav__book" href="book.html">Book</a>
+    </div>
+  </header>
 
   <main>
 
-    <!-- HERO -->
-    <section class="hero">
-      <div class="hero-meta">
-        <p class="caps">Los Angeles, California</p>
-        <p class="caps muted"><a href="mailto:wendy@wendypix.com">wendy@wendypix.com</a></p>
+    <!-- HERO: one headline, the services as color chips (the color key
+         for the whole site), two actions, and the orange sticker for
+         the free call. The five category cards are built by script.js
+         into #heroImages exactly as before. -->
+    <section class="sb-hero sb-wrap" aria-label="Wendy Shapero, photographer">
+      <div class="sb-hero__top">
+        <div class="sb-hero__copy">
+          <p class="sb-kicker">Wendy Shapero · Photographer · Los Angeles, California</p>
+          <h1 class="sb-h1">Portraits &amp;<br />moments.</h1>
+          <ul class="sb-chips" aria-label="Available for">
+            <li class="sb-chips__label" aria-hidden="true">Available for</li>
+            <li class="sb-chip sb-y">Headshots</li>
+            <li class="sb-chip sb-m">Corporate portraits</li>
+            <li class="sb-chip sb-m">Product branding</li>
+            <li class="sb-chip sb-p">Events</li>
+          </ul>
+          <div class="sb-acts">
+            <a class="sb-btn sb-btn--ink" href="book.html">Book a session</a>
+            <a class="sb-btn" href="pricing.html">See rates</a>
+          </div>
+        </div>
+        <a class="sb-sticker" href="book.html#discovery">Free<br />15-min<br />call</a>
       </div>
 
-      <h1 class="display brand"><span class="brand-wendy">WEND<span class="brand-y">Y</span></span><span class="brand-pix">PIX</span></h1>
-
-      <!-- Quick-nav row mirroring the bottom contact links — same Inter
-           Black 900, same plum/ink/teal coloring, same period
-           punctuation, just sized for inline use (no scroll transform).
-           Lives right under the wordmark so visitors can jump to Rates,
-           Call, or Book without scrolling all the way to the footer. -->
-      <nav class="hero-nav" aria-label="Primary"><a class="hero-nav__link hero-nav__link--rates" href="pricing.html">RATES.</a><a class="hero-nav__link hero-nav__link--call" href="tel:+18183830102">CALL.</a><a class="hero-nav__link hero-nav__link--book" href="book.html">BOOK.</a></nav>
-
       <div class="hero__mid">
-        <div class="hero__images" id="heroImages" aria-hidden="true">
+        <div class="hero__images" id="heroImages">
           <!-- Photo cards injected by JS -->
         </div>
       </div>
-
-      <p class="display sub">PHOTOGRAPHER<br/><span class="sub__tag">PORTRAITS &amp; MOMENTS</span></p>
-
-      <div class="services">
-        <p class="caps">Available for</p>
-        <p class="caps muted">Headshots · Corporate Portraits · Product Branding · Events</p>
-      </div>
     </section>
 
-    <!-- FEATURED WORK — Spencer-style carousel. Only renders if Wendy
-         has curated a list in scripts/pixieset.config.json (otherwise the
-         All Work section below already shows every shoot).
-         Mechanics: a focal tile sits centered with the shoot title in a
-         pill below it; flanking tiles peek in from each side, slightly
-         rotated. Click a flank to rotate it into focus; click the focal
-         tile to open the shoot. Arrow keys navigate, mouse wheel advances. -->
+    <!-- FEATURED WORK: legacy section, hidden in editorial mode. Kept so
+         script.js's legacy path still has its hooks. -->
     <section class="featured" id="work" style="display:none">
       <h2 class="display">FEATURED WORK</h2>
       <p class="featured-sub">Hand-picked sessions worth a closer look</p>
-
       <div class="featured-carousel" id="featuredCarousel" tabindex="0"
            role="region" aria-roledescription="carousel" aria-label="Featured shoots">
-        <!-- Carousel tiles injected by JS -->
       </div>
       <div class="featured-dots" id="featuredDots" aria-hidden="true">
-        <!-- Position dots injected by JS -->
       </div>
     </section>
 
-    <!-- ABOUT / BIO -->
-    <section class="about" id="about">
+    <!-- ABOUT: the lilac block (lilac means Wendy herself). -->
+    <section class="about sb-about sb-l sb-wrap" id="about">
       <div class="about__photo">
         <figure>
           <div class="about__photo-frame" id="aboutPhotoFrame">
             <img id="aboutPhoto" src="wendy-portrait.jpg" alt="Wendy Shapero, photographer"
                  onerror="document.getElementById('aboutPhotoFrame').classList.add('missing'); this.style.display='none';" />
           </div>
-          <figcaption class="about__caption caps">Wendy Shapero, Los Angeles</figcaption>
+          <figcaption class="about__caption">Wendy Shapero, Los Angeles</figcaption>
         </figure>
       </div>
       <div class="about__copy">
-        <p class="kicker">About</p>
-        <p class="bio">
-          Los Angeles&ndash;based photographer Wendy Shapero is known for her fun, easy&#8209;going,
-          relaxed manner. Her focus has been lifestyle, private celebrity &amp; corporate events,
-          headshots for actors (VO and On-Camera), portraits for executives, product placement,
-          and special occasions.
+        <p class="sb-kicker">About</p>
+        <h2 class="sb-h2">Fun, easygoing, relaxed.</h2>
+        <p class="sb-lede">
+          Los Angeles photographer Wendy Shapero shoots headshots for actors
+          (VO and on-camera), portraits for executives, lifestyle, private
+          celebrity and corporate events, product placement, and special
+          occasions.
         </p>
-        <p class="bio">
-          Stylistically she works moment to moment and celebrates spontaneity and levity.
-          <a class="link" href="book.html">Book now</a> or <a class="link" href="book.html#discovery">schedule a free 15-minute discovery call</a> to plan your next shoot.
+        <p class="sb-lede">
+          She works moment to moment and celebrates spontaneity and levity.
         </p>
+        <div class="sb-acts">
+          <a class="sb-btn sb-btn--ink" href="book.html">Book now</a>
+          <a class="sb-btn" href="book.html#discovery">Free 15-minute discovery call</a>
+        </div>
       </div>
     </section>
 
-    <!-- ALL WORK with category filter -->
+    <!-- Target for the "Work" link. script.js inserts one section per
+         category right before .all-work, so they all land after this. -->
+    <span class="sb-anchor" id="galleries" aria-hidden="true"></span>
+
+    <!-- ALL WORK: legacy grid, hidden in editorial mode. -->
     <section class="all-work">
       <h2 class="display secondary">ALL SHOOTS,<br/>TAKE A LOOK</h2>
-
       <nav class="filters" id="filters" aria-label="Filter by category">
-        <!-- Filter buttons rendered dynamically from the loaded subjects -->
       </nav>
-
       <div class="grid" id="grid">
-        <!-- All photos injected by JS -->
       </div>
     </section>
+
+    <!-- CLOSING: Rates. Call. Book. as three blocks. (Replaces the
+         scroll-stretched CONTACT panel; script.js's reveal looks for
+         .contact-mega and simply does nothing when it is absent.) -->
+    <section class="sb-trio sb-wrap" id="contact" aria-label="Rates, call, book">
+      <a class="sb-trio__b sb-w" href="pricing.html"><span class="sb-big">Rates.</span><span class="sb-trio__sub">Every package and price<svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="sb-trio__b sb-s" href="tel:+18183830102"><span class="sb-big">Call.</span><span class="sb-trio__sub">(818) 383-0102<svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="sb-trio__b sb-k" href="book.html"><span class="sb-big">Book.</span><span class="sb-trio__sub">Sessions usually book 1 to 3 weeks out<svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+    </section>
+    <footer class="sb-foot sb-wrap">
+      <a href="mailto:wendy@wendypix.com">wendy@wendypix.com</a>
+      <span>All photographs &copy; <span id="year"></span> Wendy Shapero. Based in Los Angeles.</span>
+    </footer>
 
   </main>
 
-  <!-- Scroll runway — extends the document a full viewport beyond <main>
-       so the user can scroll past it. While that scroll happens, the
-       fixed CONTACT panel below is progressively revealed. -->
-  <div class="contact-spacer" aria-hidden="true"></div>
-
-  <!-- CONTACT — pinned to the viewport behind main, revealed as main
-       scrolls up off the top. The giant word + row of links both
-       scaleY-stretch with scroll progress (different magnitudes). The
-       three link words sit edge-to-edge with no whitespace between
-       them — color alone separates them. -->
-  <section class="contact" id="contact">
-    <div class="contact-inner">
-      <h2 class="contact-mega">CONTACT</h2>
-      <!--
-        IMPORTANT: keep the three <a> elements with NO whitespace between
-        their tags. Any space (newline, indentation) renders as a literal
-        gap between words and breaks the edge-to-edge effect.
-      -->
-      <div class="contact-links" id="contactLinks"><a class="contact-link contact-link--rates" href="pricing.html">RATES.</a><a class="contact-link contact-link--call" href="tel:+18183830102">CALL.</a><a class="contact-link contact-link--book" href="book.html">BOOK.</a></div>
-      <p class="copyright">All photographs &copy; <span id="year"></span> Wendy Shapero. Based in Los Angeles.</p>
+  <!-- PHONE TAB PILL -->
+  <nav class="sb-dock" aria-label="Main">
+    <div class="sb-dock__bar">
+      <a class="sb-dtab" href="index.html" aria-current="page"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Home</a>
+      <a class="sb-dtab" href="pricing.html"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>Rates</a>
+      <a class="sb-dtab" href="book.html"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Book</a>
+      <a class="sb-dtab" href="tel:+18183830102"><svg class="sb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Call</a>
     </div>
-  </section>
+  </nav>
 
   <!-- Shoot view: a full-screen subject takeover.
        Photo-by-photo navigation: one big photo fills the viewport. Big
