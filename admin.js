@@ -111,7 +111,11 @@
       card.innerHTML = `
         <div class="admin__pkg__header">
           <h3>${escapeHtml(p.name || "(unnamed)")} ${p.inquiry ? "&middot; Inquiry-only" : `&middot; $${Number(p.price || 0).toLocaleString()}`}</h3>
-          <button type="button" class="admin__pkg__remove" data-action="remove" data-i="${i}">Remove</button>
+          <div class="admin__pkg__actions">
+            <button type="button" class="admin__pkg__move" data-action="up" data-i="${i}" ${i === 0 ? "disabled" : ""} aria-label="Move ${escapeAttr(p.name || "this package")} up">&uarr; Up</button>
+            <button type="button" class="admin__pkg__move" data-action="down" data-i="${i}" ${i === packagesState.length - 1 ? "disabled" : ""} aria-label="Move ${escapeAttr(p.name || "this package")} down">&darr; Down</button>
+            <button type="button" class="admin__pkg__remove" data-action="remove" data-i="${i}">Remove</button>
+          </div>
         </div>
 
         <div class="admin__pkg__row">
@@ -186,6 +190,23 @@
   });
 
   document.getElementById("packagesList").addEventListener("click", (e) => {
+    // Up / Down: swap with the neighbor. The saved order is the order
+    // visitors see on /book and /pricing, so nothing changes on the site
+    // until Save changes is clicked.
+    const move = e.target.closest("[data-action='up'], [data-action='down']");
+    if (move) {
+      const i = Number(move.dataset.i);
+      const j = move.dataset.action === "up" ? i - 1 : i + 1;
+      if (!Number.isFinite(i) || j < 0 || j >= packagesState.length) return;
+      [packagesState[i], packagesState[j]] = [packagesState[j], packagesState[i]];
+      renderPackages();
+      packagesStatus("", "Order changed. Click Save changes to publish it.");
+      // Keep focus on the package that moved, so repeated clicks keep moving it.
+      const same = document.querySelector(`[data-action="${move.dataset.action}"][data-i="${j}"]`);
+      const other = document.querySelector(`[data-action="${move.dataset.action === "up" ? "down" : "up"}"][data-i="${j}"]`);
+      ((same && !same.disabled) ? same : other)?.focus();
+      return;
+    }
     const btn = e.target.closest("[data-action='remove']");
     if (!btn) return;
     const i = Number(btn.dataset.i);
